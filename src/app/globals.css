@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/*
+ * OdysseusX theme — "the wine-dark sea": deep ink-blue surfaces, bronze
+ * accents, and a touch of Aegean teal. Dark by design (it's a screening room).
+ */
+@theme {
+  --color-sea-950: #050912;
+  --color-sea-900: #0a1120;
+  --color-sea-850: #0d1628;
+  --color-sea-800: #121d33;
+  --color-sea-700: #1a2844;
+  --color-sea-600: #26385c;
+  --color-sea-500: #3a4f7a;
+  --color-sea-400: #5d739f;
+  --color-sea-300: #8ea0c4;
+  --color-sea-200: #bcc8e0;
+  --color-sea-100: #e3e9f5;
+
+  --color-bronze-200: #f7e3bb;
+  --color-bronze-300: #f0cf8e;
+  --color-bronze-400: #e6b560;
+  --color-bronze-500: #d49a3a;
+  --color-bronze-600: #b27b24;
+  --color-bronze-700: #8a5d1a;
+
+  --color-aegean-300: #7fd6e3;
+  --color-aegean-400: #4fbccd;
+  --color-aegean-500: #2a9db0;
+
+  --color-wine-400: #d25b7c;
+  --color-wine-500: #a8335a;
+  --color-wine-600: #7c2443;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, ui-serif, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --animate-fade-in: fade-in 0.35s ease-out both;
+  --animate-rise: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: var(--color-sea-950);
+  color: var(--color-sea-100);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(1200px 600px at 85% -10%, rgb(212 154 58 / 0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgb(42 157 176 / 0.07), transparent 60%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgb(212 154 58 / 0.35);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-bronze-400);
+  outline-offset: 2px;
+}
+
+/* Thin, unobtrusive scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-sea-600) transparent;
+}
+
+@layer components {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  /* Form fields */
+  .field {
+    @apply w-full rounded-xl border border-sea-600/70 bg-sea-900/70 px-4 py-3 text-sea-100 placeholder:text-sea-400 transition-colors focus:border-bronze-400/70 focus:bg-sea-900 focus:outline-none focus:ring-2 focus:ring-bronze-400/20;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-sea-200;
+  }
+
+  /* A slate of text rendered like a screenplay page */
+  .screenplay {
+    font-family: "Courier Prime", "Courier New", Courier, ui-monospace, monospace;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
