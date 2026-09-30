@@ -10,6 +10,30 @@ import { z } from "zod";
 import { SKILL_IDS } from "@/lib/skills";
 import { FRAMEWORK_IDS } from "@/lib/frameworks";
 import { CAMERA_ANGLES, CAMERA_MOVEMENTS, SHOT_FRAMINGS, SHOT_SIZES } from "@/lib/film";
+import {
+  BEAT_STATUSES,
+  EXPERIENCE_LEVELS,
+  GOAL_IDS,
+  LOGLINE_COMPONENTS,
+  STORY_FORMATS,
+} from "@/lib/constants";
+
+// Re-exported for server code; client code should import these from
+// "@/lib/constants" to avoid bundling zod.
+export {
+  BEAT_STATUSES,
+  EXPERIENCE_LEVELS,
+  GOAL_IDS,
+  LOGLINE_COMPONENTS,
+  STORY_FORMATS,
+} from "@/lib/constants";
+export type {
+  BeatStatus,
+  ExperienceLevel,
+  GoalId,
+  LoglineComponent,
+  StoryFormat,
+} from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // Shared pieces
@@ -54,16 +78,6 @@ export type Evaluation = z.infer<typeof EvaluationSchema>;
 // Story Lab: logline doctor
 // ---------------------------------------------------------------------------
 
-export const LOGLINE_COMPONENTS = [
-  "protagonist",
-  "goal",
-  "obstacle",
-  "stakes",
-  "hook",
-  "specificity",
-] as const;
-export type LoglineComponent = (typeof LOGLINE_COMPONENTS)[number];
-
 export const LoglineAnalysisSchema = z.object({
   /** 0–100 */
   overall: z.number(),
@@ -86,9 +100,6 @@ export type LoglineAnalysis = z.infer<typeof LoglineAnalysisSchema>;
 // ---------------------------------------------------------------------------
 // Story Lab: story / scene / treatment analysis
 // ---------------------------------------------------------------------------
-
-export const BEAT_STATUSES = ["strong", "present", "weak", "missing"] as const;
-export type BeatStatus = (typeof BEAT_STATUSES)[number];
 
 export const StoryAnalysisSchema = z.object({
   /** 0–100 */
@@ -162,19 +173,6 @@ export type MicroFeedback = z.infer<typeof MicroFeedbackSchema>;
 // Request bodies (validated in route handlers)
 // ---------------------------------------------------------------------------
 
-export const GOAL_IDS = [
-  "filmmaker",
-  "screenwriter",
-  "creator",
-  "founder",
-  "speaker",
-  "writer",
-] as const;
-export type GoalId = (typeof GOAL_IDS)[number];
-
-export const EXPERIENCE_LEVELS = ["beginner", "intermediate", "advanced"] as const;
-export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];
-
 /** The slice of the user's profile sent to the server to personalise coaching. */
 export const CoachProfileSchema = z.object({
   name: z.string().max(80),
@@ -205,17 +203,6 @@ export const LoglineRequestSchema = z.object({
   profile: CoachProfileSchema.optional(),
 });
 export type LoglineRequest = z.infer<typeof LoglineRequestSchema>;
-
-export const STORY_FORMATS = [
-  "personal-story",
-  "short-film",
-  "feature",
-  "tv-episode",
-  "scene",
-  "pitch",
-  "brand-story",
-] as const;
-export type StoryFormat = (typeof STORY_FORMATS)[number];
 
 export const StoryRequestSchema = z.object({
   title: z.string().max(200).optional(),

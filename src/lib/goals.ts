@@ -5,7 +5,7 @@
  *
  * Pure data — safe for server and client.
  */
-import { EXPERIENCE_LEVELS, GOAL_IDS, type ExperienceLevel, type GoalId } from "@/lib/ai/schemas";
+import { EXPERIENCE_LEVELS, GOAL_IDS, type ExperienceLevel, type GoalId } from "@/lib/constants";
 import type { SkillId } from "@/lib/skills";
 
 /** lucide-react icon names (kebab-case) — mapped to components in the UI. */

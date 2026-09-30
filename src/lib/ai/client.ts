@@ -106,6 +106,8 @@ export interface GenerateOptions<S extends z.ZodType> {
   schema: S;
   effort?: Effort;
   maxTokens?: number;
+  /** Pass the route's `req.signal` so a cancelled request stops generating (and billing). */
+  signal?: AbortSignal;
 }
 
 /** Ask Claude for a JSON result that validates against `schema`. */
@@ -121,7 +123,7 @@ export async function generateStructured<S extends z.ZodType>(
       messages: opts.messages,
       output_config: { effort: opts.effort ?? "high", format: betaZodOutputFormat(opts.schema) },
       ...fallbackParams(),
-    });
+    }, { signal: opts.signal });
     const message = await stream.finalMessage();
     if (message.stop_reason === "refusal") {
       throw new CoachError(REFUSAL_MESSAGE, 422, "refusal");
@@ -143,6 +145,8 @@ export interface StreamTextOptions {
   messages: Anthropic.Beta.BetaMessageParam[];
   effort?: Effort;
   maxTokens?: number;
+  /** Pass the route's `req.signal` so a disconnected client stops generation. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -159,7 +163,7 @@ export async function streamText(opts: StreamTextOptions): Promise<ReadableStrea
     messages: opts.messages,
     output_config: { effort: opts.effort ?? "low" },
     ...fallbackParams(),
-  });
+  }, { signal: opts.signal });
 
   const iterator = stream[Symbol.asyncIterator]();
   // Pull the first event eagerly so auth/rate-limit errors surface as HTTP errors.
