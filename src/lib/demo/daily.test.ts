@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { DAILY_PROMPTS, getDailyPrompt, type DailyChallenge } from "@/content/daily-prompts";
 import { MicroFeedbackSchema } from "@/lib/ai/schemas";
+import { findTerms } from "@/lib/daily";
 import { demoCanRead, demoDailyFeedback, onTheNoseQuotes } from "./daily";
+import { sentences } from "./text";
 
 const prompt = (id: string): DailyChallenge => {
   const p = getDailyPrompt(id);
@@ -55,7 +57,12 @@ describe("demoDailyFeedback", () => {
     for (const p of DAILY_PROMPTS) {
       for (const response of SAMPLES) {
         const fragments = quotedFragments(demoDailyFeedback(p, { response }).praise);
-        expect(fragments.length, p.id).toBeGreaterThan(0);
+        if (fragments.length === 0) {
+          // Only when every sentence holds a word the brief bans: praise then quotes none of them.
+          const banned = p.rule?.forbidden ?? [];
+          expect(sentences(response).every((x) => findTerms(x, banned).length > 0), `${p.id}: ${response}`).toBe(true);
+          continue;
+        }
         const flat = response.replace(/\s+/g, " ");
         expect(flat.includes(fragments[0]), `${p.id}: ${fragments[0]}`).toBe(true);
       }

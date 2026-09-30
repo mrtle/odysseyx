@@ -7,7 +7,7 @@ import { MODEL, coachErrorResponse, coachMode, streamText } from "@/lib/ai/clien
 import { buildDirectorNote, buildPersonaSystemPrompt, supportsSystemMessages, toAnthropicMessages } from "@/lib/ai/prompts/practice";
 import { CoachChatRequestSchema } from "@/lib/ai/schemas";
 import { demoPersonaReply } from "@/lib/demo/practice";
-import { parseBody } from "@/lib/request";
+import { badRequest, demoLanguageGuard, notFound, parseBody } from "@/lib/request";
 import { getScenario } from "@/content/scenarios";
 import type { CoachMode } from "@/lib/types";
 
@@ -58,14 +58,17 @@ export async function POST(req: Request) {
   const { scenarioId, messages, profile } = parsed.data;
 
   const scenario = getScenario(scenarioId);
-  if (!scenario) return Response.json({ error: "That practice scenario doesn't exist." }, { status: 404 });
+  if (!scenario) return notFound("That practice scenario doesn't exist.");
 
   const last = messages[messages.length - 1];
   if (!last || last.role !== "user" || !last.content.trim()) {
-    return Response.json({ error: "Say something first — the last message must be yours." }, { status: 400 });
+    return badRequest("Say something first — the last message must be yours.");
   }
 
   const mode = coachMode();
+  // Only the new line: an earlier line the demo coach couldn't read shouldn't block the rest of the drill.
+  const unreadable = demoLanguageGuard(last.content, mode);
+  if (unreadable) return unreadable;
   if (mode === "demo") {
     return new Response(streamDemoReply(demoPersonaReply(scenario, messages), req.signal), { headers: streamHeaders(mode) });
   }

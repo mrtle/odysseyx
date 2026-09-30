@@ -59,8 +59,17 @@ describe("demo scripts", () => {
     // Reactions are followed by a pressure question, so they must not ask one themselves.
     const reactions = [...script.strong, ...script.solid, ...script.long, ...script.hedge, ...script.deflect, ...script.rude, ...script.offTopic];
     if (script.onNose && !script.flatPresses) reactions.push(...script.onNose);
-    // Press leads are followed by the pending question (unless the persona is an in-scene character).
-    if (script.pressRepeats !== false) reactions.push(...script.press);
+    // Press leads (and jargon presses) are followed by the pending question (unless the persona is an in-scene character).
+    if (script.pressRepeats !== false) reactions.push(...script.press, ...(script.vague ?? []));
+    // Every restated question has a second wording, so a press never parrots the question just asked.
+    if (script.pressRepeats !== false) {
+      expect(script.rephrase?.length, `${scenario.id} rephrase`).toBe(script.questions.length);
+      expect(script.openerAgain, `${scenario.id} openerAgain`).toBeTruthy();
+      for (const [i, q] of script.rephrase!.entries()) {
+        expect(q, q).not.toBe(script.questions[i]);
+        expect((q.match(/\?/g) ?? []).length, q).toBeLessThanOrEqual(1);
+      }
+    }
     for (const line of reactions) expect(line.includes("?"), line).toBe(false);
     // Every bank needs at least one line that works without a placeholder.
     for (const bank of [
@@ -127,10 +136,11 @@ describe("demoPersonaReply", () => {
     expect(turn.kind).toBe("press");
     expect(script.press.some((lead) => turn.text.startsWith(lead)), turn.text).toBe(true);
     expect(turn.text.endsWith(script.opener)).toBe(true);
-    // Later in the scene, the press restates the question actually on the table.
+    // Later in the scene, the press restates the question actually on the table — in other words, since they just heard it verbatim.
     const later = demoPersonaTurn(scenario, upToUserTurn(scenario, [GOOD_LINES["studio-pitch"][0], "yeah"]));
     expect(later.kind).toBe("press");
-    expect(later.text).toContain(script.questions[0]);
+    expect(later.text).toContain(script.rephrase![0]);
+    expect(later.text).not.toContain(script.questions[0]);
   });
 
   it("wraps up in character exactly at suggestedTurns, then only says goodbye", () => {
@@ -285,6 +295,9 @@ function play(scenario: Scenario, lines: string[]): ChatMessageInput[] {
 }
 
 const personaLines = (messages: ChatMessageInput[]) => messages.filter((m) => m.role === "persona").slice(1).map((m) => m.content);
+
+/** The out-of-scene "get scored" nudge the demo persona gives after its closing line. */
+const isNudge = (reply: string) => /^\(.*the scene's over/.test(reply);
 
 describe("demo coach: thoughtful vs lazy, rude and off-topic runs", () => {
   const RUNS = {
@@ -451,7 +464,8 @@ describe("demo persona: listening", () => {
   it.each(SCENARIOS.map((s) => [s.id, s] as const))("%s never repeats itself or echoes a broken fragment", (_id, scenario) => {
     for (const lines of [GOOD_LINES[scenario.id], LAZY_LINES, RUDE_LINES, OFF_TOPIC_LINES, HEDGY_LINES]) {
       const run = [...lines.slice(0, scenario.suggestedTurns), ...GOOD_LINES[scenario.id].slice(0, 3)];
-      const replies = personaLines(play(scenario, run));
+      // After the wrap-up comes one closing line, then the same "get scored" nudge — which is allowed to repeat.
+      const replies = personaLines(play(scenario, run)).filter((reply) => !isNudge(reply));
       // Restating a question after a thin answer is a press, not a repeat — compare what the persona says around it.
       const script = demoScriptFor(scenario);
       const reaction = (reply: string) => [script.opener, ...script.questions].reduce((text, q) => text.replace(q, ""), reply).trim();

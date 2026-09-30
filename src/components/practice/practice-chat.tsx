@@ -310,8 +310,8 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
           {announcement}
         </p>
 
-        {/* Status banners */}
-        <div className="space-y-2 px-4 empty:hidden sm:px-5">
+        {/* Status banners: capped so they scroll rather than push the composer out of the panel on short screens. */}
+        <div className="max-h-[45%] shrink-0 space-y-2 overflow-y-auto px-4 empty:hidden sm:px-5">
           {reply.error ? (
             <Alert tone="error" title={`${name} didn't answer`} className="mt-3">
               <p>{reply.error}</p>
@@ -344,7 +344,8 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
               This conversation has reached its length limit. End the scene to get your scorecard.
             </Alert>
           ) : pastLength && !reply.streaming && !reply.error ? (
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-bronze-500/30 bg-bronze-500/10 px-3.5 py-2.5 text-sm text-bronze-100">
+            // On short (landscape) screens the header's End & get scored button, which turns bronze here, carries this nudge.
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-bronze-500/30 bg-bronze-500/10 px-3.5 py-2.5 text-sm text-bronze-100 [@media(max-height:32rem)]:hidden">
               <span>That&apos;s the scene&apos;s natural length. End it for your scorecard — or keep going if you&apos;re mid-thought.</span>
               <Button size="sm" onClick={end} icon={<Flag className="size-3.5" aria-hidden />}>
                 End &amp; get scored

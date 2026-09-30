@@ -2,7 +2,7 @@ import { coachErrorResponse, coachMode, generateStructured } from "@/lib/ai/clie
 import { LOGLINE_SYSTEM_PROMPT, buildLoglinePrompt } from "@/lib/ai/prompts/lab";
 import { LoglineAnalysisSchema, LoglineRequestSchema } from "@/lib/ai/schemas";
 import { demoLogline } from "@/lib/demo/lab";
-import { parseBody } from "@/lib/request";
+import { demoLanguageGuard, parseBody } from "@/lib/request";
 import { finalizeLogline } from "../finalize";
 
 export const maxDuration = 300;
@@ -12,6 +12,8 @@ export async function POST(req: Request) {
   const parsed = await parseBody(req, LoglineRequestSchema);
   if (!parsed.ok) return parsed.response;
   const mode = coachMode();
+  const unreadable = demoLanguageGuard(parsed.data.logline, mode);
+  if (unreadable) return unreadable;
   try {
     const analysis = finalizeLogline(
       mode === "live"

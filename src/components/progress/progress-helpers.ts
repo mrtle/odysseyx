@@ -5,7 +5,7 @@
 import { findLesson, findScenario, type Catalog } from "@/components/home/catalog";
 import { LAB_TOOL_LINKS } from "@/components/home/lab-tools";
 import { REVISION_PROGRESS_PREFIX } from "@/components/lab/revision-checklist";
-import { sanitizePersisted } from "@/lib/persisted-state";
+import { sanitizePersisted, type SanitizeReport } from "@/lib/persisted-state";
 import { toDateKey, type SkillStat } from "@/lib/progress";
 import { STORAGE_KEY, initialData, type AppData } from "@/lib/store";
 import type { LabToolId, XpEvent } from "@/lib/types";
@@ -224,7 +224,6 @@ export function summarizeProgress(data: AppData): ProgressSummary {
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
-const countOf = (v: unknown): number => (Array.isArray(v) ? v.length : isRecord(v) ? Object.keys(v).length : 0);
 
 /**
  * Parse and validate a file made by `buildExport`. Every record goes through
@@ -246,16 +245,13 @@ export function parseProgressImport(text: string): ProgressImport {
   }
 
   const raw = parsed.data;
-  const clean = sanitizePersisted(raw);
+  // The report counts every record and nested item left out (top-level entries, skill scores, beats, shots…).
+  const report: SanitizeReport = { dropped: 0, repaired: 0 };
+  const clean = sanitizePersisted(raw, report);
   if (Object.keys(clean).length === 0) return { ok: false, error: "That export doesn't contain any progress this app can read." };
 
   const data: AppData = { ...initialData, ...clean };
-  const skipped =
-    Math.max(0, countOf(raw.lessonProgress) - Object.keys(data.lessonProgress).length) +
-    Math.max(0, countOf(raw.sessions) - data.sessions.length) +
-    Math.max(0, countOf(raw.labEntries) - data.labEntries.length) +
-    Math.max(0, countOf(raw.daily) - Object.keys(data.daily).length) +
-    Math.max(0, countOf(raw.xpLog) - data.xpLog.length);
+  const skipped = report.dropped;
   const exportedAt = typeof parsed.exportedAt === "string" && !Number.isNaN(Date.parse(parsed.exportedAt)) ? parsed.exportedAt : null;
   return { ok: true, data, exportedAt, summary: summarizeProgress(data), skipped };
 }

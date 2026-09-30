@@ -52,7 +52,7 @@ describe("POST /api/daily", () => {
   it("404s for an unknown prompt", async () => {
     const res = await POST(post({ promptId: "no-such-prompt", response: "A perfectly good response." }));
     expect(res.status).toBe(404);
-    expect(await res.json()).toHaveProperty("error");
+    expect(await res.json()).toMatchObject({ code: "not_found", error: expect.stringMatching(/doesn't exist/) });
   });
 
   it("400s for a response that's too short", async () => {
@@ -73,7 +73,17 @@ describe("POST /api/daily", () => {
   it("explains, rather than scores, text the offline coach can't read", async () => {
     const res = await POST(post({ promptId: "six-word-story", response: "売ります。赤ちゃんの靴、未使用。" }));
     expect(res.status).toBe(422);
-    expect(((await res.json()) as { error: string }).error).toMatch(/only reads English/);
+    const body = (await res.json()) as { error: string; code: string };
+    expect(body.error).toMatch(/only reads English/);
+    expect(body.code).toBe("unsupported_language");
+  });
+
+  it("refuses Latin-script text in another language too", async () => {
+    const res = await POST(
+      post({ promptId: "six-word-story", response: "Mi abuela nunca dijo que nos quería. Nos daba de comer, cada domingo, hasta el día en que ya no pudo." }),
+    );
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({ code: "unsupported_language" });
   });
 });
 

@@ -49,19 +49,68 @@ function splitRunOn(sentence: string): string[] {
 }
 
 /**
+ * Most units `sentences()` returns. A 30,000-character story of ordinary
+ * prose has 300–600 sentences. Past the cap (a screenplay of one-line
+ * actions, or degenerate input like "Hi. " × 2000) the middle of the text
+ * is grouped into evenly sized runs of consecutive sentences: the units
+ * still cover the whole text in order, so beat mapping still sees the
+ * ending, while the per-sentence work every demo heuristic does stays
+ * bounded. The first and last EDGE_SENTENCES are never grouped, so openings
+ * and endings can still be quoted exactly.
+ */
+export const MAX_SENTENCES = 600;
+const EDGE_SENTENCES = 5;
+const HAS_CONTENT = /[\p{L}\p{N}\p{S}]/u;
+
+/** Group the middle of an over-long list of sentences so there are at most MAX_SENTENCES units. */
+function capUnits(units: string[]): string[] {
+  if (units.length <= MAX_SENTENCES) return units;
+  const middle = units.slice(EDGE_SENTENCES, units.length - EDGE_SENTENCES);
+  const slots = MAX_SENTENCES - 2 * EDGE_SENTENCES;
+  const grouped: string[] = [];
+  for (let i = 0; i < slots; i++) {
+    const from = Math.floor((i * middle.length) / slots);
+    const to = Math.floor(((i + 1) * middle.length) / slots);
+    if (to > from) grouped.push(middle.slice(from, to).join(" "));
+  }
+  return [...units.slice(0, EDGE_SENTENCES), ...grouped, ...units.slice(units.length - EDGE_SENTENCES)];
+}
+
+function splitSentences(text: string): string[] {
+  const protectedText = text
+    .replace(/\s+/g, " ")
+    .replace(ABBREVIATIONS, (m) => m.replaceAll(".", DOT));
+  const fragments = protectedText.match(/[^.!?。！？]+[.!?。！？]+["')\]”’」』]*|[^.!?。！？]+$/g) ?? [];
+  const units: string[] = [];
+  for (const fragment of fragments) {
+    const unit = fragment.replaceAll(DOT, ".").trim();
+    // A stray "…", ". . ." or "—" between sentences is a pause, not a sentence to analyse or quote.
+    if (HAS_CONTENT.test(unit)) units.push(unit);
+  }
+  return capUnits(units.flatMap(splitRunOn));
+}
+
+/** Recent long inputs: the demo coaches ask for the same story's sentences several times per analysis. */
+const sentenceMemo: { text: string; units: readonly string[] }[] = [];
+const SENTENCE_MEMO_SIZE = 4;
+const SENTENCE_MEMO_MIN_LENGTH = 500;
+
+/**
  * Sentences, split on . ! ? (keeping abbreviations like "Dr." intact), plus
  * the CJK full stops 。！？. Run-ons over RUN_ON_WORDS words — typically
  * dictated or unpunctuated text — are cut at clause boundaries so beat
  * mapping and first-line checks still have units to work with.
+ * Punctuation-only fragments ("…", ". . .", "—") are dropped, and there
+ * are never more than MAX_SENTENCES units (see there).
  */
 export function sentences(text: string): string[] {
-  const protectedText = text
-    .replace(/\s+/g, " ")
-    .replace(ABBREVIATIONS, (m) => m.replaceAll(".", DOT));
-  return (protectedText.match(/[^.!?。！？]+[.!?。！？]+["')\]”’」』]*|[^.!?。！？]+$/g) ?? [])
-    .map((s) => s.replaceAll(DOT, ".").trim())
-    .filter(Boolean)
-    .flatMap(splitRunOn);
+  if (text.length < SENTENCE_MEMO_MIN_LENGTH) return splitSentences(text);
+  const hit = sentenceMemo.find((m) => m.text === text);
+  if (hit) return [...hit.units];
+  const units = splitSentences(text);
+  sentenceMemo.push({ text, units });
+  if (sentenceMemo.length > SENTENCE_MEMO_SIZE) sentenceMemo.shift();
+  return [...units];
 }
 
 /** Scripts written without spaces between words; these need a word segmenter. */
@@ -70,8 +119,18 @@ const UNSPACED_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p
 const segmenter: Intl.Segmenter | null =
   typeof Intl !== "undefined" && typeof Intl.Segmenter === "function" ? new Intl.Segmenter(undefined, { granularity: "word" }) : null;
 
+const APOSTROPHE = /['’‘ʼ]/;
+const ASCII_ONLY = /^[\x00-\x7f]*$/;
+
+/** normalizeApostrophes for ASCII-only text. */
+function asciiApostrophes(lower: string): string {
+  if (!lower.includes("'")) return lower;
+  return lower.replace(/(?<=[a-z0-9])'s(?![a-z0-9])/g, "").replace(/(?<=[a-z]s)'(?![a-z0-9])/g, "");
+}
+
 /** Straight apostrophes, and possessive 's / s' removed: "his daughter's" → "his daughter". */
 function normalizeApostrophes(lower: string): string {
+  if (!APOSTROPHE.test(lower)) return lower;
   return lower
     .replace(/[’‘ʼ]/g, "'")
     .replace(/(?<=[\p{L}\p{N}])'s(?![\p{L}\p{N}])/gu, "")
@@ -85,13 +144,32 @@ function normalizeApostrophes(lower: string): string {
  * Intl.Segmenter where available.
  */
 export function words(text: string): string[] {
-  const lower = normalizeApostrophes(text.toLowerCase());
-  if (segmenter && UNSPACED_SCRIPT.test(lower)) {
-    return Array.from(segmenter.segment(lower))
+  if (text.length < WORD_MEMO_MIN_LENGTH) return splitWords(text);
+  const hit = wordMemo.find((m) => m.text === text);
+  if (hit) return [...hit.words];
+  const found = splitWords(text);
+  wordMemo.push({ text, words: found });
+  if (wordMemo.length > WORD_MEMO_SIZE) wordMemo.shift();
+  return [...found];
+}
+
+const wordMemo: { text: string; words: readonly string[] }[] = [];
+const WORD_MEMO_SIZE = 4;
+const WORD_MEMO_MIN_LENGTH = 500;
+
+function splitWords(text: string): string[] {
+  const lower = text.toLowerCase();
+  if (ASCII_ONLY.test(lower)) {
+    // Same result as the Unicode path, with cheaper ASCII-only regexes.
+    return asciiApostrophes(lower).match(/[a-z0-9]+(?:'[a-z0-9]+)*/g) ?? [];
+  }
+  const normalized = normalizeApostrophes(lower);
+  if (segmenter && UNSPACED_SCRIPT.test(normalized)) {
+    return Array.from(segmenter.segment(normalized))
       .filter((s) => s.isWordLike)
       .map((s) => s.segment);
   }
-  return lower.match(/[\p{L}\p{M}\p{N}]+(?:'[\p{L}\p{M}\p{N}]+)*/gu) ?? [];
+  return normalized.match(/[\p{L}\p{M}\p{N}]+(?:'[\p{L}\p{M}\p{N}]+)*/gu) ?? [];
 }
 
 /** Share of letters that are Latin script (1 for English; near 0 for Japanese or Russian). */
@@ -101,19 +179,84 @@ export function latinShare(text: string): number {
   return (text.match(/\p{Script=Latin}/gu) ?? []).length / letters.length;
 }
 
+function normalizeUncached(text: string): string {
+  const lower = text.toLowerCase();
+  let cleaned: string;
+  if (ASCII_ONLY.test(lower)) {
+    // Same result as the Unicode path below, with cheaper ASCII-only regexes (most input is plain English).
+    cleaned = asciiApostrophes(lower).replace(/[^a-z0-9' ]+/g, " ");
+  } else {
+    cleaned = normalizeApostrophes(lower).replace(/[^\p{L}\p{M}\p{N}' ]+/gu, " ");
+  }
+  if (cleaned.includes("'")) cleaned = cleaned.replace(/(^|\s)'+|'+(?=\s|$)/g, "$1");
+  return ` ${cleaned.replace(/\s+/g, " ").trim()} `;
+}
+
+/**
+ * Short strings (lexicon terms, short sentences) are normalised once and
+ * remembered: the demo coaches match the same few hundred terms against
+ * every sentence. Bounded, and only for strings up to CACHE_MAX_LENGTH.
+ */
+const normalizeCache = new Map<string, string>();
+const CACHE_LIMIT = 4096;
+const CACHE_MAX_LENGTH = 64;
+
 /**
  * Text normalised for phrase matching: lower-case, possessives reduced,
  * punctuation (including hyphens) turned into spaces, space-padded — so
  * `includes(" term ")` finds whole words and phrases. Use the same
- * function on the terms.
+ * function on the terms (or `normalizedTerms`, which caches a whole list).
  */
 export function normalizeForMatch(text: string): string {
-  const cleaned = normalizeApostrophes(text.toLowerCase())
-    .replace(/[^\p{L}\p{M}\p{N}' ]+/gu, " ")
-    .replace(/(^|\s)'+|'+(?=\s|$)/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
-  return ` ${cleaned} `;
+  if (text.length > CACHE_MAX_LENGTH) return normalizeUncached(text);
+  let normalized = normalizeCache.get(text);
+  if (normalized === undefined) {
+    normalized = normalizeUncached(text);
+    if (normalizeCache.size >= CACHE_LIMIT) {
+      const oldest = normalizeCache.keys().next().value;
+      if (oldest !== undefined) normalizeCache.delete(oldest);
+    }
+    normalizeCache.set(text, normalized);
+  }
+  return normalized;
+}
+
+interface TermList {
+  terms: readonly string[];
+  /** `normalizeForMatch(term)` per term, "" where a term has no matchable content. */
+  needles: readonly string[];
+}
+
+/** Normalised needles per term array (lexicon lists and other module-level constants hit this every call). */
+const termListCache = new WeakMap<readonly string[], TermList>();
+
+/**
+ * `normalizeForMatch` of every term, index-aligned with `terms` ("" for a
+ * term with nothing to match). Cached per array, so pass module-level
+ * constants where possible; an array that was changed since is re-read.
+ */
+export function normalizedTerms(terms: readonly string[]): readonly string[] {
+  const cached = termListCache.get(terms);
+  if (cached && cached.terms.length === terms.length && cached.terms.every((t, i) => t === terms[i])) return cached.needles;
+  const needles = terms.map((term) => {
+    const needle = normalizeForMatch(term);
+    return needle.trim() ? needle : "";
+  });
+  termListCache.set(terms, { terms: [...terms], needles });
+  return needles;
+}
+
+/** Like countTerms, for text already passed through normalizeForMatch (normalise a sentence once, test many lists). */
+export function countTermsNormalized(normalized: string, terms: readonly string[]): number {
+  const needles = normalizedTerms(terms);
+  let n = 0;
+  for (const needle of needles) if (needle && normalized.includes(needle)) n++;
+  return n;
+}
+
+function anyNeedle(normalized: string, needles: readonly string[]): boolean {
+  for (const needle of needles) if (needle && normalized.includes(needle)) return true;
+  return false;
 }
 
 export function paragraphs(text: string): string[] {
@@ -125,11 +268,20 @@ export function paragraphs(text: string): string[] {
 
 /** Count how many of `terms` appear (as words or phrases) in `text`. */
 export function countTerms(text: string, terms: readonly string[]): number {
+  if (terms.length === 0) return 0;
+  return countTermsNormalized(normalizeForMatch(text), terms);
+}
+
+/** The distinct `terms` that appear (as words or phrases) in `text`, in list order. */
+export function matchedTerms(text: string, terms: readonly string[]): string[] {
+  if (terms.length === 0) return [];
   const hay = normalizeForMatch(text);
-  return terms.reduce((n, term) => {
-    const needle = normalizeForMatch(term);
-    return needle.trim() && hay.includes(needle) ? n + 1 : n;
-  }, 0);
+  const needles = normalizedTerms(terms);
+  const found = new Set<string>();
+  needles.forEach((needle, i) => {
+    if (needle && hay.includes(needle)) found.add(terms[i]);
+  });
+  return [...found];
 }
 
 /**
@@ -138,20 +290,23 @@ export function countTerms(text: string, terms: readonly string[]): number {
  * where there's also conflict or desire, not in "we went home".
  */
 export function countTermsInContext(text: string, terms: readonly string[], context: readonly string[]): number {
+  if (terms.length === 0 || context.length === 0) return 0;
+  const needles = normalizedTerms(terms);
+  const contextNeedles = normalizedTerms(context);
   const found = new Set<string>();
   for (const sentence of sentences(text)) {
-    if (countTerms(sentence, context) === 0) continue;
     const hay = normalizeForMatch(sentence);
-    for (const term of terms) {
-      const needle = normalizeForMatch(term);
-      if (needle.trim() && hay.includes(needle)) found.add(term);
-    }
+    if (!anyNeedle(hay, contextNeedles)) continue;
+    needles.forEach((needle, i) => {
+      if (needle && hay.includes(needle)) found.add(terms[i]);
+    });
   }
   return found.size;
 }
 
 export function hasAny(text: string, terms: readonly string[]): boolean {
-  return countTerms(text, terms) > 0;
+  if (terms.length === 0) return false;
+  return anyNeedle(normalizeForMatch(text), normalizedTerms(terms));
 }
 
 export const LEXICON = {

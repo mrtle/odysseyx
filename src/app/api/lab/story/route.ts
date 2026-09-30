@@ -2,7 +2,7 @@ import { coachErrorResponse, coachMode, generateStructured } from "@/lib/ai/clie
 import { STORY_SYSTEM_PROMPT, buildStoryPrompt } from "@/lib/ai/prompts/lab";
 import { StoryAnalysisSchema, StoryRequestSchema } from "@/lib/ai/schemas";
 import { demoStory } from "@/lib/demo/lab";
-import { parseBody } from "@/lib/request";
+import { demoLanguageGuard, parseBody } from "@/lib/request";
 import { finalizeStory } from "../finalize";
 
 export const maxDuration = 300;
@@ -12,6 +12,8 @@ export async function POST(req: Request) {
   const parsed = await parseBody(req, StoryRequestSchema);
   if (!parsed.ok) return parsed.response;
   const mode = coachMode();
+  const unreadable = demoLanguageGuard(parsed.data.text, mode);
+  if (unreadable) return unreadable;
   try {
     const analysis = finalizeStory(
       mode === "live"

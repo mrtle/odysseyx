@@ -21,7 +21,7 @@ import {
   averageSentenceLength,
   countTerms,
   firstLine,
-  latinShare,
+  hasAny,
   lexicalVariety,
   pick,
   questionCount,
@@ -115,6 +115,64 @@ export function onTheNoseQuotes(text: string): string[] {
 
 const HEDGES = LEXICON.hedges.filter((h) => h !== "like");
 
+// ---------------------------------------------------------------------------
+// Named emotions
+// ---------------------------------------------------------------------------
+
+/** Nouns that turn an emotion word into a thing: "grief counselling", "love letter", "hate mail", "relief fund". */
+const EMOTION_COMPOUND_HEADS = new Set([
+  "counselling", "counseling", "counsellor", "counselor", "group", "groups", "support", "therapy", "therapist", "letter", "letters",
+  "song", "songs", "story", "stories", "affair", "interest", "seat", "handles", "bite", "nest", "factor", "chest", "ride", "rides",
+  "trip", "mail", "speech", "crime", "crimes", "fund", "effort", "efforts", "work", "worker", "workers", "package", "pitcher",
+  "management", "class", "classes", "course", "workshop", "book", "books", "poem", "poems", "note", "notes", "potion", "triangle",
+  "language", "scene", "scenes", "island", "street", "lane", "hotline", "leaflet", "leaflets", "pamphlet", "pamphlets", "sign",
+]);
+/** "a book on grief", "a pamphlet about anger": the emotion is a topic on a cover, not a feeling on the page. */
+const EMOTION_TOPIC_BEFORE =
+  /\b(?:book|books|paperback|paperbacks|pamphlet|pamphlets|leaflet|leaflets|guide|guides|essay|essays|article|articles|poem|poems|song|songs|album|film|films|movie|movies|class|classes|course|courses|group|seminar|workshop|lecture|lectures|podcast|chapter|chapters|shelf|shelves|section|sermon|talk|documentary|manual|handbook|poster|posters|sign|magazine|magazines)\s+(?:on|about|of)\s+$/i;
+/** "a book called Grief…", "a sign that reads 'Hope'": naming a title or a label. */
+const EMOTION_NAMING_BEFORE = /\b(?:called|named|titled|entitled|labelled|labeled|marked|reads|read|says|spells|spelled|spelling)\s+["“‘']?$/i;
+const emotionPatterns = new Map<string, RegExp>();
+
+/** True when the word at `index` opens a sentence, a line or a quotation. */
+function opensSentence(text: string, index: number): boolean {
+  let i = index - 1;
+  while (i >= 0 && /[\s"“‘'(\[]/.test(text[i])) i--;
+  return i < 0 || /[.!?…:\n]/.test(text[i]);
+}
+
+/**
+ * The emotions a piece names outright, as a feeling ("she is full of
+ * grief"). Emotion words inside a title or a name ("a book called Grief Is
+ * a Journey", "a girl named Joy"), a quoted label, a topic ("a book on
+ * grief") or a noun compound ("grief counselling", "love letter") are
+ * objects in the scene, not the writer naming the feeling.
+ */
+export function namedEmotions(text: string): string[] {
+  const found: string[] = [];
+  for (const term of LEXICON.emotion) {
+    let pattern = emotionPatterns.get(term);
+    if (!pattern) {
+      pattern = new RegExp(`(?<![\\p{L}\\p{N}'’])${term}(?![\\p{L}\\p{N}])`, "giu");
+      emotionPatterns.set(term, pattern);
+    }
+    for (const m of text.matchAll(pattern)) {
+      const at = m.index ?? 0;
+      const before = text.slice(Math.max(0, at - 40), at);
+      const after = text.slice(at + m[0].length, at + m[0].length + 24);
+      const capitalised = /^\p{Lu}/u.test(m[0]);
+      if (capitalised && !opensSentence(text, at)) continue; // a title or a name mid-sentence
+      if (capitalised && /^\s+\p{Lu}/u.test(after)) continue; // "Grief Is a Journey" opening a sentence
+      if (EMOTION_NAMING_BEFORE.test(before) || EMOTION_TOPIC_BEFORE.test(before)) continue;
+      const next = after.match(/^[\s-]+([a-z]+)/)?.[1];
+      if (next && EMOTION_COMPOUND_HEADS.has(next)) continue;
+      found.push(term);
+      break;
+    }
+  }
+  return found;
+}
+
 /** Irony and contrast — the engine of most hooks. */
 const CONTRAST = [
   "but",
@@ -195,6 +253,18 @@ interface Signals {
   vague: number;
 }
 
+/**
+ * Time pivots and changes the shared lexicon misses but micro-stories lean on
+ * ("One night…", "The next year…", "every night after"): the structure skill's
+ * score, nudge and praise all read them.
+ */
+const PIVOTS = [
+  "one night", "one morning", "one evening", "one afternoon", "the next year", "the next day", "the next week", "next year",
+  "the following", "on the night", "that morning", "that evening", "by morning", "the day after", "weeks later", "months later",
+  "after that", "from then on", "every night after", "every day after", "ever after", "this time", "at last",
+];
+const CHANGES = ["this time", "instead", "for once", "from then on", "ever after", "anymore", "any more", "every night after", "every day after"];
+
 function readSignals(text: string): Signals {
   const lower = words(text);
   return {
@@ -205,12 +275,12 @@ function readSignals(text: string): Signals {
     specific: specificityMarkers(text),
     sensory: countTerms(text, LEXICON.sensory),
     visualTerms: countTerms(text, LEXICON.visual),
-    emotionsNamed: findTerms(text, LEXICON.emotion),
+    emotionsNamed: namedEmotions(text),
     conflict: countTerms(text, LEXICON.conflict),
     stakes: countTerms(text, LEXICON.stakes),
     desire: countTerms(text, LEXICON.desire),
-    change: countTerms(text, LEXICON.change),
-    time: countTerms(text, LEXICON.time),
+    change: countTerms(text, LEXICON.change) + countTerms(text, CHANGES),
+    time: countTerms(text, LEXICON.time) + countTerms(text, PIVOTS),
     hedgesUsed: findTerms(text, HEDGES),
     rhythm: sentenceLengthVariance(text),
     averageLength: averageSentenceLength(text),
@@ -317,10 +387,15 @@ function quote(text: string, maxWords = 16): string {
   return `“${firstLine(text, maxWords).replace(/^["“”']+|["“”']+$/g, "")}”`;
 }
 
-/** The learner's strongest sentence: the most concrete and specific one. */
-function bestSentence(skill: SkillId, s: Signals): string {
-  const candidates = s.sentenceList.filter((x) => wordsIn(x) >= 3);
-  if (candidates.length === 0) return s.text;
+/**
+ * The learner's strongest sentence: the most concrete and specific one that
+ * the nudge doesn't criticise (`flagged`). Null when every sentence is
+ * flagged — praise then mustn't quote any of them.
+ */
+function bestSentence(skill: SkillId, s: Signals, flagged: (sentence: string) => boolean = () => false): string | null {
+  const unflagged = s.sentenceList.filter((x) => !flagged(x));
+  const candidates = unflagged.filter((x) => wordsIn(x) >= 3);
+  if (candidates.length === 0) return unflagged[0] ?? (s.sentenceList.length === 0 && !flagged(s.text) ? s.text : null);
   if (skill === "hook") return candidates[0];
   if (skill === "delivery") {
     const speakable = candidates.filter((x) => wordsIn(x) <= 20);
@@ -330,6 +405,13 @@ function bestSentence(skill: SkillId, s: Signals): string {
     const last = candidates[candidates.length - 1];
     if (wordsIn(last) <= 6) return last;
   }
+  if (skill === "structure") {
+    // Praise for structure is praise for the turn: quote the line where things shift.
+    const pivots = candidates.filter((c) => countTerms(c, LEXICON.change) + countTerms(c, CHANGES) + countTerms(c, PIVOTS) + countTerms(c, LEXICON.time) > 0);
+    const later = pivots.filter((c) => c !== candidates[0]);
+    if (later.length > 0) return later[later.length - 1];
+    if (pivots.length > 0) return pivots[0];
+  }
   let best = candidates[0];
   let bestScore = -Infinity;
   for (const c of candidates) {
@@ -338,7 +420,7 @@ function bestSentence(skill: SkillId, s: Signals): string {
       specificityMarkers(c) * 1.5 +
       countTerms(c, LEXICON.conflict) +
       lexicalVariety(c) -
-      countTerms(c, LEXICON.emotion);
+      namedEmotions(c).length;
     if (score > bestScore) {
       best = c;
       bestScore = score;
@@ -386,19 +468,126 @@ const PRAISE: Record<SkillId, string[]> = {
 const RAW_MATERIAL =
   "there's a real idea in that line. The raw material is here; what it needs now is shaping, not starting over.";
 
-function praiseFor(skill: SkillId, s: Signals, checks: ConstraintCheck[]): string {
-  const line = bestSentence(skill, s);
+/** Shown when every sentence carries something the nudge criticises: praise that quotes nothing it would contradict. */
+const WHOLE_PIECE =
+  "You got a complete piece down, and that's the part most people skip. The raw material is here; what it needs now is shaping, not starting over.";
+
+/** Where a sentence can be cut into clauses ("and" is left alone: it joins adjectives as often as clauses). */
+const CLAUSE_SPLIT = /\s*[,;:—–]\s*|\s+(?=(?:as|but|while|when|until|because)\s)/;
+const LEADING_CONJUNCTION = /^(?:as|but|while|when|until|because)\s+/i;
+/** A clause that can stand as a quote: it opens on a subject, not mid-predicate ("tells me to drive"). */
+const STANDALONE_CLAUSE = /^(?:\p{Lu}|(?:i|he|she|they|we|you|it|the|a|an|his|her|their|my|our|its|this|that|one|two|three)\b)/u;
+
+/**
+ * The line to praise. Sentences the nudge criticises are avoided: first the
+ * best clean sentence, then the best clean clause of a flagged one ("the
+ * rain falls on his old coat" out of a sentence that also names despair).
+ * A line the feedback only criticises for its form (narration in a
+ * dialogue-only piece, an over-long sentence, the hedge the nudge quotes)
+ * may still be quoted, but without claiming a strength (`clean: false`). A
+ * line with a failed brief's banned word or a named emotion is never quoted.
+ */
+function praiseLine(skill: SkillId, s: Signals, flags: Flags): { line: string; clean: boolean } | null {
+  const any = (x: string) => flags.hard(x) || flags.soft(x);
+  const sentence = bestSentence(skill, s, any);
+  if (sentence !== null) return { line: sentence, clean: true };
+  const clauses = s.sentenceList
+    .flatMap((x) => x.split(CLAUSE_SPLIT))
+    .map((c) => c.trim().replace(LEADING_CONJUNCTION, ""))
+    .filter((c) => wordsIn(c) >= 4 && STANDALONE_CLAUSE.test(c));
+  const clause = clauses.length > 0 ? bestSentence(skill, { ...s, sentenceList: clauses }, any) : null;
+  if (clause !== null && wordsIn(clause) >= 4) return { line: clause, clean: true };
+  const formOnly = bestSentence(skill, s, flags.hard);
+  return formOnly === null ? null : { line: formOnly, clean: false };
+}
+
+function praiseFor(skill: SkillId, s: Signals, checks: ConstraintCheck[], flags: Flags): string {
+  const picked = praiseLine(skill, s, flags);
+  if (picked === null) return WHOLE_PIECE;
+  const { line } = picked;
   const lineWords = wordsIn(line);
+  // Each strength is only claimed when the signal behind it is there — and it's the same signal the nudge reads,
+  // so the praise never says "a clear shift" above a nudge that says "we don't get the turn".
   const earned =
+    picked.clean &&
     (skill !== "delivery" || lineWords <= 20) &&
-    (skill !== "hook" || (lineWords <= 30 && hookIntrigue(line) > 0)) &&
+    (skill !== "hook" || (line === s.sentenceList[0] && lineWords <= 22 && hookIntrigue(line) > 0)) &&
     (skill !== "dialogue" || s.speechLines > 0) &&
-    (skill !== "visual" || countTerms(line, LEXICON.emotion) === 0);
+    (skill !== "visual" || namedEmotions(line).length === 0) &&
+    (skill !== "structure" || hasTurn(s)) &&
+    (skill !== "conflict" || s.stakes > 0) &&
+    (skill !== "pacing" || s.rhythm >= 3);
   const reason = earned ? pick(PRAISE[skill], `${skill}:${s.text}`) : RAW_MATERIAL;
   const allMet = checks.length > 0 && checks.every((c) => c.met);
   // Only vouch for what was measured: parts of a brief (tone, "first person") aren't machine-checkable.
   const brief = allMet ? ` And you hit every measurable part of the brief (${checks[0].detail.toLowerCase()}).` : "";
   return `${quote(line)} — ${reason}${brief}`;
+}
+
+/** The structure nudge's own test: a change word, or at least two time markers. */
+function hasTurn(s: Signals): boolean {
+  return s.change > 0 || s.time >= 2;
+}
+
+interface Flags {
+  /** Lines with a word the feedback says must go: a failed brief's banned word, or a named emotion. Never quoted. */
+  hard: (sentence: string) => boolean;
+  /**
+   * Lines the feedback criticises for their form (a question mark, the throat-clearing opener, the over-long or
+   * unpunchy sentence, narration) or quotes back (the on-the-nose line, the hedge): quotable, but never praised.
+   */
+  soft: (sentence: string) => boolean;
+}
+
+/**
+ * Sentences the feedback criticises, so the praise doesn't hold one up as
+ * the best line: any that break a failed rule, and — when the skill nudge is
+ * what's shown — the named emotion, on-the-nose line or hedge it calls out.
+ */
+function flaggedSentences(text: string, s: Signals, skill: SkillId, rule: DailyRule | undefined, checks: ConstraintCheck[]): Flags {
+  const failedIds = new Set(checks.filter((c) => !c.met).map((c) => c.id));
+  const hard: ((sentence: string) => boolean)[] = [];
+  const soft: ((sentence: string) => boolean)[] = [];
+  const first = s.sentenceList[0];
+  const last = s.sentenceList[s.sentenceList.length - 1];
+  if (failedIds.has("forbidden") && rule?.forbidden?.length) {
+    const banned = rule.forbidden;
+    hard.push((x) => hasAny(x, banned));
+  }
+  if (failedIds.has("forbidden-opener")) soft.push((x) => x === first);
+  if (failedIds.has("no-question-marks")) soft.push((x) => /[?？¿]/.test(x));
+  if (failedIds.has("no-dialogue")) soft.push((x) => /["“”]/.test(x));
+  if (failedIds.has("max-sentence") && rule?.maxSentenceWords !== undefined) {
+    const max = rule.maxSentenceWords;
+    soft.push((x) => wordsIn(x) > max);
+  }
+  if (failedIds.has("last-sentence")) soft.push((x) => x === last);
+  if (failedIds.has("dialogue-only")) {
+    const narration = nonEmptyLines(text).filter((line) => dialogueShape(line).narration > 0);
+    soft.push((x) => narration.some((line) => line.includes(x) || x.includes(line)));
+  }
+  if (failedIds.has("speaker-words") && rule?.speakerMaxWords) {
+    const { speakers, maxWords } = rule.speakerMaxWords;
+    const labelled = new RegExp(`^(?:${speakers.map((sp) => sp.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\s*:\\s*(.*)$`, "i");
+    const tooLong = nonEmptyLines(text)
+      .map((line) => line.match(labelled)?.[1])
+      .filter((spoken): spoken is string => spoken !== undefined && countWords(spoken) > maxWords);
+    soft.push((x) => tooLong.some((spoken) => spoken.includes(x) || x.includes(spoken)));
+  }
+  // Emotions are penalised whenever these skills are scored, so a line that names one is never the showcase.
+  if (skill === "visual" || skill === "character") hard.push((x) => namedEmotions(x).length > 0);
+  // The line the skill nudge quotes back (on the nose, or hedged) can still be the raw material, but not the showcase.
+  if (failedIds.size === 0) {
+    if (skill === "dialogue" && s.onTheNose.length > 0) {
+      const called = s.onTheNose[0].replace(/…$/, "");
+      soft.push((x) => x.includes(called) || called.includes(x));
+    }
+    if (skill === "delivery" && s.hedgesUsed.length > 0) {
+      const hedge = [s.hedgesUsed[0]];
+      soft.push((x) => hasAny(x, hedge));
+    }
+  }
+  return { hard: (x) => hard.some((test) => test(x)), soft: (x) => soft.some((test) => test(x)) };
 }
 
 function plural(n: number, noun: string): string {
@@ -482,7 +671,7 @@ function skillNudge(skill: SkillId, s: Signals): string {
         ? "Sharpen the specificity: a name, a number or a place turns a general premise into one we can picture."
         : "Put the tension in the very first clause. Right now the question the reader should be asking arrives a beat late.";
     case "structure":
-      return s.change === 0 && s.time < 2
+      return !hasTurn(s)
         ? "We get the situation but not the turn. Mark the moment where things change, so the ending feels earned rather than stopped."
         : "Make the ending answer the beginning more directly — echo an image or phrase from the first line so the shape clicks shut.";
     case "character":
@@ -559,9 +748,10 @@ const TRY_THIS: Record<SkillId, string[]> = {
   ],
 };
 
-function tryThisFor(skill: SkillId, s: Signals, failed: ConstraintCheck | undefined): string {
-  if (failed?.id === "words" || failed?.id === "sentences" || failed?.id === "lines") {
-    return `Do a hard-constraint pass: keep ${quote(bestSentence(skill, s), 10)} untouched and rebuild everything around it until you hit “${failed.label.toLowerCase()}” on the nose.`;
+function tryThisFor(skill: SkillId, s: Signals, failed: ConstraintCheck | undefined, flags: Flags): string {
+  const keep = praiseLine(skill, s, flags)?.line ?? null;
+  if (keep !== null && (failed?.id === "words" || failed?.id === "sentences" || failed?.id === "lines")) {
+    return `Do a hard-constraint pass: keep ${quote(keep, 10)} untouched and rebuild everything around it until you hit “${failed.label.toLowerCase()}” on the nose.`;
   }
   return pick(TRY_THIS[skill], `try:${skill}:${s.text}`);
 }
@@ -570,20 +760,19 @@ function tryThisFor(skill: SkillId, s: Signals, failed: ConstraintCheck | undefi
 // Entry point
 // ---------------------------------------------------------------------------
 
-/** Shown instead of feedback when the offline coach can't read the response. */
-export const DEMO_ENGLISH_ONLY =
-  "The offline demo coach only reads English, so it can't score this fairly. Write it in English, or add an ANTHROPIC_API_KEY on the server for full coaching in any language.";
-
-/** The heuristics are English word lists: text in other scripts would be scored as empty. */
-export function demoCanRead(text: string): boolean {
-  return latinShare(text) >= 0.5;
-}
+/**
+ * The daily route used to import the English check from here; it now lives
+ * in ./language with every other demo route's, and is re-exported so older
+ * imports keep working.
+ */
+export { DEMO_ENGLISH_ONLY, demoCanRead } from "@/lib/demo/language";
 
 export function demoDailyFeedback(prompt: DailyChallenge, request: Pick<DailyFeedbackRequest, "response">): MicroFeedback {
   const text = request.response.trim();
   const signals = readSignals(text);
   const checks = checkConstraints(prompt.rule, text);
   const failed = checks.find((c) => !c.met);
+  const flags = flaggedSentences(text, signals, prompt.skill, prompt.rule, checks);
 
   const raw =
     0.4 * craftScore(signals) +
@@ -594,9 +783,9 @@ export function demoDailyFeedback(prompt: DailyChallenge, request: Pick<DailyFee
 
   return {
     score,
-    praise: praiseFor(prompt.skill, signals, checks),
+    praise: praiseFor(prompt.skill, signals, checks, flags),
     nudge: failed ? constraintNudge(failed, signals, prompt.skill, prompt.rule) : skillNudge(prompt.skill, signals),
-    tryThis: tryThisFor(prompt.skill, signals, failed),
+    tryThis: tryThisFor(prompt.skill, signals, failed, flags),
     skill: prompt.skill,
   };
 }

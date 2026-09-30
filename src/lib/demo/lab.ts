@@ -31,6 +31,7 @@ import {
   dialogueLines,
   lexicalVariety,
   normalizeForMatch,
+  normalizedTerms,
   paragraphs,
   scale,
   sentences,
@@ -49,13 +50,23 @@ import {
  */
 const norm = normalizeForMatch;
 
-/** The subset of `terms` (words or phrases) that appear in `text`. */
+/**
+ * The subset of `terms` (words or phrases) that appear in `text`, in list
+ * order. The text is normalised once per call and the terms' normalised
+ * forms come from text.ts's per-array cache (see `normalizedTerms`), so pass
+ * module-level constants rather than fresh array literals on hot paths.
+ */
 function hits(text: string, terms: readonly string[]): string[] {
-  const hay = norm(text);
+  return hitsIn(norm(text), terms);
+}
+
+/** `hits` for text already passed through `norm` — normalise a sentence once, test it against many lists. */
+function hitsIn(hay: string, terms: readonly string[]): string[] {
+  const needles = normalizedTerms(terms);
   const found: string[] = [];
-  for (const term of terms) {
-    const needle = norm(term);
-    if (needle.trim() && hay.includes(needle) && !found.includes(term)) found.push(term);
+  for (let i = 0; i < needles.length; i++) {
+    const needle = needles[i];
+    if (needle && hay.includes(needle) && !found.includes(terms[i])) found.push(terms[i]);
   }
   return found;
 }
@@ -63,14 +74,17 @@ function hits(text: string, terms: readonly string[]): string[] {
 /** Total occurrences of `terms` in `text` (every repeat counts), each weighted by `weight(term)`. */
 function occurrences(text: string, terms: readonly string[], weight: (term: string) => number = () => 1): number {
   const hay = norm(text);
+  const needles = normalizedTerms(terms);
+  const seen = new Set<string>();
   let total = 0;
-  for (const term of new Set(terms)) {
-    const needle = norm(term);
-    if (!needle.trim()) continue;
+  for (let i = 0; i < needles.length; i++) {
+    const needle = needles[i];
+    if (!needle || seen.has(terms[i])) continue;
+    seen.add(terms[i]);
     let count = 0;
     // Step past the needle but keep its trailing space, so adjacent repeats ("no no") both count.
     for (let at = hay.indexOf(needle); at >= 0; at = hay.indexOf(needle, at + needle.length - 1)) count++;
-    total += count * weight(term);
+    total += count * weight(terms[i]);
   }
   return total;
 }
@@ -131,12 +145,19 @@ const GOAL_RE =
 
 /** Verbs that can follow a protagonist noun phrase ("a shy librarian finds…"), present and simple past. */
 const SUBJECT_VERBS =
+  "rescues|saves|steals|stole|kills|murders|hears|heard|sees|saw|catches|caught|hires|buys|sells|wins|escapes|survives|arrives|crashes|quits|accepts|adopts|marries|kidnaps|betrays|overhears|confesses|breaks|chases|follows|" +
   "is|are|was|were|has|have|had|discovers?|discovered|finds?|found|learns?|learned|learnt|goes|go|went|travels?|travelled|traveled|gets?|got|becomes?|became|falls?|fell|meets?|met|realizes|realises|realize|realized|realised|returns?|returned|inherits?|inherited|wakes?|woke|lands?|landed|joins?|joined|takes?|took|starts?|started|begins?|began|moves?|moved|decides?|decided|agrees?|agreed|embarks?|embarked|sets? off|team up|teams up|receives?|received|loses|lost|uncovers?|uncovered|witnesses|witnessed|stumbles?|stumbled";
-const PROTAGONIST_PHRASE = String.raw`(?:an?|the|two|three|four|five|six|a pair of|a group of|a band of|\d+)\s+[^,.;]{2,60}?|[A-Z][a-z]+(?:,\s*an?\s+[^,]{2,40},)?`;
+/** A first name with up to two more capitalised words, after an optional title: "Maya", "Maya Okafor", "Dr. Lena Park". */
+const NAME_PATTERN = String.raw`(?:(?:Dr|Mr|Mrs|Ms|Mx|Prof|Sgt|Capt|Det|Lt|Rev|Sr|Fr)\.?\s+|(?:Detective|Captain|Doctor|Professor|Officer|Agent|Sergeant|Sister|Brother|Father|Judge|Sheriff|Coach)\s+(?=[A-Z]))?[A-Z][a-z]+(?:\s+[A-Z][a-z'’-]+){0,2}`;
+const NAME_LED_RE = new RegExp(`^${NAME_PATTERN}\\b`);
+/** "Maya Okafor, a nurse, …": a name with an appositive, which needs its closing comma before a verb. */
+const NAME_APPOSITIVE_RE = new RegExp(`^${NAME_PATTERN},\\s`);
+// Case-sensitive on purpose (hence the [Aa] classes): a lower-case phrase ("her estranged father") is never a name.
+const PROTAGONIST_PHRASE = String.raw`(?:[Aa]n?|[Tt]he|[Tt]wo|[Tt]hree|[Ff]our|[Ff]ive|[Ss]ix|[Aa] pair of|[Aa] group of|[Aa] band of|\d+)\s+[^,.;]{2,60}?|${NAME_PATTERN}(?:,\s*[Aa]n?\s+[^,]{2,40},)?`;
 /** "A retired cop who lands a job… discovers" — the phrase may carry a relative clause, but never ends on "who". */
-const FALLBACK_PROTAGONIST_RE = new RegExp(String.raw`^(${PROTAGONIST_PHRASE})(?<!\b(?:who|whose|that|which))\s+(?=(?:${SUBJECT_VERBS})\b)`, "i");
+const FALLBACK_PROTAGONIST_RE = new RegExp(String.raw`^(${PROTAGONIST_PHRASE})(?<!\b(?:who|whose|that|which))\s+(?=(?:${SUBJECT_VERBS})\b)`);
 /** Second pass when no main verb follows the relative clause: "A shy kid who wants to be a pilot." */
-const FALLBACK_WHO_RE = new RegExp(String.raw`^(${PROTAGONIST_PHRASE})\s+(?=who\b)`, "i");
+const FALLBACK_WHO_RE = new RegExp(String.raw`^(${PROTAGONIST_PHRASE})\s+(?=who\b)`);
 
 /** An action that is really an inciting event rather than a goal ("discovers she can rewind time"). */
 const INCIDENT_ACTION_RE =
@@ -297,6 +318,10 @@ interface LoglineParts {
    * introduces them.
    */
   incidentAfterNamed: string | null;
+  /** True when the incident is where the protagonist is named, so the main clause can use a pronoun. */
+  incidentNamesProtagonist: boolean;
+  /** "once a celebrated chef, now a prison cook": a fall or reinvention, which is irony in itself. */
+  formerSelf: string | null;
   /** The subject the writer used in the main clause, when it's a pronoun standing in for the protagonist. */
   subjectPronoun: string | null;
   protagonist: string | null;
@@ -347,6 +372,7 @@ const PERSON_HEADS = new Set([
   "friends", "siblings", "sisters", "brothers", "family", "crew", "team", "outcast", "loner", "misfit", "genius", "comedian",
   "musician", "artist", "dancer", "novelist", "poet", "sommelier", "surgeon", "therapist", "psychiatrist", "chemist", "professor",
   "cadet", "officer", "marine", "sailor", "fisherman", "farmer", "rancher", "cowboy", "mechanic", "courier", "assassin", "mercenary",
+  "champion", "star", "legend", "hero", "heroine", "icon", "celebrity", "idol", "cook", "tycoon", "mogul", "millionaire", "billionaire",
 ]);
 
 function headNoun(phrase: string): string {
@@ -392,26 +418,114 @@ function liftFromIncident(incident: string, pronoun: string): { phrase: string; 
   const gender = genderOf(phrase);
   const p = pronoun.toLowerCase();
   if (gender && p !== "they" && gender !== p) return null;
-  // "When a stranger saves him…": the incident's subject acts on the protagonist, so it's someone else.
+  // "When a stranger saves him…": the incident's subject acts on the protagonist, so it's someone else. Only the
+  // incident's own clause counts: in "…discovers a leak, but nobody believes her" the "her" is the discoverer.
+  const own = rest.split(/\s*[,;—–]\s*(?=(?:but|and|while|so|yet|only|until)\b)|\s+(?=but\s)/i)[0];
   const actsOnProtagonist =
     p === "he"
-      ? /\b(him|himself)\b/i.test(rest)
+      ? /\b(him|himself)\b/i.test(own)
       : p === "she"
-        ? /\bher\b(?=\s*(?:[,.;:—–]|$|\s(?:to|from|with|for|in|on|at|into|out|away|up|down|back|off|over|again|alone|and|but)\b))/i.test(rest)
-        : /\bthem\b/i.test(rest);
+        ? /\bher\b(?=\s*(?:[,.;:—–]|$|\s(?:to|from|with|for|in|on|at|into|out|away|up|down|back|off|over|again|alone|and|but)\b))/i.test(own)
+        : /\bthem\b/i.test(own);
   if (actsOnProtagonist) return null;
   if (!nameLed && hits(phrase, FLAW_WORDS).length === 0 && !looksLikePerson(phrase)) return null;
   return { phrase, rest: stripEnd(rest) };
 }
 
+/** A clause's own verb: a phrase containing one isn't just a subject. */
+const SUBJECT_VERB_RE = new RegExp(String.raw`\b(?:${SUBJECT_VERBS})\b`, "i");
+/** "the town's doctor, a recovering alcoholic" / "Maya Okafor, a disgraced ferry captain": a noun phrase with one appositive. */
+const APPOSITIVE_SUBJECT_RE = /^[^,;:—–]{1,60},\s*(?:an?|the|his|her|their)\s+[^,;:—–]{1,60},?$/i;
+/** How a main-clause subject starts: a pronoun or a determiner (names are checked with NAME_LED_RE). */
+const SUBJECT_START_RE = /^(?:(?:she|he|they)\b|(?:an?|the|his|her|their|two|three|four|five|six|a pair of|a group of|a band of|\d+)\s)/i;
+
+/** True when `phrase` reads as a clause's subject — a pronoun, or a noun phrase (with at most one appositive) and no verb of its own. */
+function isSubjectPhrase(phrase: string): boolean {
+  const p = stripEnd(phrase);
+  if (!p || words(p).length > 14) return false;
+  if (PRONOUN_SUBJECT_RE.test(p)) return true;
+  if (/[,;:—–]/.test(p) && !APPOSITIVE_SUBJECT_RE.test(p)) return false;
+  return !SUBJECT_VERB_RE.test(p);
+}
+
+/**
+ * INCIDENT_RE ends the incident at its first comma, which is wrong when the
+ * incident names someone with an appositive ("When Maya Okafor, a disgraced
+ * ferry captain, learns…, she must…"). Move the boundary to the separator
+ * right before the main clause's subject — the first one after which only a
+ * subject phrase stands before the goal verb.
+ */
+function resplitIncident(body: string, lead: string, rest: string, goalIndex: number): { incident: string; rest: string } | null {
+  const before = rest.slice(0, goalIndex);
+  if (!/[,;:—–]/.test(stripEnd(before)) || isSubjectPhrase(before)) return null;
+  const restStart = body.length - rest.length;
+  for (const sep of before.matchAll(/\s*[,;:—–]\s*/g)) {
+    const at = sep.index ?? 0;
+    const candidate = before.slice(at + sep[0].length);
+    if (!(SUBJECT_START_RE.test(candidate) || NAME_LED_RE.test(candidate)) || !isSubjectPhrase(candidate)) continue;
+    return { incident: stripEnd(body.slice(lead.length, restStart + at)), rest: rest.slice(at + sep[0].length) };
+  }
+  return null;
+}
+
+/**
+ * "Sarah is a cop. She must stop a bomber…": parse the sentence that holds
+ * the goal (and anything after it), keeping the sentence before it as
+ * context for who "she" is.
+ */
+function goalSentence(premise: string): { main: string; context: string | null } {
+  const units = sentences(premise);
+  if (units.length < 2) return { main: premise, context: null };
+  const at = units.findIndex((u) => GOAL_RE.test(u));
+  if (at <= 0) return { main: premise, context: null };
+  return { main: stripEnd(units.slice(at).join(" ")), context: stripEnd(units[at - 1]) };
+}
+
+const COPULA_RE = /^(.+?)\s+(?:is|was)\s+((?:an?|the)\s+[^,;:—–]+)$/i;
+const WHOLE_NAME_RE = new RegExp(`^${NAME_PATTERN}$`);
+
+/**
+ * What the sentence before the goal says about the protagonist: "Sarah is a
+ * cop." introduces them ("Sarah, a cop"); "A retired cop finds a bomb in her
+ * mailbox." is an incident that names them.
+ */
+function introFromContext(context: string): { phrase: string } | { incident: string } | null {
+  const copula = context.match(COPULA_RE);
+  if (copula) {
+    const [, subject, role] = copula;
+    if (WHOLE_NAME_RE.test(subject) && !ARTICLES.has(subject.split(/\s+/)[0].toLowerCase())) return { phrase: `${subject}, ${midSentence(role)}` };
+    if (/^(?:an?|the)\s/i.test(subject) && words(subject).length <= 8) return { phrase: midSentence(subject) };
+    return null;
+  }
+  const m = matchProtagonist(context);
+  return m && !m.viaWho ? { incident: midSentence(context) } : null;
+}
+
+/** "Once a celebrated chef, now a prison cook, Marco must…": a former self (and a present one), not an inciting event. */
+const FORMER_SELF_RE = /^once\s+((?:an?|the)\s+[^,;:—–]+?)\s*,\s*(?:(?:and\s+|but\s+)?now\s+((?:an?|the)\s+[^,;:—–]+?)\s*,\s*)?(.+)$/i;
+
+/** "Maya Okafor, a disgraced ferry captain" → name and descriptor. */
+const NAMED_CORE_RE = new RegExp(`^(${NAME_PATTERN})(?:,\\s*(.+?))?,?$`);
+
+function stripArticle(phrase: string): string {
+  return phrase.replace(/^(?:an?|the)\s+/i, "");
+}
+
 function parseLogline(raw: string): LoglineParts {
   const text = raw.replace(/\s+/g, " ").trim();
   // "What if a shy teenager discovered…?" is a premise question: read what follows it.
-  const body = stripEnd(text).replace(/^what if\s+/i, "");
+  const premise = stripEnd(text).replace(/^what if\s+/i, "");
+  const { main, context } = goalSentence(premise);
+  const former = main.match(FORMER_SELF_RE);
+  const formerSelf =
+    former && !SUBJECT_VERB_RE.test(former[1]) && (looksLikePerson(former[1]) || hits(former[1], FLAW_WORDS).length > 0)
+      ? { was: midSentence(stripEnd(former[1])), now: former[2] ? stripEnd(former[2]) : null }
+      : null;
+  const body = formerSelf && former ? former[3] : main;
   const incidentMatch = body.match(INCIDENT_RE);
   let incident = incidentMatch ? stripEnd(incidentMatch[2]) : null;
   const incidentLead = incidentMatch ? incidentMatch[1].toLowerCase() : "when";
-  const rest = incidentMatch ? incidentMatch[3] : body;
+  let rest = incidentMatch ? incidentMatch[3] : body;
 
   let protagonist: string | null = null;
   let goalVerb: string | null = null;
@@ -420,7 +534,15 @@ function parseLogline(raw: string): LoglineParts {
   let afterGoal = "";
   let viaWho = false;
 
-  const goalMatch = rest.match(GOAL_RE);
+  let goalMatch = rest.match(GOAL_RE);
+  if (incidentMatch && goalMatch?.index !== undefined) {
+    const resplit = resplitIncident(body, incidentMatch[1], rest, goalMatch.index);
+    if (resplit) {
+      incident = resplit.incident;
+      rest = resplit.rest;
+      goalMatch = rest.match(GOAL_RE);
+    }
+  }
   if (goalMatch && goalMatch.index !== undefined) {
     const before = stripEnd(rest.slice(0, goalMatch.index));
     protagonist = before.length > 0 ? before : null;
@@ -435,15 +557,34 @@ function parseLogline(raw: string): LoglineParts {
     }
   }
 
-  // A pronoun subject after an incident that names the protagonist: lift the name.
+  // A pronoun subject: find who it stands for — in the incident, or in the sentence before.
+  const pronounSubject = protagonist !== null && PRONOUN_SUBJECT_RE.test(protagonist);
+  const intro = pronounSubject && context ? introFromContext(context) : null;
+  if (intro && "incident" in intro && !incident) incident = intro.incident;
   let subjectPronoun: string | null = null;
+  let incidentNamesProtagonist = false;
   let incidentAfterNamed: string | null = incident ? `${incidentLead} ${incident}` : null;
-  if (protagonist && PRONOUN_SUBJECT_RE.test(protagonist) && incident) {
+  if (protagonist && pronounSubject && incident) {
     const lifted = liftFromIncident(incident, protagonist);
     if (lifted) {
       subjectPronoun = protagonist.toLowerCase();
       protagonist = lifted.phrase;
       incidentAfterNamed = `${incidentLead} ${subjectPronoun} ${lifted.rest}`;
+      incidentNamesProtagonist = true;
+    }
+  }
+  if (protagonist && PRONOUN_SUBJECT_RE.test(protagonist) && intro && "phrase" in intro) {
+    subjectPronoun = protagonist.toLowerCase();
+    protagonist = intro.phrase;
+  }
+  // "Once a celebrated chef, now a prison cook, Marco…" → "Marco, a celebrated chef turned prison cook".
+  if (protagonist && formerSelf) {
+    const self = formerSelf.now ? `${formerSelf.was} turned ${stripArticle(formerSelf.now)}` : `a former ${stripArticle(formerSelf.was)}`;
+    if (PRONOUN_SUBJECT_RE.test(protagonist)) {
+      subjectPronoun = protagonist.toLowerCase();
+      protagonist = self;
+    } else if (WHOLE_NAME_RE.test(protagonist) && !ARTICLES.has(protagonist.split(/\s+/)[0].toLowerCase())) {
+      protagonist = `${protagonist}, ${self}`;
     }
   }
 
@@ -451,6 +592,7 @@ function parseLogline(raw: string): LoglineParts {
   let identity: string | null = null;
   let impliedGoal: string | null = null;
   let actionIsIncident = false;
+  let actionCore: string | null = null;
   if (action) {
     const copula = action.match(/^(?:is|are|was|were)\s+((?:an?|the|his|her|their|my)\s+.+)$/i);
     if (copula) {
@@ -472,7 +614,15 @@ function parseLogline(raw: string): LoglineParts {
       const word = cut[1].toLowerCase();
       const tail = afterGoal.slice(cut.index + cut[0].length);
       if (word === "before" || word === "or" || word === "or else" || word === "lest") {
-        stakes = stripEnd(`${word} ${tail}`);
+        // "before the wedding, but the boss is his father-in-law": the deadline, then the obstacle.
+        const obstacleCut = tail.match(/\s*[,;—–]\s*\b(but|while|despite|even as|only to)\b\s+/i);
+        if (obstacleCut && obstacleCut.index !== undefined && obstacleCut.index > 0) {
+          stakes = stripEnd(`${word} ${tail.slice(0, obstacleCut.index)}`);
+          connector = obstacleCut[1].toLowerCase();
+          obstacle = stripEnd(tail.slice(obstacleCut.index + obstacleCut[0].length));
+        } else {
+          stakes = stripEnd(`${word} ${tail}`);
+        }
       } else {
         connector = word;
         const stakesCut = tail.match(/\s*[,;—–]?\s*\b(before|or else|or|lest)\b\s+/i);
@@ -491,6 +641,8 @@ function parseLogline(raw: string): LoglineParts {
     if (cut && cut.index !== undefined && cut.index > 0) {
       connector = cut[1].toLowerCase();
       obstacle = stripEnd(action.slice(cut.index + cut[0].length));
+      // "discovered she could rewind time, but every rewind…": the incident ends where the obstacle starts.
+      if (actionIsIncident) actionCore = stripEnd(action.slice(0, cut.index));
     }
   }
 
@@ -503,7 +655,7 @@ function parseLogline(raw: string): LoglineParts {
     const who = protagonist.match(/\s+(who|whose|that|with)\s+(.+)$/i);
     whoClause = who ? who[0].trim() : null;
     const core = who ? protagonist.slice(0, who.index).trim() : protagonist;
-    const namedMatch = core.match(/^([A-Z][a-z]+)(?:,\s*(.+?))?,?$/);
+    const namedMatch = core.match(NAMED_CORE_RE);
     let descriptorSource = core;
     if (namedMatch && !ARTICLES.has(namedMatch[1].toLowerCase())) {
       named = true;
@@ -524,7 +676,8 @@ function parseLogline(raw: string): LoglineParts {
     }
   }
   // An incident told as the protagonist's action becomes the incident.
-  if (actionIsIncident && protagonist && action && !incident) incident = `${midSentence(protagonist)} ${presentTense(action)}`;
+  const incidentAction = actionCore ?? action;
+  if (actionIsIncident && protagonist && incidentAction && !incident) incident = `${midSentence(protagonist)} ${presentTense(incidentAction)}`;
 
   const lower = ` ${text.toLowerCase()} `;
   const plural = protagonist !== null && /^(two|three|four|five|six|a pair of|a group of|a band of|\d+)\b/i.test(protagonist);
@@ -543,8 +696,8 @@ function parseLogline(raw: string): LoglineParts {
           : /^(she|her|hers|herself)$/.test(textPronoun)
             ? "she"
             : "he";
-  if (actionIsIncident && protagonist && action) incidentAfterNamed = `when ${pronoun} ${agree(pronoun, presentTense(action))}`;
-  else if (subjectPronoun && incidentAfterNamed) incidentAfterNamed = incidentAfterNamed.replace(/^(\S+ \S+) (\S+)/, (m, lead: string, verb: string) => `${lead} ${agree(pronoun, verb)}`);
+  if (actionIsIncident && protagonist && incidentAction) incidentAfterNamed = `when ${pronoun} ${agree(pronoun, presentTense(incidentAction))}`;
+  else if (incidentNamesProtagonist && incidentAfterNamed) incidentAfterNamed = incidentAfterNamed.replace(/^(\S+ \S+) (\S+)/, (m, lead: string, verb: string) => `${lead} ${agree(pronoun, verb)}`);
 
   return {
     text,
@@ -553,6 +706,8 @@ function parseLogline(raw: string): LoglineParts {
     incident,
     incidentLead: actionIsIncident && !incidentMatch ? "when" : incidentLead,
     incidentAfterNamed: incident ? incidentAfterNamed : null,
+    incidentNamesProtagonist: incidentNamesProtagonist || actionIsIncident,
+    formerSelf: formerSelf ? `once ${formerSelf.was}${formerSelf.now ? `, now ${midSentence(formerSelf.now)}` : ""}` : null,
     subjectPronoun,
     protagonist,
     descriptors,
@@ -850,11 +1005,11 @@ function cleanHedges(text: string): string {
 }
 
 const RELATION_NOUN_RE =
-  /\b(her|his|their)\s+((?:own|estranged|only|last|little|younger|older|missing|sick|dying|beloved|family)\s+)?(son|daughter|children|child|brother|sister|wife|husband|mother|father|family|career|freedom|farm|home|job|marriage|company|reputation|sanity|life|kingdom|crew|town|best friend|partner)\b/gi;
+  /\b(her|his|their)\s+((?:(?:own|estranged|only|last|little|younger|older|missing|sick|dying|beloved|family|kidnapped|abducted|twin|baby|infant|teenage|newborn|adopted|autistic|disabled)\s+){0,2})(son|daughter|children|child|brother|sister|wife|husband|mother|father|family|career|freedom|farm|home|job|marriage|company|reputation|sanity|life|kingdom|crew|town|best friend|partner)\b(?!-)/gi;
 
 /** Words after a relation noun that make it the subject of its own clause ("her father sold…", "her partner is selling…"). */
 const SUBJECT_OF_CLAUSE_RE =
-  /^\s+(?:is|was|are|were|has|had|will|would|can|could|must|who|sold|stole|killed|murdered|framed|betrayed|abandoned|left|drove|took|kidnapped|sabotaged|ruined|lied|cheated|blackmails?|betrays?|sells|steals|kills|frames|abandons|[a-z]+ed)\b/i;
+  /^\s+(?:is|was|are|were|has|had|will|would|can|could|must|who|dies|die|dying|sold|stole|killed|murdered|framed|betrayed|abandoned|left|drove|took|kidnapped|sabotaged|ruined|lied|cheated|blackmails?|betrays?|sells|steals|kills|frames|abandons|[a-z]+ed)\b/i;
 
 /**
  * The personal loss to name in a rewrite ("his daughter"), skipping relation
@@ -870,7 +1025,7 @@ function stakesNoun(p: LoglineParts): string | null {
     const after = p.text.slice((m.index ?? 0) + m[0].length);
     if (SUBJECT_OF_CLAUSE_RE.test(after)) continue;
     if (widowed && (noun === "husband" || noun === "wife")) continue;
-    if (/\b(late|dead|murdered|slain|deceased|avenge|avenges|avenging|mourn|mourns|mourning|buried|buries|killed|kills|murders|lost|drove|drives)\s+$/i.test(before)) continue;
+    if (/\b(late|dead|murdered|slain|deceased|avenge|avenges|avenging|mourn|mourns|mourning|buried|buries|killed|kills|murders|lose|loses|losing|lost|drove|drives)\s+$/i.test(before)) continue;
     if (/^\s+(?:to|into)\s+(?:his|her|their)\s+(?:death|grave|suicide)\b/i.test(after)) continue;
     return m[0].toLowerCase();
   }
@@ -880,8 +1035,13 @@ function stakesNoun(p: LoglineParts): string | null {
 const TRAILING_FUNCTION_WORDS =
   /\s+(a|an|the|of|to|from|and|but|with|what|that|her|his|their|its|in|on|at|for|by|or|as|toward|towards|only|into|onto|across|through|own|about|over|under|after|before|while|until|who|which|whose|when|where|if|than|so|just|very|more|most|—|–|-)$/i;
 
-/** Points where a phrase can end cleanly: before punctuation or a subordinate clause — never inside a noun phrase. */
-const CLAUSE_CUT_RE = /\s*(?:[,;:]|\s[—–-])\s+|\s+(?=(?:to|so that|in order to|while|before|until|as|when|because|after|only to|even as|without)\s)/gi;
+/**
+ * Points where a phrase can end cleanly: before punctuation or a subordinate clause — never inside a noun phrase.
+ * "to" only when it starts a purpose ("to pay his debts"), not a destination ("to Moscow", "to the coast"), and
+ * "as" only as a conjunction ("as the storm hits"), not a comparison ("as fast as he can").
+ */
+const CLAUSE_CUT_RE =
+  /\s*(?:[,;:]|\s[—–-])\s+|\s+(?=(?:to(?!\s+(?:(?:the|a|an|his|her|their|its|my|our|your|this|that|these|those)\b|[A-Z]))|as(?=\s+(?:the|a|an|his|her|their|its|she|he|they|it|we|i|you)\b)|so that|in order to|while|before|until|when|because|only to|even as|without)\s)/g;
 
 /**
  * Shorten a phrase to at most `max` words by cutting at a clause boundary.
@@ -928,9 +1088,15 @@ function consequenceClause(consequence: string, pronoun: LoglineParts["pronoun"]
 
 type RewriteKey = "classic" | "irony" | "stakes" | "tighter";
 
+/** An inserted phrase that needs closing before a verb: "the town's doctor, a recovering alcoholic", "a sailor, now blind". */
+const INSERTED_PHRASE_RE = /,\s*(?:an?|the|his|her|their|now|once|formerly|still)\s+[^,]+$/i;
+
+/** A deadline that already names what's lost: "before she loses her father", "before the town dies". */
+const STATED_LOSS_RE = /\b(?:lose|loses|losing|lost|die|dies|dying|killed|kills|destroyed|destroys|gone for good)\b/i;
+
 /** Protagonist for the "Tighter" rewrite: drop trailing where/who detail ("a reluctant keeper on a remote island" → "a reluctant keeper"). */
 function tightenProtagonist(core: string): string {
-  if (/^[A-Z][a-z]+,/.test(core)) return core;
+  if (NAME_APPOSITIVE_RE.test(core)) return core;
   const cut = core.match(/^(.+?)\s+(?:on|in|at|from|with|aboard|inside|near|who|whose|that)\s+/i);
   const shorter = cut && words(cut[1]).length >= 2 ? cut[1] : core;
   return words(shorter).length <= 6 ? shorter : core;
@@ -949,7 +1115,8 @@ function rewriteOptions(p: LoglineParts): Record<RewriteKey, string> {
   const full = who ? midSentence(cleanHedges(who)) : placeholderProtagonist;
   const core = who ? midSentence(cleanHedges(who.replace(/\s+(who|whose|that|with)\s+.+$/i, ""))) : placeholderProtagonist;
   /** Close an appositive ("Maya, a nurse" → "Maya, a nurse,") when a verb follows. */
-  const asSubject = (phrase: string) => (/^[A-Z][a-z]+,\s/.test(phrase) ? `${phrase},` : phrase);
+  const asSubject = (phrase: string) =>
+    (NAME_APPOSITIVE_RE.test(phrase) || INSERTED_PHRASE_RE.test(phrase)) && !/,$/.test(phrase) ? `${phrase},` : phrase;
 
   const goal = p.goal
     ? cleanHedges(p.goal)
@@ -959,7 +1126,7 @@ function rewriteOptions(p: LoglineParts): Record<RewriteKey, string> {
         ? toBaseForm(cleanHedges(p.action.split(/\s+and\s+|,\s*/)[0]))
         : "[a concrete goal]";
   // "to pay off his debts" is a purpose; "to the mainland" is a destination and stays in the goal.
-  const purposeSplit = goal.match(/^(\S+(?:\s+\S+){2,}?)\s+(to(?!\s+(?:the|a|an|his|her|their|its|my|our|your|this|that|these|those|[A-Z])\b)|so that|in order to)\s+(.+)$/);
+  const purposeSplit = goal.match(/^(\S+(?:\s+\S+){2,}?)\s+(to(?!\s+(?:(?:the|a|an|his|her|their|its|my|our|your|this|that|these|those)\b|[A-Z]))|so that|in order to)\s+(.+)$/);
   const goalHead = purposeSplit ? purposeSplit[1] : goal;
   const purpose = purposeSplit ? `${purposeSplit[2]} ${purposeSplit[3]}` : null;
 
@@ -970,12 +1137,17 @@ function rewriteOptions(p: LoglineParts): Record<RewriteKey, string> {
       ? `when ${cleanHedges(p.obstacle)}`
       : null;
   const incidentNamed = p.incident && p.incidentAfterNamed ? cleanHedges(p.incidentAfterNamed) : incidentFull;
-  const incidentNamesProtagonist = Boolean(p.subjectPronoun) || p.actionIsIncident;
-  const obstacle = p.obstacle && p.connector && !(p.connector === "when" && !p.incident) ? `${p.connector} ${cleanHedges(p.obstacle)}` : null;
+  const incidentNamesProtagonist = p.incidentNamesProtagonist;
+  // An obstacle the incident already states ("…discovers she can rewind time, but every rewind…") isn't repeated.
+  const obstacleInIncident = p.obstacle !== null && incidentFull !== null && norm(incidentFull).includes(norm(p.obstacle));
+  const obstacle =
+    p.obstacle && p.connector && !(p.connector === "when" && !p.incident) && !obstacleInIncident ? `${p.connector} ${cleanHedges(p.obstacle)}` : null;
   const deadline = p.stakes && /^before\b/i.test(p.stakes) ? cleanHedges(p.stakes) : null;
   const consequence = p.stakes && !deadline ? cleanHedges(p.stakes).replace(/^(or else|or|lest)\s+/i, "") : null;
-  // "before midnight — or lose her only child": the loss is already spelled out.
-  const lossStated = consequence !== null || (deadline !== null && /(?:[,;—–]|\s-\s)\s*or\s|\bor\s+(?:else|lose|die|watch|be)\b/i.test(deadline));
+  // "before midnight — or lose her only child" / "before she loses her father for good": the loss is already spelled out.
+  const lossStated =
+    consequence !== null ||
+    (deadline !== null && (/(?:[,;—–]|\s-\s)\s*or\s|\bor\s+(?:else|lose|die|watch|be)\b/i.test(deadline) || STATED_LOSS_RE.test(deadline)));
   const deadlineCore = deadline ? (deadline.split(/\s*(?:[,;—–]|\s-\s)\s*(?=or\b)/i)[0] ?? deadline) : null;
   const loss = stakesNoun(p);
 
@@ -1103,7 +1275,7 @@ function buildRewrites(p: LoglineParts, order: LoglineComponent[]): { angle: str
 export function demoLogline(req: Pick<LoglineRequest, "logline" | "genre">): LoglineAnalysis {
   const p = parseLogline(req.logline);
   const flaws = hits(p.protagonist ?? p.text, FLAW_WORDS);
-  const irony = hits(p.text, IRONY_MARKERS);
+  const irony = p.formerSelf ? [p.formerSelf, ...hits(p.text, IRONY_MARKERS)] : hits(p.text, IRONY_MARKERS);
   const vague = hits(p.text, VAGUE_TERMS);
   const antagonists = hits(p.text, ANTAGONIST_TERMS);
   const conflict = hits(p.text, LEXICON.conflict);
@@ -1257,6 +1429,8 @@ const WEAK_CONFLICT = [
   "couldn't", "doesn't", "don't", "no one", "waiting", "truth", "buyer", "hard", "difficult", "worried", "nervous",
 ];
 const STORY_CONFLICT = [...STRONG_CONFLICT, ...WEAK_CONFLICT];
+/** Pressure or feeling: what a better opening line would carry. */
+const OPENER_TERMS = [...STRONG_CONFLICT, ...LEXICON.emotion];
 const WEAK_CONFLICT_SET = new Set(WEAK_CONFLICT);
 const conflictWeight = (term: string) => (WEAK_CONFLICT_SET.has(term) ? 0.25 : 1);
 const STORY_DESIRE = [...LEXICON.desire, "going to", "trying to", "has to", "have to", "needs to", "had to", "promised", "vowed", "determined", "longing", "chooses", "decides to"];
@@ -1357,6 +1531,8 @@ const FORMAT_INFO: Record<StoryFormat, { label: string; note: string; beatUnit: 
 
 interface SentenceInfo {
   text: string;
+  /** `norm(text)`, computed once: every lexicon test on this sentence reuses it. */
+  hay: string;
   wordCount: number;
   position: number;
 }
@@ -1381,7 +1557,7 @@ interface Draft {
  */
 function readDraft(raw: string): Draft {
   const blocks = paragraphs(raw).length;
-  const read = readScreenplay(raw, 1);
+  const read = readScreenplay(raw);
   if (read.slugs > 0 || read.cues >= 2) {
     const units = read.units.map((u) => (u.kind === "dialogue" ? `${u.speaker ?? "Someone"}: \u201c${u.text}\u201d` : u.text));
     return {
@@ -1411,7 +1587,7 @@ function sentenceMap(list: string[]): SentenceInfo[] {
   const total = sum(counts);
   let before = 0;
   return list.map((s, i) => {
-    const info = { text: s, wordCount: counts[i], position: (before + counts[i] / 2) / total };
+    const info = { text: s, hay: norm(s), wordCount: counts[i], position: (before + counts[i] / 2) / total };
     before += counts[i];
     return info;
   });
@@ -1478,10 +1654,10 @@ interface BeatReading {
   signal: number;
 }
 
-function kindSignal(text: string, kind: BeatKind): number {
-  let signal = hits(text, KIND_LEXICON[kind]).length;
-  if ((kind === "theme" || kind === "ally") && dialogueLines(text) > 0) signal += 0.5;
-  if (kind === "setup" || kind === "develop") signal += Math.min(hits(text, LEXICON.sensory).length, 2) * 0.25;
+function kindSignal(s: SentenceInfo, kind: BeatKind): number {
+  let signal = hitsIn(s.hay, KIND_LEXICON[kind]).length;
+  if ((kind === "theme" || kind === "ally") && dialogueLines(s.text) > 0) signal += 0.5;
+  if (kind === "setup" || kind === "develop") signal += Math.min(hitsIn(s.hay, LEXICON.sensory).length, 2) * 0.25;
   return signal;
 }
 
@@ -1496,7 +1672,7 @@ function alignBeats(map: SentenceInfo[], beats: FrameworkBeat[], kinds: BeatKind
   const B = beats.length;
   const LAMBDA = 3;
   const MISSING = -0.6;
-  const signals = beats.map((_, b) => map.map((s) => kindSignal(s.text, kinds[b])));
+  const signals = beats.map((_, b) => map.map((s) => kindSignal(s, kinds[b])));
   const score = (b: number, s: number) => signals[b][s] - LAMBDA * Math.abs(map[s].position - beats[b].position);
 
   // f[k]: best total for the beats so far using only sentences with index < k.
@@ -1597,7 +1773,7 @@ function bestSentence(list: SentenceInfo[], terms: readonly string[], minWords =
   let bestHits = 0;
   for (const s of list) {
     if (s.wordCount < minWords) continue;
-    const n = hits(s.text, terms).length;
+    const n = hitsIn(s.hay, terms).length;
     if (n > bestHits) {
       best = s;
       bestHits = n;
@@ -1638,6 +1814,9 @@ function splitLongSentence(sentence: string): string {
 function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
+
+/** Sentence-length standard deviation (words) past which a draft's rhythm has real range. */
+const HIGH_RHYTHM_VARIANCE = 8;
 
 /** Weighted conflict density (per 100 words) below which a draft reads as calm, and above which it reads as fraught. */
 const CONFLICT_DENSITY = { low: 0.6, high: 4.5 } as const;
@@ -1722,7 +1901,7 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   // also has real opposition or desire, and without at least two distinct real-conflict words the score stays below 60.
   const strongConflict = hits(text, STRONG_CONFLICT);
   const stakesInContext = map.reduce(
-    (n, s) => (hits(s.text, STRONG_CONFLICT).length + hits(s.text, STORY_DESIRE).length > 0 ? n + occurrences(s.text, LEXICON.stakes) * 0.5 : n),
+    (n, s) => (hitsIn(s.hay, STRONG_CONFLICT).length + hitsIn(s.hay, STORY_DESIRE).length > 0 ? n + occurrences(s.text, LEXICON.stakes) * 0.5 : n),
     0,
   );
   const conflictDensity = per100(occurrences(text, STORY_CONFLICT, conflictWeight) + stakesInContext);
@@ -1750,6 +1929,9 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   if (avgLen < 7 && !draft.screenplay) pacingRaw -= 6;
   if (totalWords > 350 && paras <= 1) pacingRaw -= 10;
   const pacingScore = clampScore(pacingRaw);
+  // "Short lines land the big moments" is only true of a draft that has short lines among long ones.
+  const shortest = lengths.reduce((min, l) => Math.min(min, l), lengths[0] ?? 0);
+  const rhythmEarned = pacingScore >= 70 || (variance >= HIGH_RHYTHM_VARIANCE && shortest <= 6 && !(totalWords > 350 && paras <= 1));
   const pacing: SkillScore = {
     skill: "pacing",
     score: pacingScore,
@@ -1758,7 +1940,7 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
         ? `One ${totalWords}-word block gives the reader nowhere to breathe. Paragraph breaks are pacing tools — use them to land beats.`
         : variance < 4
           ? `Sentences run at a steady ~${Math.round(avgLen)} words each. Vary the rhythm: a short line after a long one makes a moment hit.`
-          : pacingScore >= 65
+          : rhythmEarned
             ? `Good rhythmic range (sentences average ~${Math.round(avgLen)} words, with real variety) — short lines land where they should.`
             : `Some rhythmic range (sentences average ~${Math.round(avgLen)} words). Save your shortest sentences for the biggest moments.`,
   };
@@ -1812,7 +1994,11 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   overall = clampScore(clamp(overall, 15, 95));
 
   const ranked = [...skillScores].sort((a, b) => b.score - a.score);
-  const top = ranked[0];
+  // A headline only leads with a strength the notes below back up: "A clear shape" needs a structure score of 65+,
+  // "Confident rhythm" the same rhythm the pacing strength needs.
+  const headlineWorthy = (s: SkillScore) =>
+    s.skill === "structure" ? s.score >= 65 : s.skill === "pacing" ? rhythmEarned : s.score >= 50;
+  const top = ranked.find(headlineWorthy) ?? ranked[0];
   const gapCandidates = contrastFramework ? ranked.filter((r) => r.skill !== "conflict") : ranked;
   const bottom = gapCandidates[gapCandidates.length - 1];
   const gapText = (skill: SkillId) =>
@@ -1826,7 +2012,7 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   const headline =
     bottom.score >= 70
       ? `${SKILL_PRAISE[top.skill]} — this draft is close; the notes below are polish.`
-      : top.score < 50
+      : top.score < 50 || !headlineWorthy(top)
         ? "The raw material is here — now it needs a spine."
         : `${SKILL_PRAISE[top.skill]}, but ${gapText(bottom.skill)}.`;
 
@@ -1843,11 +2029,15 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   // --- Strengths ------------------------------------------------------------
   // Each strength quotes a different line: one sentence shouldn't be praised three ways.
   const praise: Partial<Record<SkillId, { line: string; source: string | null } | null>> = {
-    structure: { line: `A shape you can feel: ${landed} of ${beats.length} ${framework.name} beats land.`, source: null },
+    structure: structureScore >= 65 ? { line: `A shape you can feel: ${landed} of ${beats.length} ${framework.name} beats land.`, source: null } : null,
     character: desireSentence ? { line: `A clear, active want: "${truncateWords(stripEnd(desireSentence.text), 18)}"`, source: desireSentence.text } : null,
     conflict: conflictSentence && conflictReal ? { line: `Real pressure on the page: "${truncateWords(stripEnd(conflictSentence.text), 18)}"`, source: conflictSentence.text } : null,
     hook: hookScore >= 50 ? { line: `A first line that earns the second: "${truncateWords(stripEnd(firstSentence), 18)}"`, source: firstSentence } : null,
-    pacing: { line: "Rhythm with range — your short sentences land the big moments.", source: null },
+    pacing: rhythmEarned
+      ? { line: "Rhythm with range — your short sentences land the big moments.", source: null }
+      : pacingScore >= 60 && variance >= 4 && shortest <= 6
+        ? { line: "Some rhythmic range already: a few short sentences break up the longer ones.", source: null }
+        : null,
     visual: sensorySentence ? { line: `Filmable, sensory detail: "${truncateWords(stripEnd(sensorySentence.text), 18)}"`, source: sensorySentence.text } : null,
     dialogue: onTheNose.length === 0 && dialogueCount > 0 ? { line: "Dialogue that talks around feelings instead of naming them.", source: null } : null,
   };
@@ -1891,7 +2081,7 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
     addNote(lastSentence, "The ending explains the lesson. Trust the audience: end on an image or action that proves it instead.");
   }
   for (const s of map) {
-    const hedges = hits(s.text, HEDGE_TERMS);
+    const hedges = hitsIn(s.hay, HEDGE_TERMS);
     if (hedges.length > 0 && s.wordCount >= 6 && !usedQuotes.has(s.text)) {
       addNote(s.text, `Hedge words (${hedges.map((h) => `"${h}"`).join(", ")}) soften the moment. Without them: "${truncateWords(cleanHedges(s.text), 30)}"`);
       break;
@@ -1905,7 +2095,7 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   const passive = map.find((s) => PASSIVE_RE.test(s.text));
   if (passive) addNote(passive.text, "Passive voice hides who's acting. Put the doer first and the line gets its energy back.");
   const vivid = bestSentence(map, STORY_SENSORY, 6);
-  if (vivid && hits(vivid.text, STORY_SENSORY).length >= 2) {
+  if (vivid && hitsIn(vivid.hay, STORY_SENSORY).length >= 2) {
     addNote(vivid.text, "This is the texture that makes a story feel lived-in — concrete, sensory, filmable. Let more lines work this way.");
   }
   if (endsWithChange && !lessonEnding) {
@@ -1932,7 +2122,7 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   if (hookScore < 70) {
     // Suggest a later line to open on only if it actually carries pressure or feeling.
     const earlyHalf = map.slice(1, Math.max(2, Math.ceil(map.length * 0.6)));
-    const opener = bestSentence(earlyHalf, [...STRONG_CONFLICT, ...LEXICON.emotion]);
+    const opener = bestSentence(earlyHalf, OPENER_TERMS);
     improvements.push({
       title: "Open closer to the disruption",
       detail: `Your first line — "${truncateWords(stripEnd(firstSentence), 14)}" — ${openerGeneric ? "announces the story rather than starting it" : "takes its time"}. Audiences commit in the first few seconds; start where something is already at stake.`,
@@ -2064,10 +2254,15 @@ const NAME_STOPWORDS = new Set([
   "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December",
   "Christmas", "Easter", "Mister", "Miss", "Sir", "Madam", "Ma'am", "Grandma", "Grandpa", "Mum", "Mama", "Papa", "Love",
   "Honey", "Baby", "Darling", "Cut", "Fade", "Title", "Scene", "Pause", "Meanwhile", "Again", "Soon", "Too", "Very",
+  "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth", "Last", "Next", "North", "South",
+  "East", "West", "Old", "New", "Upper", "Lower", "Central", "Downtown", "Uptown", "Detective", "Officer", "Doctor", "Captain",
+  "Agent", "Sergeant", "Professor", "Judge", "Sheriff", "Aunt", "Uncle", "Nurse", "Coach", "Mrs", "Lady", "Lord", "Father",
+  "Sister", "Brother", "Saint",
 ]);
 
 const ROLE_NOUNS =
-  "woman|man|girl|boy|kid|child|stranger|driver|waitress|waiter|bartender|nurse|doctor|officer|cop|soldier|mother|father|teenager|couple|figure|guard|clerk|priest|pilot|captain|detective|widow|grandmother|grandfather|aunt|uncle|son|daughter|brother|sister|husband|wife|boyfriend|girlfriend|boss|landlord|landlady|neighbour|neighbor|teacher|coach|manager|receptionist|cook|chef|customer|patient|mechanic|janitor|cashier|stepfather|stepmother";
+  "woman|man|girl|boy|kid|child|stranger|driver|waitress|waiter|bartender|nurse|doctor|officer|cop|soldier|mother|father|teenager|couple|figure|guard|clerk|priest|pilot|captain|detective|widow|grandmother|grandfather|aunt|uncle|son|daughter|brother|sister|husband|wife|boyfriend|girlfriend|boss|landlord|landlady|neighbour|neighbor|teacher|coach|manager|receptionist|cook|chef|customer|patient|mechanic|janitor|cashier|stepfather|stepmother|" +
+  "suspect|witness|prisoner|inmate|victim|killer|thief|gunman|intruder|visitor|guest|passenger|reporter|journalist|lawyer|judge|agent|sergeant|lieutenant|sheriff|deputy|bouncer|singer|dancer|student|baby|toddler|hunter|farmer|fisherman|sailor|maid|butler|nanny|surgeon|paramedic|vendor|shopkeeper|bride|groom|widower|interrogator|informant|hostage|kidnapper|soldiers?";
 const ROLE_NOUN_RE = new RegExp(String.raw`\b(?:a|an|the|her|his|their|my|our)\s+((?:young|old|older|elderly|tired|lone|small|tall|little|teenage|younger|estranged)\s+)?(${ROLE_NOUNS})\b`, "gi");
 /** Roles that usually describe a named character ("Maria, a woman in her forties") rather than someone new. */
 const GENERIC_ROLES = new Set(["woman", "man", "girl", "boy", "kid", "child", "figure", "couple", "teenager"]);
@@ -2108,7 +2303,7 @@ interface ScreenplayRead {
  * speeches, and action or prose split into sentences — lifting quoted
  * speech out of prose.
  */
-function readScreenplay(scene: string, minActionWords = 3): ScreenplayRead {
+function readScreenplay(scene: string): ScreenplayRead {
   const lines = scene.replace(/\r/g, "").split("\n").map((l) => l.trim());
   let location: string | null = null;
   let time: string | null = null;
@@ -2135,7 +2330,8 @@ function readScreenplay(scene: string, minActionWords = 3): ScreenplayRead {
         // "she said" alone is attribution, not action.
         if (words(action.replace(SPEAKER_BEFORE_RE, "").replace(SPEAKER_AFTER_RE, "")).length < 3) continue;
       }
-      if (words(action).length >= minActionWords) units.push({ kind: "action", text: action });
+      // Short lines stay: "He leaps." or "Dead end." is often the beat the whole scene builds to.
+      if (words(action).length > 0) units.push({ kind: "action", text: action });
     }
   };
 
@@ -2230,30 +2426,81 @@ const SCENE_NOUNS = new Set([
 
 /** True when the capitalised word at `index` starts a sentence, a line or a quotation. */
 function sentenceInitial(text: string, index: number): boolean {
-  if (/^\s*$/.test(text.slice(0, index))) return true;
+  const start = text.search(/\S/);
+  if (start < 0 || index <= start) return true;
   return /(?:[.!?…:]["”’)\]]*\s+|["“‘(]\s*|\n\s*|[—–]\s+)$/.test(text.slice(Math.max(0, index - 8), index));
 }
 
+/** Last words that make a capitalised run a place rather than a person: "Fifth Avenue", "Grace Cathedral", "Union Station". */
+const PLACE_SUFFIXES = new Set([
+  "Avenue", "Ave", "Street", "St", "Road", "Rd", "Lane", "Boulevard", "Blvd", "Drive", "Way", "Place", "Square", "Plaza", "Park",
+  "Bridge", "River", "Lake", "Bay", "Beach", "Island", "Hill", "Hills", "Mountain", "Mountains", "Valley", "Station", "Terminal",
+  "Airport", "Hotel", "Motel", "Inn", "Church", "Chapel", "Cathedral", "Temple", "Mosque", "Synagogue", "Hall", "Tower", "Towers",
+  "Building", "Center", "Centre", "Hospital", "School", "Academy", "College", "University", "Market", "Mall", "Club", "Bar",
+  "Diner", "Cafe", "Café", "Restaurant", "Theatre", "Theater", "Museum", "Library", "Prison", "Garden", "Gardens", "Heights",
+  "Harbor", "Harbour", "Pier", "Port", "County", "City", "Town", "Village", "Court", "Crescent", "Row", "Alley", "Highway",
+]);
+/** Words that follow a verb rather than a noun: "lights a cigarette", "hands her the keys", "heads out". */
+const VERB_FOLLOWERS = new Set([
+  "a", "an", "the", "his", "her", "their", "its", "my", "our", "your", "him", "them", "it", "me", "us", "this", "that", "up",
+  "down", "out", "off", "on", "in", "into", "to", "at", "back", "away", "over", "through", "across", "toward", "towards", "around",
+  "one", "two", "another", "some",
+]);
+/** Place-name endings that are also common surnames. */
+const SURNAME_SUFFIXES = new Set(["Park", "Hall", "Church", "Bay", "Hill", "Lake", "Court", "Way", "Place", "Row", "Town", "Port", "Garden"]);
+/** Mid-sentence capitals after these are places ("down Fifth", "past Denver", "in Florida"), not people. */
+const PLACE_PREPOSITION_RE =
+  /\b(?:in|from|at|near|across|through|into|toward|towards|outside|inside|of|down|up|along|on|past|by|over|around|onto|beyond|behind|under|beneath|off)\s+$/i;
 /**
- * Characters in a prose scene: capitalised words that appear at least once
- * mid-sentence (so "Where", "Steam" or a quoted "Florida." don't count), plus
- * people named by role ("her father" → "the father").
+ * Plural nouns that could be read as a verb's "-s" ("Nora lights…" vs "Brake lights glow") or that make the word
+ * before them a modifier ("church bells", "car keys") rather than a name or a location.
+ */
+const PLURAL_NOUNS = new Set([
+  "bells", "lights", "doors", "windows", "horns", "sirens", "leaves", "waves", "wheels", "engines", "heads", "eyes", "hands",
+  "footsteps", "voices", "shadows", "clouds", "birds", "dogs", "cars", "trucks", "drums", "pipes", "tires", "tyres", "glasses",
+  "plates", "cups", "keys", "papers", "curtains", "blinds", "shutters", "boots", "shoes", "clocks", "phones", "alarms", "fans",
+  "flames", "lamps", "candles", "walls", "floors", "stairs", "steps", "tables", "chairs", "benches", "stalls", "towers", "streets",
+  "roofs", "gates", "fences", "trees", "flowers", "petals", "sheets", "pages", "letters", "bottles", "cans", "boxes", "crates",
+]);
+
+/**
+ * Characters in a prose scene: names (the first word of a capitalised run,
+ * seen mid-sentence or acting like a person), plus people named by role
+ * ("her father" → "the father"). Capitalised runs that are places ("Fifth
+ * Avenue"), capitals after a place preposition ("down Broadway"), quoted
+ * words and sentence-opening common nouns ("Church bells ring", "Steam
+ * rises") are not characters.
  */
 function proseCharacters(scene: string): string[] {
   const counts = new Map<string, { count: number; evidence: boolean; first: number }>();
-  for (const m of scene.matchAll(/\b([A-Z][a-z]{2,})\b/g)) {
-    const name = m[1];
-    if (NAME_STOPWORDS.has(name) || SCENE_NOUNS.has(name)) continue;
-    const index = m.index ?? 0;
+  for (const run of scene.matchAll(/\b[A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)*\b/g)) {
+    const parts = [...run[0].matchAll(/[A-Z][a-z]+/g)];
+    // "Fifth Avenue" is a place; "Jin Park" or "Tom Hall" is a person with a surname that can also end a place name.
+    const knownFirstName = FEMALE_NAMES.has(parts[0][0]) || MALE_NAMES.has(parts[0][0]);
+    if (parts.some((w) => PLACE_SUFFIXES.has(w[0]) && !(knownFirstName && SURNAME_SUFFIXES.has(w[0])))) continue;
+    // "Then Maya…" → "Maya"; in "Maya Okafor" only the first name is counted.
+    const first = parts.find((w) => !NAME_STOPWORDS.has(w[0]) && !SCENE_NOUNS.has(w[0]));
+    if (!first || first[0].length < 3) continue;
+    const name = first[0];
+    const index = (run.index ?? 0) + (first.index ?? 0);
     const entry = counts.get(name) ?? { count: 0, evidence: false, first: index };
     entry.count++;
-    const after = scene.slice(index + name.length, index + name.length + 24);
+    const after = scene.slice(index + name.length, index + name.length + 32);
     if (!sentenceInitial(scene, index)) {
-      // Mid-sentence capitals are names — except places ("in Florida", "from Denver").
-      if (!/\b(?:in|from|at|near|across|through|into|toward|towards|outside|inside|of)\s+$/i.test(scene.slice(Math.max(0, index - 12), index))) entry.evidence = true;
-    } else if (/^(?:\s*\([^)]*\))?\s+[a-z]+(?:s|ed)\b|^['’]s\b|^,\s/.test(after) && !new RegExp(`\\b${name.toLowerCase()}\\b`).test(scene)) {
-      // Sentence-initial, but acting like a person ("Kai sprints", "Maria's hands"), and never used as a common noun.
-      entry.evidence = true;
+      // Mid-sentence capitals are names — except places ("in Florida", "down Fifth").
+      if (!PLACE_PREPOSITION_RE.test(scene.slice(Math.max(0, index - 12), index))) entry.evidence = true;
+    } else if (/^['’]s\b|^,\s/.test(after)) {
+      entry.evidence = true; // "Maria's hands", "Maria, soaked, …"
+    } else {
+      // Sentence-initial and acting like a person ("Kai sprints"), unless it's a common noun ("Church bells ring")
+      // or also used in lower case elsewhere.
+      const m = after.match(/^(?:\s*\([^)]*\))?\s+([a-z]+)\b(?:\s+([a-z]+))?/);
+      const next = m?.[1];
+      const lower = name.toLowerCase();
+      // "Nora lights a cigarette" acts; "Brake lights glow" is a compound noun: an "-s" word that can be a plural
+      // noun only counts as a verb when an object, particle or the end of the sentence follows it.
+      const verb = next !== undefined && /(?:s|ed)$/.test(next) && (!PLURAL_NOUNS.has(next) || m?.[2] === undefined || VERB_FOLLOWERS.has(m[2]));
+      if (verb && !COMMON_NOUNS.has(lower) && !new RegExp(`\\b${lower}\\b`).test(scene)) entry.evidence = true;
     }
     counts.set(name, entry);
   }
@@ -2266,15 +2513,44 @@ function proseCharacters(scene: string): string[] {
   const roles: string[] = [];
   for (const m of scene.matchAll(ROLE_NOUN_RE)) {
     const noun = m[2].toLowerCase();
-    if (names.length > 0 && GENERIC_ROLES.has(noun)) continue;
+    const index = m.index ?? 0;
+    // A generic role usually describes a named character ("Maria, a woman in her forties") — unless it's the subject
+    // of its own sentence ("A woman in a red coat stops at the crosswalk").
+    if (names.length > 0 && GENERIC_ROLES.has(noun) && !sentenceInitial(scene, index)) continue;
     // "Tom, her father," describes a named character.
-    const before = scene.slice(Math.max(0, (m.index ?? 0) - 24), m.index);
+    const before = scene.slice(Math.max(0, index - 24), index);
     if (/\b[A-Z][a-z]+(?:\s*\([^)]*\))?,\s*$/.test(before)) continue;
     const role = `the ${noun}`;
     if (!roles.includes(role)) roles.push(role);
   }
   return [...names, ...roles].slice(0, 3);
 }
+
+/** Common, clearly gendered first names (unisex names like Sam, Alex or Jordan are left out on purpose). */
+const FEMALE_NAMES = new Set(
+  (
+    "Mary Maria Mara Marie Anna Ana Anne Hannah Sarah Sara Emma Emily Olivia Sophia Sofia Isabella Mia Ava Amelia Charlotte Grace " +
+    "Lily Chloe Zoe Ella Nora Leah Lucy Lena Nadia Maya Mira Nina Rosa Rose Clara Alice Helen Elena Eva Eve Julia Laura Linda Susan " +
+    "Karen Lisa Nancy Margaret Martha Ruth Esther Rachel Rebecca Naomi Miriam Judith Diana Delia Irene Iris Ivy Jane Janet Jenny " +
+    "Jennifer Jessica Kate Katie Claire Fiona Amy Beth Ellen Ingrid Greta Priya Aisha Fatima Yasmin Leila Layla Mei Yuki Keiko " +
+    "Carmen Lucia Paula Monica Veronica Sylvia Tessa Vera Wendy Abby Abigail Ada Agnes Bella Carla Carol Cora Daisy Dora Edith " +
+    "Elsa Freya Gwen Hazel Ida Isla Jade Joan June Lara Lila Mabel Maggie Megan Molly Nell Olga Penny Polly Ruby Sally Stella " +
+    "Tara Viola Violet Yara Zara Elise Eliza Elizabeth Beatrice Harriet Imogen Josephine Louise Lydia Natalie Natasha Olive Phoebe " +
+    "Sadie Talia Theresa Ursula Victoria Mariam Amara Ines Marta Magda Hana Noor Rania Sana Anya Katya Irina Svetlana"
+  ).split(" "),
+);
+const MALE_NAMES = new Set(
+  (
+    "John James Jack Jacob Michael David Daniel Samuel Thomas Tom Tommy William Will Henry Harry George Charles Joseph Joe Leo " +
+    "Liam Noah Oliver Ethan Lucas Mason Logan Owen Jonas Jonah Marco Mario Carlos Diego Juan Luis Miguel Pedro Pablo Rafael Omar " +
+    "Ali Ahmed Hassan Ibrahim Karim Ravi Arjun Raj Hiro Kenji Takeshi Ivan Dmitri Sergei Pavel Anton Viktor Hans Klaus Peter Paul " +
+    "Mark Luke Matthew Andrew Adam Ben Benjamin Frank Fred Gary Greg Harold Hugo Ian Isaac Jake Jason Jim Jimmy Joel Kevin Larry " +
+    "Leon Martin Max Nathan Nick Oscar Patrick Ray Richard Rick Robert Bob Roger Ron Ryan Scott Sean Simon Steve Steven Ted Tim " +
+    "Tony Victor Vincent Walter Arthur Albert Alfred Eddie Edward Elliot Felix Finn Gabriel Gus Hank Jasper Kurt Lars Milo Neil " +
+    "Otto Rex Rory Seth Silas Theo Toby Tyler Wade Zach Caleb Eli Elijah Ezra Levi Malik Tariq Yusuf Dev Vikram Sanjay Tomas " +
+    "Mateo Santiago Andre Bruno Emil Erik Fabio Luca Nico Stefan Sven Marcus Julian Adrian Dominic Hector Javier Kofi"
+  ).split(" "),
+);
 
 /**
  * Which characters are "she" and which "he", from the scene itself: role
@@ -2291,6 +2567,9 @@ function characterGenders(scene: string, units: SceneUnit[], characters: string[
   for (const c of characters) {
     const role = genderOf(c);
     if (role) vote(c, role, 10);
+    const given = /^the\s/i.test(c) ? null : c.split(" ")[0];
+    if (given && FEMALE_NAMES.has(given)) vote(c, "she", 4);
+    else if (given && MALE_NAMES.has(given)) vote(c, "he", 4);
     const first = c.replace(/^the\s+/i, "").split(" ")[0];
     const appositive = scene.match(new RegExp(String.raw`\b${first}\b(?:\s*\([^)]*\))?,\s*(?:her|his|their|the|a|an)\s+(?:\w+\s+)?(\w+)`, "i"));
     const appositiveGender = appositive ? genderOf(appositive[1]) : null;
@@ -2301,8 +2580,12 @@ function characterGenders(scene: string, units: SceneUnit[], characters: string[
     const subject = named.length === 1 ? named[0] : null;
     if (!subject) continue;
     const next = units[i + 1];
-    const pronoun = next && next.kind === "action" ? next.text.match(/^(she|he)\b/i)?.[1].toLowerCase() : undefined;
-    if (pronoun && namesIn(next.text, characters).length === 0) vote(subject, pronoun as "she" | "he", 2);
+    const pronoun = next && next.kind === "action" ? next.text.match(LEADING_PRONOUN_RE)?.[1].toLowerCase() : undefined;
+    // "Nadia wipes the counter. She…" is a strong cue; after a role with no gender ("The suspect does not look up. He
+    // slides a photo…") the pronoun is as likely to be the other person, so it only counts when there is no other.
+    if (pronoun && namesIn(next.text, characters).length === 0 && (!/^the\s/i.test(subject) || characters.length === 1)) {
+      vote(subject, pronoun as "she" | "he", 2);
+    }
     // "Maria stares at her phone": a possessive after the only name in the sentence.
     const after = units[i].text.slice(units[i].text.search(new RegExp(`\\b${subject.replace(/^the\s+/i, "").split(" ")[0]}\\b`, "i")));
     if (/\b(her|herself)\b/i.test(after) && !/\b(his|him|himself)\b/i.test(after)) vote(subject, "she", 0.5);
@@ -2313,8 +2596,19 @@ function characterGenders(scene: string, units: SceneUnit[], characters: string[
   return genders;
 }
 
-const PLACE_RE =
-  /\b(kitchen|living room|bedroom|bathroom|hallway|office|diner|bar|car|truck|bus|train|station|platform|street|alley|rooftop|roof|beach|shore|forest|woods|field|farm|barn|church|hospital|ward|classroom|school|gym|warehouse|garage|apartment|motel|hotel room|elevator|stairwell|lighthouse|boat|ship|deck|harbour|harbor|dock|cabin|tent|desert|mountain|lake|river|bridge|parking lot|restaurant|cafe|café|library|courtroom|cell|prison|lab|studio|theatre|theater|backstage|stage|crosswalk|corner|sidewalk|pavement|intersection|square|plaza|park|subway|market|porch|yard|backyard|garden|cemetery|graveyard|airport|terminal|gas station|supermarket|laundromat|pier|boardwalk|highway|bus stop|taxi|cab)\b/gi;
+const PLACE_WORDS = [
+  "kitchen", "living room", "bedroom", "bathroom", "hallway", "office", "diner", "bar", "car", "truck", "bus", "train", "station",
+  "platform", "street", "alley", "rooftop", "roof", "beach", "shore", "forest", "woods", "field", "farm", "barn", "church",
+  "hospital", "ward", "classroom", "school", "gym", "warehouse", "garage", "apartment", "motel", "hotel room", "elevator",
+  "stairwell", "lighthouse", "boat", "ship", "deck", "harbour", "harbor", "dock", "cabin", "tent", "desert", "mountain", "lake",
+  "river", "bridge", "parking lot", "restaurant", "cafe", "café", "library", "courtroom", "cell", "prison", "lab", "studio",
+  "theatre", "theater", "backstage", "stage", "crosswalk", "corner", "sidewalk", "pavement", "intersection", "square", "plaza",
+  "park", "subway", "market", "porch", "yard", "backyard", "garden", "cemetery", "graveyard", "airport", "terminal", "gas station",
+  "supermarket", "laundromat", "pier", "boardwalk", "highway", "bus stop", "taxi", "cab", "interrogation room", "waiting room",
+  "dining room", "hospital room", "motel room", "attic", "basement", "cellar",
+];
+// Longest first, so "bus stop" wins over "bus" and "hotel room" over "hotel".
+const PLACE_RE = new RegExp(String.raw`\b(${[...PLACE_WORDS].sort((a, b) => b.length - a.length).join("|")})\b`, "gi");
 const EXTERIOR_PLACE_RE =
   /street|alley|rooftop|roof|beach|shore|forest|woods|field|farm|desert|mountain|lake|river|bridge|parking lot|dock|harbou?r|deck|crosswalk|corner|sidewalk|pavement|intersection|square|plaza|park|porch|yard|garden|cemetery|graveyard|pier|boardwalk|highway|bus stop/i;
 
@@ -2331,13 +2625,24 @@ function parseScene(scene: string): ParsedScene {
   } else {
     characters = proseCharacters(scene);
   }
+  if (characters.length === 0) {
+    // "She walks into the kitchen…": nobody is named, but the pronouns still say who's there.
+    for (const u of units) {
+      const p = u.kind === "action" ? u.text.match(LEADING_PRONOUN_RE)?.[1].toLowerCase() : undefined;
+      const who = p === "she" ? "the woman" : p === "he" ? "the man" : null;
+      if (who && !characters.includes(who)) characters.push(who);
+    }
+  }
 
   if (!location) {
     // Prefer the place people are *in* ("at the crosswalk") over a landmark they pass ("past the church").
     let best: { word: string; score: number; index: number } | null = null;
     for (const m of scene.matchAll(PLACE_RE)) {
       const before = scene.slice(Math.max(0, (m.index ?? 0) - 16), m.index).toLowerCase();
-      const score = /\b(in|inside|into|at|on|across|through|onto)\s+(the|a|an|his|her|their|our|my)?\s*$/.test(before)
+      // "Church bells ring", "car keys": a place word modifying another noun isn't where the scene is.
+      const next = scene.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 16).match(/^\s+([a-z]+)/i)?.[1]?.toLowerCase();
+      if (next && PLURAL_NOUNS.has(next)) continue;
+      const score = /\b(in|inside|into|at|on|across|through|onto|by|beside)\s+(the|a|an|his|her|their|our|my)?\s*$/.test(before)
         ? 2
         : /\b(past|near|beyond|toward|towards|behind|outside|from|of|above|below|over)\s+(the|a|an|his|her|their|our|my)?\s*$/.test(before)
           ? -1
@@ -2365,15 +2670,48 @@ const OBJECT_TERMS = [
   "suitcase", "camera", "tape", "screen", "laptop", "coin", "flower", "flowers", "plate", "table", "hand", "hands", "pen",
   "contract", "passport", "gift", "shoe", "shoes", "helmet", "radio", "lamp", "message", "text", "coffee", "photograph",
 ];
+/** Object words that are also verbs ("bells ring", "they watch", "she notes"): they only count after a determiner. */
+const VERBISH_OBJECTS = new Set(["ring", "watch", "note", "file", "tape", "text", "screen", "box", "bag", "map", "hand", "hands", "cards", "plate", "book", "lamp"]);
+const verbishNounRe = new Map<string, RegExp>();
+
+/** The props a line mentions, skipping object words used as verbs ("Church bells ring" has no ring in it). */
+function objectsIn(text: string): string[] {
+  return hits(text, OBJECT_TERMS).filter((o) => {
+    if (!VERBISH_OBJECTS.has(o)) return true;
+    let re = verbishNounRe.get(o);
+    if (!re) {
+      re = new RegExp(String.raw`\b(?:a|an|the|his|her|their|my|our|its|this|that|your|one|two|each|every|no)\s+(?:[a-z'’-]+\s+){0,2}${o}\b`, "i");
+      verbishNounRe.set(o, re);
+    }
+    return re.test(text);
+  });
+}
+
+/** Everyday nouns that open sentences in scene description; capitalised there, they still aren't names. */
+const COMMON_NOUNS = new Set<string>([
+  ...PLACE_WORDS.filter((w) => !w.includes(" ")),
+  ...OBJECT_TERMS,
+  ...ROLE_NOUNS.split("|").map((r) => r.replace(/\W/g, "")),
+  ...[...SCENE_NOUNS].map((n) => n.toLowerCase()),
+  "bells", "doors", "door", "engine", "sirens", "morning", "night", "evening", "dawn", "dusk", "sun", "moon", "sky", "wind",
+]);
 const HANDLING_TERMS = ["picks up", "holds", "reads", "opens", "slides", "places", "finds", "pulls out", "hands", "grips", "clutches", "unfolds", "drops", "pockets", "sets down", "turns over", "lights", "pours", "writes", "signs", "tears", "hides", "puts"];
 const LOOK_TERMS = ["looks at", "sees", "watches", "stares at", "glances at", "notices", "spots", "studies"];
-const TURN_STRONG = ["realizes", "realises", "understands", "decides", "recognizes", "recognises", "knows", "breaks down", "cries", "sobs", "laughs", "smiles", "gasps"];
+const TURN_STRONG = [
+  "realizes", "realises", "understands", "decides", "recognizes", "recognises", "knows", "breaks down", "cries", "starts to cry",
+  "begins to cry", "starts crying", "bursts into tears", "weeps", "sobs", "laughs", "starts to laugh", "smiles", "gasps",
+];
+/** A closing line with one of these ends on a face. */
+const CLOSING_FACE_TERMS: readonly string[] = [...LEXICON.emotion, ...TURN_STRONG];
 const TURN_WEAK = ["freezes", "stops", "hesitates", "stares", "silence", "beat", "pause", "tears", "swallows", "breath", "breathes", "finally", "slowly"];
 const POWER_TERMS = ["towers", "looms", "stands over", "orders", "commands", "threatens", "grabs", "demands", "corners", "blocks", "steps closer", "leans in", "glares", "points the gun", "raises the gun"];
 const VULNERABLE_TERMS = ["alone", "shrinks", "cowers", "collapses", "kneels", "sinks", "curls", "trembles", "slumps", "falls to"];
 const CHAOS_TERMS = ["runs", "chase", "chases", "crash", "crashes", "fight", "fights", "struggle", "struggles", "explodes", "screams", "scrambles", "shoves", "bursts", "smashes", "races", "lunges", "flees", "tackles", "sprints"];
 const MOVE_TERMS = ["walks", "crosses", "enters", "follows", "drives", "paces", "climbs", "approaches", "wanders", "arrives", "heads"];
 const DISORIENT_TERMS = ["dizzy", "drunk", "spins", "nightmare", "blur", "blurs", "woozy", "reels", "sways"];
+const READING_TERMS = ["reads", "writes", "signs"];
+const PAUSE_TERMS = ["silence", "beat", "pause"];
+const FOLLOW_TERMS = ["follows", "wanders", "paces"];
 const DEPART_TERMS = ["leaves", "walks away", "walks out", "exits", "door closes", "drives off", "drives away", "is gone", "disappears", "shuts the door", "turns away", "storms out"];
 
 const SOUND_CUES: { terms: string[]; sound: string; ambient: boolean }[] = [
@@ -2434,6 +2772,23 @@ interface ShotDraft extends Omit<Shot, "number" | "lens"> {
   lens?: string;
 }
 
+/**
+ * An action line that continues the previous subject without naming it:
+ * "Kneels.", "Digs.", "Doesn't touch them." — a verb first, not a noun
+ * ("Waves roll in", "Stalls explode").
+ */
+function continuesSubject(text: string): boolean {
+  const first = text.match(/^(?:([Dd]oesn['’]t|[Dd]oes not|[Dd]idn['’]t|[Cc]an['’]t|[Ww]on['’]t)\b|([A-Z][a-z]+s)\b(?![',’]))/);
+  if (!first) return false;
+  if (first[1]) return true;
+  const word = first[2].toLowerCase();
+  return !COMMON_NOUNS.has(word) && !PLURAL_NOUNS.has(word) && !NAME_STOPWORDS.has(first[2]) && !SCENE_NOUNS.has(first[2]);
+}
+
+/** A subject pronoun opening an action, perhaps after a short lead-in: "She…", "For a moment he…", "Then, slowly, they…". */
+const LEADING_PRONOUN_RE =
+  /^(?:(?:for a (?:moment|second|beat|long moment)|then|now|slowly|suddenly|finally|still|again|at last|once more|without a word|then,? slowly)\s*,?\s+)?(she|he|they)\b/i;
+
 function namesIn(text: string, characters: string[]): string[] {
   return characters.filter((c) => new RegExp(`\\b${c.replace(/^the\s+/i, "").split(" ")[0]}\\b`, "i").test(text));
 }
@@ -2446,7 +2801,7 @@ function unitImportance(unit: SceneUnit): number {
   const t = unit.text;
   return (
     turnScore(unit) +
-    hits(t, OBJECT_TERMS).length * (hits(t, HANDLING_TERMS).length > 0 ? 1.5 : 0.25) +
+    objectsIn(t).length * (hits(t, HANDLING_TERMS).length > 0 ? 1.5 : 0.25) +
     hits(t, POWER_TERMS).length +
     hits(t, CHAOS_TERMS).length +
     hits(t, VULNERABLE_TERMS).length +
@@ -2463,20 +2818,26 @@ interface CoverageState {
   turnIndex: number;
   /** Characters by most recent mention, for resolving "she"/"he". */
   recent: string[];
+  /** Who said the previous unit, when it was a line of dialogue (unattributed lines in prose alternate). */
+  previousLineBy: string | null;
 }
 
-/** Who "she"/"he" most likely is: the most recently mentioned character with that pronoun. */
-function resolvePronoun(pronoun: string, scene: ParsedScene, state: CoverageState): string {
+/**
+ * Who "she"/"he" most likely is: the most recently mentioned character with
+ * that pronoun; else, by elimination, the only character whose pronoun isn't
+ * known (or the only character at all). When it's still ambiguous the subject
+ * stays generic ("the woman") rather than guessing — pinning a line on the
+ * wrong person is worse than not naming one.
+ */
+function resolvePronoun(pronoun: string, scene: ParsedScene, state: CoverageState, exclude: readonly string[] = []): string {
   const p = pronoun.toLowerCase();
   if (p !== "she" && p !== "he") return state.lastSubject;
-  const pool = [...state.recent, ...scene.characters.filter((c) => !state.recent.includes(c))];
+  const pool = [...state.recent, ...scene.characters.filter((c) => !state.recent.includes(c))].filter((c) => !exclude.includes(c));
   const match = pool.find((c) => scene.genders.get(c) === p);
   if (match) return match;
-  // No character is known to be "she"/"he": stay with the current subject unless it's known to be the other one.
-  if (scene.genders.get(state.lastSubject) && scene.genders.get(state.lastSubject) !== p) {
-    return pool.find((c) => !scene.genders.has(c)) ?? state.lastSubject;
-  }
-  return state.lastSubject;
+  const unknown = scene.characters.filter((c) => !scene.genders.has(c) && !exclude.includes(c));
+  if (unknown.length === 1) return unknown[0];
+  return p === "she" ? "the woman" : "the man";
 }
 
 /** The character a unit is about: its speaker, the attributed speaker, the first name in it, or whoever its pronoun points to. */
@@ -2488,10 +2849,18 @@ function unitSubject(unit: SceneUnit, scene: ParsedScene, state: CoverageState):
     if (known) return known;
     if (/^(she|he)$/i.test(hint)) return resolvePronoun(hint, scene, state);
   }
+  // An unattributed line straight after another is the other person's reply.
+  if (unit.kind === "dialogue" && state.previousLineBy && scene.characters.length >= 2) {
+    const reply = [...state.recent, ...scene.characters].find((c) => c !== state.previousLineBy && scene.characters.includes(c));
+    if (reply) return reply;
+  }
   const named = namesIn(unit.text, scene.characters);
+  const pronoun = unit.text.match(LEADING_PRONOUN_RE)?.[1];
+  // "She offers one to Beth": the pronoun is the subject, and it isn't Beth.
+  if (pronoun && unit.kind === "action") return resolvePronoun(pronoun, scene, state, named);
   if (named.length > 0 && unit.kind === "action") return named[0];
-  const pronoun = unit.text.match(/^(she|he)\b/i)?.[1];
   if (pronoun) return resolvePronoun(pronoun, scene, state);
+  if (unit.kind === "action" && named.length === 0 && continuesSubject(unit.text)) return state.lastSubject;
   return named[0] ?? state.lastSubject;
 }
 
@@ -2501,20 +2870,22 @@ function noteMentions(unit: SceneUnit, subject: string, scene: ParsedScene, stat
   const byLastMention = namesIn(unit.text, scene.characters).sort(
     (a, b) => lower.lastIndexOf(b.replace(/^the\s+/i, "").split(" ")[0].toLowerCase()) - lower.lastIndexOf(a.replace(/^the\s+/i, "").split(" ")[0].toLowerCase()),
   );
-  const mentioned = unit.speaker || /^(she|he)\b/i.test(unit.text) ? [subject, ...byLastMention] : [...byLastMention, subject];
+  const pronounLed = /^(?:she|he)$/i.test(unit.text.match(LEADING_PRONOUN_RE)?.[1] ?? "");
+  const mentioned = unit.speaker || pronounLed ? [subject, ...byLastMention] : [...byLastMention, subject];
   state.recent = [...new Set([...mentioned, ...state.recent])];
   if (unit.speaker) state.lastSpeaker = unit.speaker;
-  if (unit.speaker || byLastMention.length > 0 || /^(she|he)\b/i.test(unit.text) || unit.speakerHint) state.lastSubject = subject;
+  state.previousLineBy = unit.kind === "dialogue" ? subject : null;
+  if (unit.speaker || byLastMention.length > 0 || pronounLed || unit.speakerHint) state.lastSubject = subject;
 }
 
 function shotForUnit(unit: SceneUnit, index: number, scene: ParsedScene, state: CoverageState): ShotDraft {
   const t = unit.text;
   const chars = scene.characters;
   const named = namesIn(t, chars);
-  const pronounStart = /^(she|he|they)\b/i.test(t);
+  const pronounStart = LEADING_PRONOUN_RE.test(t) || (unit.kind === "action" && named.length === 0 && continuesSubject(t));
   const subject = unitSubject(unit, scene, state);
   const action = unit.kind === "dialogue" ? `${unit.speaker ? `${unit.speaker}: ` : ""}"${truncateWords(t, 18)}"` : truncateWords(t, 22);
-  const objects = hits(t, OBJECT_TERMS).filter((o) => !["hand", "hands", "table", "text"].includes(o));
+  const objects = objectsIn(t).filter((o) => !["hand", "hands", "table", "text"].includes(o));
   const base = { subject, action, sound: unit.kind === "dialogue" ? "" : soundFor(t) };
   const isTurn = index === state.turnIndex;
   const other = chars.find((c) => c !== subject) ?? null;
@@ -2524,7 +2895,7 @@ function shotForUnit(unit: SceneUnit, index: number, scene: ParsedScene, state: 
       ...base,
       size: "extreme-close-up",
       framing: "insert",
-      angle: hits(t, ["reads", "writes", "signs"]).length > 0 ? "overhead" : "eye-level",
+      angle: hits(t, READING_TERMS).length > 0 ? "overhead" : "eye-level",
       movement: "static",
       subject: `The ${objects[0]}`,
       purpose: `Make the ${objects[0]} a character — the audience has to register it before it matters.`,
@@ -2552,7 +2923,7 @@ function shotForUnit(unit: SceneUnit, index: number, scene: ParsedScene, state: 
       purpose: `Put us behind ${subject}'s eyes so we discover it at the same moment.`,
     };
   }
-  if (hits(t, TURN_WEAK).length > 0 && (unit.kind === "dialogue" || named.length > 0 || pronounStart || hits(t, ["silence", "beat", "pause"]).length > 0)) {
+  if (hits(t, TURN_WEAK).length > 0 && (unit.kind === "dialogue" || named.length > 0 || pronounStart || hits(t, PAUSE_TERMS).length > 0)) {
     // A pause or hesitation: hold it on the face of whoever is absorbing the moment.
     const reactor =
       unit.kind === "action" && named.length === 0 && !pronounStart && state.lastSpeaker
@@ -2597,7 +2968,7 @@ function shotForUnit(unit: SceneUnit, index: number, scene: ParsedScene, state: 
     return { ...base, size: "medium-wide", framing: "single", angle: "high", movement: "static", purpose: `Look down on ${subject} — the frame itself makes them small.` };
   }
   if (unit.kind === "action" && hits(t, MOVE_TERMS).length > 0) {
-    return { ...base, size: "full", framing: "single", angle: "eye-level", movement: hits(t, ["follows", "wanders", "paces"]).length > 0 ? "steadicam" : "tracking", lens: "32mm on a gimbal", purpose: `Move with ${subject} so the blocking carries the story — we travel the space with them.` };
+    return { ...base, size: "full", framing: "single", angle: "eye-level", movement: hits(t, FOLLOW_TERMS).length > 0 ? "steadicam" : "tracking", lens: "32mm on a gimbal", purpose: `Move with ${subject} so the blocking carries the story — we travel the space with them.` };
   }
   if (unit.kind === "dialogue") {
     if (!state.twoShotDone && chars.length >= 2) {
@@ -2642,34 +3013,40 @@ const DEFAULT_INTENT: Record<string, { lead: string; tail: string }> = {
   restrained: { lead: "Quiet pressure", tail: "the audience should sense what's unspoken before anyone says it" },
 };
 
+const TENSE_MOOD = ["tense", "tension", "thriller", "paranoid", "suspense", "claustrophobic", "dread", "menace", "threat", "anxious", "secret"];
+const EERIE_MOOD = ["horror", "creepy", "haunted", "eerie", "unsettling"];
+const MELANCHOLY_MOOD = ["grief", "loss", "mourning", "sad", "melancholy", "funeral", "lonely", "alone"];
+const TENDER_MOOD = ["tender", "warm", "nostalgic", "love", "intimate", "gentle", "romantic", "hopeful", "kindness"];
+const COMIC_MOOD = ["comedy", "comic", "funny", "deadpan", "absurd", "farce"];
+const MOOD_TERMS = [...TENSE_MOOD, ...EERIE_MOOD, ...MELANCHOLY_MOOD, ...TENDER_MOOD, ...COMIC_MOOD];
+
 function visualConceptFor(scene: ParsedScene, intent: string, allText: string): { concept: string; mood: string } {
   // The director's stated intent outranks whatever the scene's words suggest.
-  const moodTerms = ["tense", "tension", "thriller", "paranoid", "suspense", "claustrophobic", "dread", "menace", "threat", "anxious", "secret", "horror", "creepy", "haunted", "eerie", "unsettling", "grief", "loss", "mourning", "sad", "melancholy", "funeral", "lonely", "alone", "tender", "warm", "nostalgic", "love", "intimate", "gentle", "romantic", "hopeful", "kindness", "comedy", "comic", "funny", "deadpan", "absurd", "farce"];
-  const probe = hits(intent, moodTerms).length > 0 ? intent : `${intent} ${allText}`;
+  const probe = hits(intent, MOOD_TERMS).length > 0 ? intent : `${intent} ${allText}`;
   let palette = "natural, slightly desaturated tones with one warm accent";
   let lighting = "soft, motivated light from a single source";
   let mood = "restrained";
-  if (hits(probe, ["tense", "tension", "thriller", "paranoid", "suspense", "claustrophobic", "dread", "menace", "threat", "anxious", "secret"]).length > 0) {
+  if (hits(probe, TENSE_MOOD).length > 0) {
     palette = "cool steel blues and greens broken by sodium-orange practicals";
     lighting = "low-key and hard from the side, with deep shadows the audience can't see into";
     mood = "tense";
-  } else if (hits(probe, ["horror", "creepy", "haunted", "eerie", "unsettling"]).length > 0) {
+  } else if (hits(probe, EERIE_MOOD).length > 0) {
     palette = "sickly greens against crushed blacks";
     lighting = "under-lit, with pools of darkness at the frame edges";
     mood = "eerie";
-  } else if (hits(intent, KINETIC_INTENT_TERMS).length > 0 || (hits(intent, moodTerms).length === 0 && hits(allText, KINETIC_TERMS).length >= 2)) {
+  } else if (hits(intent, KINETIC_INTENT_TERMS).length > 0 || (hits(intent, MOOD_TERMS).length === 0 && hits(allText, KINETIC_TERMS).length >= 2)) {
     palette = "high-contrast night colour — hard practicals, wet reflections, deep blacks";
     lighting = "hard and directional, with light sources that move through frame";
     mood = "kinetic";
-  } else if (hits(probe, ["grief", "loss", "mourning", "sad", "melancholy", "funeral", "lonely", "alone"]).length > 0) {
+  } else if (hits(probe, MELANCHOLY_MOOD).length > 0) {
     palette = "desaturated greys and slate blues with a single warm object in frame";
     lighting = "flat, overcast window light — no glamour";
     mood = "melancholy";
-  } else if (hits(probe, ["tender", "warm", "nostalgic", "love", "intimate", "gentle", "romantic", "hopeful", "kindness"]).length > 0) {
+  } else if (hits(probe, TENDER_MOOD).length > 0) {
     palette = "warm ambers and faded greens";
     lighting = "soft, wrapped key light, golden where the story allows it";
     mood = "tender";
-  } else if (hits(probe, ["comedy", "comic", "funny", "deadpan", "absurd", "farce"]).length > 0) {
+  } else if (hits(probe, COMIC_MOOD).length > 0) {
     palette = "clean, bright, slightly saturated colours";
     lighting = "high-key and even, so nothing competes with the timing";
     mood = "comic";
@@ -2708,6 +3085,87 @@ const SHOT_GRAMMAR_WORDS = new Set([
 
 /** Kinds of moment that different wording can share ("leaves" / "walks out"). */
 const MOMENT_CONCEPTS: readonly (readonly string[])[] = [DEPART_TERMS, LOOK_TERMS, HANDLING_TERMS.filter((t) => t !== "hands"), CHAOS_TERMS, TURN_STRONG];
+
+/** Objects too generic to say what a shot is of ("hands" are in half the inserts). */
+const IGNORED_OBJECTS = new Set(["hand", "hands", "text"]);
+
+type ShotIdeaSubject = { kind: "character" | "object" | "place"; term: string };
+
+/**
+ * What a shot idea puts in frame: the first character, object or location it
+ * names ("Over-the-shoulder of Daniel at the door" → Daniel; "Close-up on the
+ * envelope as Tom slides it" → the envelope).
+ */
+function shotIdeaSubject(shot: string, scene: ParsedScene): ShotIdeaSubject | null {
+  let best: (ShotIdeaSubject & { at: number }) | null = null;
+  const consider = (kind: ShotIdeaSubject["kind"], term: string, key: string) => {
+    const at = shot.search(new RegExp(String.raw`\b${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\b`, "i"));
+    if (at >= 0 && (!best || at < best.at)) best = { kind, term, at };
+  };
+  for (const c of scene.characters) consider("character", c, c.replace(/^the\s+/i, "").split(" ")[0]);
+  for (const o of hits(shot, OBJECT_TERMS)) if (!IGNORED_OBJECTS.has(o)) consider("object", o, o);
+  for (const w of words(scene.location ?? "")) if (w.length > 3) consider("place", w, w);
+  if (!best) return null;
+  const { kind, term } = best;
+  return { kind, term };
+}
+
+/** A shot idea's framing, from its size words: "ots", "insert", "pov", "two-shot", "wide", "close" or "medium". */
+function ideaFraming(size: string | null): string | null {
+  if (!size) return null;
+  if (/over[- ]the[- ]shoulder|ots/.test(size)) return "ots";
+  if (/insert/.test(size)) return "insert";
+  if (/pov/.test(size)) return "pov";
+  if (/two[- ]shot/.test(size)) return "two-shot";
+  if (/wide|ws|establishing|long shot|full shot/.test(size)) return "wide";
+  if (/close|cu|ecu|tight/.test(size)) return "close";
+  return "medium";
+}
+
+function planFraming(shot: Shot): string {
+  if (shot.framing === "over-the-shoulder") return "ots";
+  if (shot.framing === "insert") return "insert";
+  if (shot.framing === "pov") return "pov";
+  if (shot.framing === "two-shot") return "two-shot";
+  if (shot.framing === "establishing" || shot.size === "wide" || shot.size === "extreme-wide" || shot.size === "full") return "wide";
+  if (shot.size === "close-up" || shot.size === "extreme-close-up") return "close";
+  return "medium";
+}
+
+/**
+ * The plan shot a writer's idea duplicates, if any. The idea's subject has to
+ * be the plan shot's subject — the character or object it frames, not a noun
+ * that happens to appear in its action ("Daniel at the door" isn't the insert
+ * of the open door). Then either the framing matches (an over-the-shoulder
+ * of Daniel and the plan's over-the-shoulder with Daniel in it) or the moment
+ * does (shared action words, or the same kind of beat — an exit, a look).
+ * A matching framing outweighs a shared word.
+ */
+function samePlanShot(shot: string, size: string | null, subject: ShotIdeaSubject, plan: Shot[], scene: ParsedScene): { shot: Shot; sameMoment: boolean } | null {
+  const framing = ideaFraming(size);
+  const nameWords = new Set(scene.characters.flatMap((c) => words(c)));
+  const subjectWords = new Set(words(subject.term));
+  const terms = new Set(words(shot).filter((w) => w.length > 3 && !SHOT_GRAMMAR_WORDS.has(w) && !nameWords.has(w) && !subjectWords.has(w)));
+  const concepts = MOMENT_CONCEPTS.filter((c) => hits(shot, c).length > 0);
+  let best: { shot: Shot; sameMoment: boolean; score: number } | null = null;
+  for (const p of plan) {
+    const framed =
+      subject.kind === "character"
+        ? namesIn(p.subject, [subject.term]).length > 0
+        : subject.kind === "object"
+          ? hits(p.subject, [subject.term]).length > 0
+          : p.framing === "establishing" && words(p.subject).includes(subject.term);
+    if (!framed) continue;
+    const kind = planFraming(p);
+    const framingMatch =
+      framing !== null && (framing === kind || (subject.kind === "object" && (framing === "close" || framing === "insert") && (kind === "insert" || kind === "close")));
+    const shared = new Set(words(p.action).filter((w) => terms.has(w))).size + concepts.filter((c) => hits(p.action, c).length > 0).length * 2;
+    if (!framingMatch && shared === 0) continue;
+    const score = (framingMatch ? 2 : 0) + shared * 1.5;
+    if (!best || score > best.score) best = { shot: p, sameMoment: shared > 0, score };
+  }
+  return best ? { shot: best.shot, sameMoment: best.sameMoment } : null;
+}
 
 /** A prompt for a shot with no stated purpose — varied, so a list of ideas doesn't get the same sentence each time. */
 function purposePrompt(index: number): string {
@@ -2752,31 +3210,17 @@ function feedbackForUserShot(shot: string, index: number, plan: Shot[], scene: P
     notes.push("A wide gives geography; decide whether it's here to orient us or to make a character look small — framing and lens differ for each.");
   }
 
-  // The plan shot covering the same moment must share a character or an object *and* what happens —
-  // a shared name alone ("Mara") or a shared shot type ("over-the-shoulder") isn't the same moment.
+  const subject = shotIdeaSubject(shot, scene);
+  const match = subject ? samePlanShot(shot, size?.[1] ?? null, subject, plan, scene) : null;
   const shotNames = namesIn(shot, scene.characters);
-  const shotObjects = hits(shot, OBJECT_TERMS).filter((o) => !["hand", "hands", "text"].includes(o));
-  const nameWords = new Set(scene.characters.flatMap((c) => words(c)));
-  const terms = new Set(words(shot).filter((w) => w.length > 3 && !SHOT_GRAMMAR_WORDS.has(w) && !nameWords.has(w)));
-  const concepts = MOMENT_CONCEPTS.filter((c) => hits(shot, c).length > 0);
-  let match: Shot | null = null;
-  let matchScore = 0;
-  for (const p of plan) {
-    const text = `${p.subject} ${p.action}`;
-    const anchors = namesIn(text, shotNames).length + hits(text, shotObjects).length;
-    const action = new Set(words(text).filter((w) => terms.has(w))).size + concepts.filter((c) => hits(text, c).length > 0).length * 2;
-    if (anchors === 0 || action === 0) continue;
-    const score = anchors * 2 + action;
-    if (score > matchScore) {
-      match = p;
-      matchScore = score;
-    }
-  }
+  const shotObjects = hits(shot, OBJECT_TERMS).filter((o) => !IGNORED_OBJECTS.has(o));
   const locationWords = words(scene.location ?? "").filter((w) => w.length > 3);
   const anchored = shotNames.length > 0 || shotObjects.length > 0 || locationWords.some((w) => words(shot).includes(w));
   if (!hasPurpose && notes.length < 2) notes.push(purposePrompt(index));
-  if (match) {
-    notes.push(`It covers the same moment as shot ${match.number} in the plan (${SHOT_SIZE_INFO[match.size].label.toLowerCase()}, ${match.movement.replace("-", " ")}) — compare the two and keep whichever tells the story more clearly.`);
+  if (match?.sameMoment) {
+    notes.push(`It covers the same moment as shot ${match.shot.number} in the plan (${SHOT_SIZE_INFO[match.shot.size].label.toLowerCase()}, ${match.shot.movement.replace("-", " ")}) — compare the two and keep whichever tells the story more clearly.`);
+  } else if (match) {
+    notes.push(`The plan already has this set-up: shot ${match.shot.number}, ${inSentence(match.shot.subject)} in ${SHOT_SIZE_INFO[match.shot.size].label.toLowerCase()} — keep one, or give yours a different beat to cover.`);
   } else if (!anchored && !drone) {
     notes.push("Anchor it to someone or something in the scene so the crew knows exactly what's in frame.");
   }
@@ -2799,17 +3243,23 @@ export function demoShots(req: Pick<ShotsRequest, "scene" | "intent" | "userShot
   const closingIndex = units.length > 2 ? units.length - 1 : -1;
   const middle = units.map((unit, index) => ({ unit, index })).filter((u) => u.index !== establishingIndex && u.index !== closingIndex);
 
-  // The turn: the strongest realisation beat, preferring the back half of the scene.
+  // The turn: the strongest realisation beat, preferring the back half of the scene. A punchy line after a longer
+  // one there ("Dead end.", "He leaps.") is the writer marking a beat with rhythm, so it counts too.
+  // Only after someone is on screen: a push-in on a character who hasn't appeared yet has nothing to land on.
+  const firstPresence = units.findIndex((u) => u.kind === "dialogue" || namesIn(u.text, chars).length > 0 || LEADING_PRONOUN_RE.test(u.text));
+  const turnCandidates = firstPresence < 0 ? middle : middle.filter((m) => m.index >= firstPresence);
   let turnIndex = -1;
   let bestTurn = 0;
-  for (const { unit, index } of middle) {
-    const score = turnScore(unit) + (index >= units.length / 2 ? 0.5 : 0);
+  for (const { unit, index } of turnCandidates) {
+    const backHalf = index >= units.length / 2;
+    const punch = backHalf && unit.kind === "action" && words(unit.text).length <= 3 && index > 0 && words(units[index - 1].text).length >= 6 ? 1.5 : 0;
+    const score = turnScore(unit) + (backHalf ? 0.5 : 0) + punch;
     if (score > bestTurn) {
       bestTurn = score;
       turnIndex = index;
     }
   }
-  if (turnIndex < 0 && middle.length > 0) turnIndex = middle[Math.floor(middle.length * 0.66)].index;
+  if (turnIndex < 0 && turnCandidates.length > 0) turnIndex = turnCandidates[Math.floor(turnCandidates.length * 0.66)].index;
 
   const target = clamp(Math.round(units.length * 0.8) + 2, 6, 14);
   const middleBudget = target - 2;
@@ -2827,7 +3277,7 @@ export function demoShots(req: Pick<ShotsRequest, "scene" | "intent" | "userShot
     chosen = chosen.filter((c) => keep.has(c.index));
   }
 
-  const state: CoverageState = { twoShotDone: false, lastSubject: protagonist, lastSpeaker: null, turnIndex, recent: [] };
+  const state: CoverageState = { twoShotDone: false, lastSubject: protagonist, lastSpeaker: null, turnIndex, recent: [], previousLineBy: null };
   const drafts: ShotDraft[] = [];
 
   // 1. Establishing.
@@ -2921,7 +3371,7 @@ export function demoShots(req: Pick<ShotsRequest, "scene" | "intent" | "userShot
       purpose: `Pull back and leave ${closingSubject} alone in a frame that's suddenly too big for them.`,
       sound: soundFor(lastText) || ambientFor(scene, allText),
     };
-  } else if (last && (last.kind === "dialogue" || hits(lastText, [...LEXICON.emotion, ...TURN_STRONG]).length > 0)) {
+  } else if (last && (last.kind === "dialogue" || hits(lastText, CLOSING_FACE_TERMS).length > 0)) {
     closing = {
       size: "close-up", framing: "single", angle: "eye-level", movement: "static", subject: closingSubject,
       action: last.kind === "dialogue" ? `${closingSubject}: "${truncateWords(lastText, 16)}"` : truncateWords(lastText, 18),

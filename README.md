@@ -35,7 +35,8 @@ npm run dev                  # http://localhost:3000
   effort. Refusals retry server-side on a fallback model (`fallbacks: "default"`).
 - **Demo mode.** With no key set, the app still works end to end. An offline heuristic coach in
   `src/lib/demo/` produces deterministic feedback in the same shape, and a "Demo coach" badge shows
-  in the UI.
+  in the UI. The offline coach reads English only: text that is clearly in another language gets a
+  `422` with `code: "unsupported_language"` and a note explaining why, instead of a score.
 
 | Variable | Purpose |
 | --- | --- |
@@ -43,6 +44,29 @@ npm run dev                  # http://localhost:3000
 | `ODYSSEUSX_MODEL` | Override the model (default `claude-opus-5-5`). |
 | `ODYSSEUSX_MODE` | Force `live` or `demo`. Use `live` when credentials come from an `ant auth login` profile rather than an env var. |
 | `ODYSSEUSX_DISABLE_FALLBACKS` | Set to `1` when routing through a gateway or cloud platform that doesn't accept the `fallbacks` parameter. |
+| `ODYSSEUSX_RATE_LIMIT_PER_MINUTE` | Live-mode AI calls per minute per client (default `20`, bursts allowed up to the same number). `0` turns it off. |
+| `ODYSSEUSX_DEMO_RATE_LIMIT_PER_MINUTE` | Demo-mode AI calls per minute per client (default `60`). The offline coach costs server CPU, so it's limited too, just more loosely. `0` turns it off. |
+| `ODYSSEUSX_GLOBAL_RATE_LIMIT_PER_MINUTE` | AI calls per minute for all clients together, per mode (default 10 × the per-client limit: `200` live, `600` demo). A backstop against clients rotating addresses. `0` turns it off. |
+| `ODYSSEUSX_TRUSTED_PROXY_HOPS` | How many proxies in front of the app append to `X-Forwarded-For` (default `1`). See [Deploying publicly](#deploying-publicly). |
+
+### Deploying publicly
+
+Every AI route (`/api/coach/*`, `/api/lab/*`, `/api/daily`) accepts only same-origin requests, caps
+bodies at 1 MB, and rate-limits each client with an in-memory token bucket (per server instance), plus
+a global bucket per mode. Rate-limited calls get `429` with a `Retry-After` header. Every error body
+has the shape `{ "error": "…", "code": "…" }`.
+
+Route handlers can't see the socket address, so the client is identified from headers, and the left end
+of `X-Forwarded-For` is whatever the client sent. Tell the app how many proxies to trust:
+
+- **Behind one reverse proxy or load balancer** that appends to `X-Forwarded-For` (nginx with
+  `$proxy_add_x_forwarded_for`, AWS ALB, Fly, Render…): the default `ODYSSEUSX_TRUSTED_PROXY_HOPS=1`
+  uses the rightmost entry, the address that proxy saw.
+- **Behind a CDN and a proxy**: set it to the number of hops, e.g. `2`.
+- **On Vercel**: nothing to set; the platform's `x-vercel-forwarded-for` header is used.
+- **Exposed directly with `npm start`**: set `ODYSSEUSX_TRUSTED_PROXY_HOPS=0`. Forwarded headers are
+  then ignored and all clients share one bucket, so raise the per-client limits accordingly (or, better,
+  put a proxy in front).
 
 ## Scripts
 
@@ -88,4 +112,4 @@ src/
   (the equivalent of Letter AI's manager view)
 - Upload a short film or storyboard frames for visual feedback (Claude vision)
 - Custom scenarios authored by coaches, and certification paths
-- Rate limiting and usage metering for the AI routes before a public deployment
+- Shared rate limiting across server instances (e.g. Redis) and per-user usage metering once there are accounts
