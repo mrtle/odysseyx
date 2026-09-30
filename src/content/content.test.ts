@@ -122,6 +122,19 @@ describe("lesson ids", () => {
     }
   });
 
+  it.each(TRACKS.map((t) => [t.id, t] as const))(
+    "%s quizzes can't be gamed by always picking the longest option",
+    (_id, track) => {
+      const questions = track.lessons.flatMap((l) => l.quiz);
+      const longest = questions.filter((q) => {
+        const lengths = q.options.map((o) => o.length);
+        return lengths[q.answerIndex] === Math.max(...lengths);
+      }).length;
+      // With 4 options, chance is 25%; allow some slack but never a reliable tell.
+      expect(longest / questions.length).toBeLessThanOrEqual(0.4);
+    },
+  );
+
   it("vary the correct quiz answer position across the curriculum", () => {
     const positions = new Set(ALL_LESSONS.flatMap((l) => l.quiz.map((q) => q.answerIndex)));
     expect(positions.size).toBeGreaterThanOrEqual(3);
