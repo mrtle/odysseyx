@@ -77,6 +77,21 @@ of `X-Forwarded-For` is whatever the client sent. Tell the app how many proxies 
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Generate route types, then `tsc --noEmit` |
 | `npm test` | Vitest unit tests: progress logic, demo coach, prompts, content integrity |
+| `npm run build:demo` | Build the click-through demo as one self-contained HTML file (see below) |
+
+### Static click-through demo
+
+`npm run build:demo` bundles the whole app into a single HTML file in `.demo-dist/` that runs with no
+server at all:
+
+- `odysseusx-standalone.html` opens directly in a browser.
+- `odysseusx.html` is the same page without the document wrapper, for hosts that add their own, such
+  as claude.ai Artifacts.
+
+The demo build (`demo/`) renders the real pages with a small hash router, swaps in browser stand-ins
+for `next/link`, `next/navigation` and `next/headers`, and answers `fetch("/api/...")` in the page by
+calling the real route handlers. Because it never has credentials, every AI feature runs on the
+offline demo coach. It's for trying and sharing the product; the Next.js app is what you deploy.
 
 ## Architecture
 

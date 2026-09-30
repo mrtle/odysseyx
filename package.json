@@ -2,7 +2,7 @@
   "name": "odysseusx",
   "version": "0.1.0",
   "private": true,
-  "description": "OdysseusX — an AI storytelling coach that trains storytellers and filmmakers.",
+  "description": "OdysseusX \u2014 an AI storytelling coach that trains storytellers and filmmakers.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,7 +10,8 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:demo": "node scripts/build-demo.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.129.0",
@@ -28,10 +29,12 @@
     "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^9",
     "eslint-config-next": "16.3.7",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vite": "^8.3.1",
     "vitest": "^5.0.2"
   }
 }

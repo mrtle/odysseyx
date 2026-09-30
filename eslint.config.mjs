@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated single-file demo bundle (npm run build:demo)
+    ".demo-dist/**",
   ]),
 ]);
 

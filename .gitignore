@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local env (but keep the example)
 !.env.example
+
+# static demo build output
+/.demo-dist/
