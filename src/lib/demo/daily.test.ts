@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DAILY_PROMPTS, getDailyPrompt, type DailyChallenge } from "@/content/daily-prompts";
 import { MicroFeedbackSchema } from "@/lib/ai/schemas";
-import { demoDailyFeedback } from "./daily";
+import { demoCanRead, demoDailyFeedback, onTheNoseQuotes } from "./daily";
 
 const prompt = (id: string): DailyChallenge => {
   const p = getDailyPrompt(id);
@@ -66,7 +66,7 @@ describe("demoDailyFeedback", () => {
     const six = prompt("six-word-story");
     const exact = demoDailyFeedback(six, { response: "Baby shoes for sale, never worn." });
     expect(exact.nudge).not.toMatch(/brief/i);
-    expect(exact.praise).toMatch(/honoured the brief/);
+    expect(exact.praise).toMatch(/every measurable part of the brief \(6 of 6 words\)/);
 
     const over = demoDailyFeedback(six, { response: "Baby shoes for sale, never worn, sadly, today." });
     expect(over.nudge).toMatch(/exactly 6 words/);
@@ -139,5 +139,99 @@ describe("demoDailyFeedback", () => {
         "So basically it's kind of a heist film. A retired locksmith has one night to break into her own old house. The new owners changed nothing but the locks.",
     });
     expect(feedback.nudge).toMatch(/hedge “(basically|kind of)”/);
+  });
+
+  it("never vouches for a brief whose defining rule was broken", () => {
+    const cases: [string, string][] = [
+      ["one-word-answers", "MUM: How was school?\nTEEN: It was honestly the worst day of my entire life and I never want to go back."],
+      ["cold-open", "A basket on the step. Inside, a baby, asleep, and a note in a hand nobody recognises. Who left the baby here?"],
+      ["campfire-opener", "So, I am nine years old and my grandmother hands me a knife and says the fish won't gut itself."],
+      ["say-it-without-saying-it", "A: Are you wanting the car tonight?\nB: I am needing it, yes.\nA: Your feelings about Dad are showing.\nB: Pass the salt.\nA: It's by you.\nB: So it is."],
+      ["weather-report", "Rain for a week. She is full of despair and anguish, mourning him. His umbrella stays by the door, furled."],
+    ];
+    for (const [id, response] of cases) {
+      const feedback = demoDailyFeedback(prompt(id), { response });
+      expect(feedback.praise, id).not.toMatch(/brief/);
+      expect(feedback.praise, id).not.toMatch(/to the letter/);
+    }
+  });
+
+  it("accepts the Visual track's shot-size abbreviations and any order for Three Shots", () => {
+    const shots = prompt("three-shots");
+    const abbreviated = demoDailyFeedback(shots, {
+      response: "WS: A lighthouse on a black cliff.\nMS: An old keeper climbs the stairs.\nCU: The lamp flickers out.",
+    });
+    expect(abbreviated.nudge).not.toMatch(/Missing|out of order/);
+    const reveal = demoDailyFeedback(shots, {
+      response: "Close-up: a ring in the sand.\nMedium: a woman kneels to pick it up.\nWide: the empty beach, the tide coming in.",
+    });
+    expect(reveal.nudge).not.toMatch(/Missing|out of order/);
+  });
+
+  it("doesn't mark a correct Story Spine out of order when a beat's phrase appears earlier", () => {
+    const feedback = demoDailyFeedback(prompt("story-spine"), {
+      response:
+        "Once upon a time there was a baker who hoped one day to win the county fair. Every day she baked the same plain loaf. One day a stranger asked for rye. Because of that she tried a new recipe. Because of that she burned six batches. Until finally the seventh rose perfectly. Ever since then she has baked something new every week.",
+    });
+    expect(feedback.nudge).not.toMatch(/out of order/);
+    expect(feedback.praise).toMatch(/every measurable part of the brief/);
+  });
+
+  it("quotes on-the-nose lines in the learner's own words, and ignores 'I want to <do something>'", () => {
+    expect(onTheNoseQuotes("Don't. Leave it. I want to see how long it sits there.")).toEqual([]);
+    expect(onTheNoseQuotes("I need a minute.")).toEqual([]);
+    expect(onTheNoseQuotes("Fine. I Want You To Stay, okay?")).toEqual(["I Want You To Stay, okay"]);
+    expect(onTheNoseQuotes("You never listen. I’m scared, that's all.")).toEqual(["I’m scared, that's all"]);
+
+    const dishes = prompt("the-dishes");
+    const innocuous = demoDailyFeedback(dishes, {
+      response: '"You left the pan."\n"I\'m soaking it."\n"Since Sunday?"\n"Don\'t. Leave it. I want to see how long it sits there."',
+    });
+    expect(innocuous.nudge).not.toMatch(/says the feeling out loud/);
+    const nose = demoDailyFeedback(dishes, {
+      response: '"You left the pan."\n"I\'m soaking it."\n"Since Sunday?"\n"I Need You To Notice Me, just once."',
+    });
+    expect(nose.nudge).toContain("“I Need You To Notice Me, just once” says the feeling out loud");
+    expect(nose.nudge).not.toMatch(/“i need/);
+  });
+
+  it("only praises a first line's hook when it has one", () => {
+    const first = prompt("first-line");
+    const flat = demoDailyFeedback(first, { response: "This is a story about a boy who had a nice day and did some things." });
+    expect(flat.praise).not.toMatch(/raises a question|specific promise/);
+    const strong = demoDailyFeedback(first, {
+      response: "The morning my mother sold our house, she forgot to mention I was still living in it.",
+    });
+    expect(strong.score - flat.score).toBeGreaterThanOrEqual(10);
+    const milk = demoDailyFeedback(prompt("six-word-story"), { response: "I went to the store today and bought some milk." });
+    expect(milk.praise).not.toMatch(/raises a question|specific promise/);
+  });
+
+  it("pluralises the missing-words nudge", () => {
+    const fortyNine = Array.from({ length: 49 }, (_, i) => (i % 9 === 8 ? "door." : "key")).join(" ");
+    const feedback = demoDailyFeedback(prompt("lost-key"), { response: fortyNine });
+    expect(feedback.nudge).toMatch(/That missing word is a gift — spend it/);
+    expect(feedback.nudge).not.toMatch(/Those 1/);
+  });
+
+  it("coaches the voicemail as delivery and the room as visual, not as two-hander dialogue or character", () => {
+    const voicemail = demoDailyFeedback(prompt("the-voicemail"), {
+      response:
+        "Hey, it's me. I know it's late. I just wanted to say I found the photo of us at the lake, the one you said you lost. I'm not calling to fight. I'm calling because I kept it. I've had it the whole time. Oh. Oh no. You weren't the one who lost it, were you. I'm going to hang up now.",
+    });
+    expect(voicemail.skill).toBe("delivery");
+    expect(`${voicemail.nudge} ${voicemail.tryThis}`).not.toMatch(/two different actors|one character a question/);
+    const room = demoDailyFeedback(prompt("who-lives-here"), {
+      response:
+        "Three alarm clocks on the nightstand, all set to 5:10. A book on grief counselling, spine uncracked. Dog bowls by the door, washed and stacked. A single mug in the sink.",
+    });
+    expect(room.skill).toBe("visual");
+    expect(`${room.nudge} ${room.tryThis}`).not.toMatch(/your character|with their hands/);
+  });
+
+  it("reads non-English text as unreadable rather than scoring it as empty", () => {
+    expect(demoCanRead("売ります。赤ちゃんの靴、未使用。")).toBe(false);
+    expect(demoCanRead("Продаются детские ботинки, неношеные.")).toBe(false);
+    expect(demoCanRead("Baby shoes for sale — never worn. Café, déjà vu.")).toBe(true);
   });
 });

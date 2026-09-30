@@ -34,7 +34,7 @@ export function ExerciseScratchpad({ prompt, placeholder }: { prompt: string; pl
         placeholder={placeholder ?? "Scribble your answer here…"}
         rows={4}
         aria-describedby={`${id}-hint`}
-        className="field min-h-28 resize-y text-[0.95rem] leading-7"
+        className="field min-h-28 resize-y text-base leading-7"
       />
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-sea-300">
         <p id={`${id}-hint`}>Scratchpad only — notes aren&apos;t saved when you leave this page.</p>

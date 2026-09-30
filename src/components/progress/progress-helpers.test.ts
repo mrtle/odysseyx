@@ -3,12 +3,15 @@ import { fixtureCatalog, fixtureState } from "@/components/home/test-fixtures";
 import { labEntryScore, labEntrySummary } from "@/components/home/lab-tools";
 import { toDateKey, type SkillStat } from "@/lib/progress";
 import type { LabEntry } from "@/lib/types";
+import { STORAGE_KEY } from "@/lib/store";
 import {
   buildExport,
   buildHeatmap,
   describeXpReason,
   exportFileName,
   heatLevel,
+  orphanedStorageKeys,
+  parseProgressImport,
   pickAppData,
   trendInfo,
   xpByDay,
@@ -141,6 +144,71 @@ describe("export", () => {
 
   it("names the file by local date", () => {
     expect(exportFileName(new Date(2026, 8, 30, 23, 59))).toBe("odysseusx-progress-2026-09-30.json");
+  });
+});
+
+describe("import", () => {
+  const state = fixtureState();
+  const exported = () => JSON.parse(JSON.stringify(buildExport(state, new Date("2026-09-30T08:00:00.000Z"))));
+
+  it("round-trips an export", () => {
+    const result = parseProgressImport(JSON.stringify(exported()));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toEqual(pickAppData(state));
+    expect(result.exportedAt).toBe("2026-09-30T08:00:00.000Z");
+    expect(result.skipped).toBe(0);
+    expect(result.summary).toMatchObject({ name: "Penelope Ithaca", xp: fixtureState().xp });
+  });
+
+  it("rejects files that aren't OdysseusX exports", () => {
+    expect(parseProgressImport("not json")).toMatchObject({ ok: false });
+    expect(parseProgressImport("[]")).toMatchObject({ ok: false });
+    expect(parseProgressImport(JSON.stringify({ app: "Other", format: 1, data: {} }))).toMatchObject({ ok: false });
+    expect(parseProgressImport(JSON.stringify({ ...exported(), data: "nope" }))).toMatchObject({ ok: false });
+    expect(parseProgressImport(JSON.stringify({ app: "OdysseusX", format: 1, data: { unrelated: true } }))).toMatchObject({
+      ok: false,
+    });
+    const newer = parseProgressImport(JSON.stringify({ ...exported(), format: 2 }));
+    expect(newer.ok === false && newer.error).toMatch(/newer version/);
+  });
+
+  it("validates every record and fills in missing fields", () => {
+    const file = exported();
+    file.data.sessions.push({ id: 42, junk: true });
+    file.data.xp = "lots";
+    delete file.data.daily;
+    const result = parseProgressImport(JSON.stringify(file));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.skipped).toBe(1);
+    expect(result.data.sessions).toHaveLength(fixtureState().sessions.length);
+    expect(result.data.xp).toBe(0);
+    expect(result.data.daily).toEqual({});
+  });
+});
+
+describe("orphanedStorageKeys", () => {
+  const keys = [
+    STORAGE_KEY,
+    `${STORAGE_KEY}:unreadable-1700000000000`,
+    "odysseusx-daily-draft",
+    "odysseusx-lab-plan:keep-me",
+    "odysseusx-lab-plan:gone",
+    "someone-elses-key",
+  ];
+
+  it("on reset, removes every app key except the store itself", () => {
+    expect(orphanedStorageKeys(keys)).toEqual([
+      `${STORAGE_KEY}:unreadable-1700000000000`,
+      "odysseusx-daily-draft",
+      "odysseusx-lab-plan:keep-me",
+      "odysseusx-lab-plan:gone",
+    ]);
+  });
+
+  it("on import, removes only checklists whose entry no longer exists", () => {
+    expect(orphanedStorageKeys(keys, new Set(["keep-me"]))).toEqual(["odysseusx-lab-plan:gone"]);
   });
 });
 

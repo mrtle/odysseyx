@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import { FlaskConical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,12 +11,23 @@ import { useAppStore, useHasHydrated } from "@/lib/store";
 import type { LabEntry, LabToolId } from "@/lib/types";
 import { cn, formatRelative } from "@/lib/utils";
 import { LAB_TOOLS, LAB_TOOL_LIST, entryHref, entryScore } from "./lab-meta";
+import { forgetRevisionProgress } from "./revision-checklist";
 
 type Filter = "all" | LabToolId;
 
-function HistoryItem({ entry, onDelete }: { entry: LabEntry; onDelete: () => void }) {
+function HistoryItem({ entry, onDelete, linkRef }: { entry: LabEntry; onDelete: () => void; linkRef: Ref<HTMLAnchorElement> }) {
   const [confirming, setConfirming] = useState(false);
-  const focusOnMount = useCallback((el: HTMLButtonElement | null) => el?.focus(), []);
+  const keepRef = useRef<HTMLButtonElement>(null);
+  const trashRef = useRef<HTMLButtonElement>(null);
+  const wasConfirming = useRef(false);
+
+  // Opening the confirmation focuses "Keep"; cancelling it (Keep or Escape) returns focus to the trash button.
+  useEffect(() => {
+    if (confirming) keepRef.current?.focus();
+    else if (wasConfirming.current) trashRef.current?.focus();
+    wasConfirming.current = confirming;
+  }, [confirming]);
+
   const tool = LAB_TOOLS[entry.tool];
   const Icon = tool.icon;
   const score = entryScore(entry);
@@ -33,12 +44,13 @@ function HistoryItem({ entry, onDelete }: { entry: LabEntry; onDelete: () => voi
       </span>
       <div className="min-w-0 flex-1">
         <Link
+          ref={linkRef}
           href={entryHref(entry.id)}
-          className="block truncate font-medium text-sea-100 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none group-hover:text-bronze-200"
+          className="line-clamp-2 font-medium text-sea-100 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none group-hover:text-bronze-200"
         >
           {entry.title}
         </Link>
-        <p className="mt-0.5 truncate text-xs text-sea-400">
+        <p className="mt-0.5 line-clamp-2 text-xs text-sea-400">
           {tool.name} · <time dateTime={entry.createdAt}>{formatRelative(entry.createdAt)}</time>
           {entry.mode === "demo" ? " · Demo coach" : ""}
         </p>
@@ -58,17 +70,13 @@ function HistoryItem({ entry, onDelete }: { entry: LabEntry; onDelete: () => voi
             <Button variant="danger" size="sm" onClick={onDelete} aria-label={`Delete “${entry.title}”`}>
               Delete
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setConfirming(false)}
-              ref={focusOnMount}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setConfirming(false)} ref={keepRef}>
               Keep
             </Button>
           </>
         ) : (
           <button
+            ref={trashRef}
             type="button"
             onClick={() => setConfirming(true)}
             aria-label={`Delete “${entry.title}”`}
@@ -88,6 +96,40 @@ export function LabHistory() {
   const entries = useAppStore((s) => s.labEntries);
   const deleteLabEntry = useAppStore((s) => s.deleteLabEntry);
   const [filter, setFilter] = useState<Filter>("all");
+  const [announcement, setAnnouncement] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const links = useRef(new Map<string, HTMLAnchorElement>());
+  /** Where keyboard focus goes once a deleted row has unmounted: a neighbouring entry's link, or the logbook itself. */
+  const focusAfterDelete = useRef<string | null>(null);
+
+  useEffect(() => {
+    const target = focusAfterDelete.current;
+    if (target === null) return;
+    focusAfterDelete.current = null;
+    const link = links.current.get(target);
+    if (link) link.focus();
+    else rootRef.current?.focus();
+  }, [entries]);
+
+  function remove(entry: LabEntry, visible: LabEntry[]) {
+    const index = visible.findIndex((e) => e.id === entry.id);
+    const neighbour = visible[index + 1] ?? visible[index - 1];
+    focusAfterDelete.current = neighbour?.id ?? "";
+    forgetRevisionProgress(entry.id);
+    deleteLabEntry(entry.id);
+    setAnnouncement(`Deleted “${entry.title}” from your logbook.`);
+  }
+
+  const linkRef = (id: string) => (el: HTMLAnchorElement | null) => {
+    if (el) links.current.set(id, el);
+    else links.current.delete(id);
+  };
+
+  const status = (
+    <p role="status" className="sr-only">
+      {announcement}
+    </p>
+  );
 
   if (!hydrated) {
     return (
@@ -101,11 +143,14 @@ export function LabHistory() {
 
   if (entries.length === 0) {
     return (
-      <EmptyState
-        icon={<FlaskConical className="size-8" aria-hidden />}
-        title="Your logbook is empty"
-        description="Every analysis you run is saved here, so you can come back to the notes and watch your drafts improve voyage by voyage."
-      />
+      <div ref={rootRef} tabIndex={-1} className="rounded-2xl focus:outline-none">
+        {status}
+        <EmptyState
+          icon={<FlaskConical className="size-8" aria-hidden />}
+          title="Your logbook is empty"
+          description="Every analysis you run is saved here, so you can come back to the notes and watch your drafts improve voyage by voyage."
+        />
+      </div>
     );
   }
 
@@ -119,7 +164,8 @@ export function LabHistory() {
   const filters: { id: Filter; label: string }[] = [{ id: "all", label: "All" }, ...LAB_TOOL_LIST.map((t) => ({ id: t.id as Filter, label: t.name }))];
 
   return (
-    <div>
+    <div ref={rootRef} tabIndex={-1} className="rounded-2xl focus:outline-none">
+      {status}
       <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filter by tool">
         {filters.map((f) => (
           <button
@@ -149,7 +195,7 @@ export function LabHistory() {
       ) : (
         <ul className="space-y-2">
           {visible.map((entry) => (
-            <HistoryItem key={entry.id} entry={entry} onDelete={() => deleteLabEntry(entry.id)} />
+            <HistoryItem key={entry.id} entry={entry} linkRef={linkRef(entry.id)} onDelete={() => remove(entry, visible)} />
           ))}
         </ul>
       )}

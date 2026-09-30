@@ -38,6 +38,7 @@ export async function POST(req: Request) {
                 messages: [{ role: "user", content: buildEvaluationUserContent(scenario, messages) }],
                 schema: EvaluationSchema,
                 effort: "high",
+                signal: req.signal,
               }),
             ),
             scenario,

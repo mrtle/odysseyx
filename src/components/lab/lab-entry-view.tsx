@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, FileSearch, RotateCcw, Trash2 } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -14,6 +14,7 @@ import { cn, formatRelative } from "@/lib/utils";
 import { parseLabInput } from "./lab-input";
 import { LAB_TOOLS, toolHref } from "./lab-meta";
 import { BackToLab } from "./lab-ui";
+import { forgetRevisionProgress } from "./revision-checklist";
 import { LoglineResult } from "./logline-result";
 import { ShotPlanResult } from "./shot-plan-result";
 import { StoryResult } from "./story-result";
@@ -63,7 +64,16 @@ export function LabEntryView({ id }: { id: string }) {
   const deleteLabEntry = useAppStore((s) => s.deleteLabEntry);
   const [confirming, setConfirming] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const focusOnMount = useCallback((el: HTMLButtonElement | null) => el?.focus(), []);
+  const keepRef = useRef<HTMLButtonElement>(null);
+  const deleteRef = useRef<HTMLButtonElement>(null);
+  const wasConfirming = useRef(false);
+
+  // Opening the confirmation focuses "Keep"; cancelling it (Keep or Escape) returns focus to "Delete".
+  useEffect(() => {
+    if (confirming) keepRef.current?.focus();
+    else if (wasConfirming.current) deleteRef.current?.focus();
+    wasConfirming.current = confirming;
+  }, [confirming]);
 
   if (!hydrated || leaving) {
     return (
@@ -94,6 +104,7 @@ export function LabEntryView({ id }: { id: string }) {
 
   function remove() {
     setLeaving(true);
+    forgetRevisionProgress(id);
     deleteLabEntry(id);
     router.push("/lab");
   }
@@ -120,16 +131,12 @@ export function LabEntryView({ id }: { id: string }) {
                 <Button variant="danger" onClick={remove}>
                   Delete for good
                 </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setConfirming(false)}
-                  ref={focusOnMount}
-                >
+                <Button variant="ghost" onClick={() => setConfirming(false)} ref={keepRef}>
                   Keep
                 </Button>
               </span>
             ) : (
-              <Button variant="secondary" onClick={() => setConfirming(true)} icon={<Trash2 className="size-4" aria-hidden />}>
+              <Button ref={deleteRef} variant="secondary" onClick={() => setConfirming(true)} icon={<Trash2 className="size-4" aria-hidden />}>
                 Delete
               </Button>
             )}

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScoreRing } from "@/components/ui/score-ring";
+import { sessionActivityAt } from "@/lib/progress";
 import type { LabEntry, PracticeSession } from "@/lib/types";
 import { cn, formatRelative } from "@/lib/utils";
 import { findScenario, type Catalog } from "./catalog";
@@ -34,7 +35,7 @@ export function buildActivity(sessions: PracticeSession[], labEntries: LabEntry[
         href: `/practice/review/${s.id}`,
         title: scenario?.title ?? "Practice drill",
         meta: scenario ? `Practice · ${scenario.persona.name}` : "Practice",
-        at: s.endedAt ?? s.startedAt,
+        at: sessionActivityAt(s),
         score: s.evaluation?.overall ?? null,
         note: s.evaluation ? undefined : "Unfinished",
       };
@@ -67,9 +68,10 @@ export function ActivityRow({ item }: { item: ActivityItem }) {
       >
         <Icon className="size-4" />
       </span>
+      {/* Titles wrap to two lines: beside a score ring and chevron a phone leaves ~110px, too little for one. */}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-sea-100 group-hover:text-bronze-200">{item.title}</span>
-        <span className="block truncate text-xs text-sea-400">
+        <span className="line-clamp-2 text-sm font-medium break-words text-sea-100 group-hover:text-bronze-200">{item.title}</span>
+        <span className="line-clamp-2 text-xs text-sea-400">
           {item.meta} · <time dateTime={item.at}>{formatRelative(item.at)}</time>
         </span>
       </span>
@@ -87,7 +89,7 @@ export function RecentActivity({ items, className }: { items: ActivityItem[]; cl
           Recent voyages
         </h2>
         {items.length > 0 ? (
-          <Link href="/progress" className="text-sm font-medium text-bronze-300 hover:text-bronze-200">
+          <Link href="/progress" className="-mx-2 -my-3 inline-flex items-center rounded-md px-2 py-3 text-sm font-medium text-bronze-300 hover:text-bronze-200">
             Full log
           </Link>
         ) : null}

@@ -11,8 +11,10 @@
   --color-sea-800: #121d33;
   --color-sea-700: #1a2844;
   --color-sea-600: #26385c;
+  /* sea-500 is a border/decoration shade (about 2.3:1 on the page); it is too dark for text. */
   --color-sea-500: #3a4f7a;
-  --color-sea-400: #5d739f;
+  /* Muted text: at least 4.5:1 (WCAG AA) on sea-950 through sea-800. */
+  --color-sea-400: #7489b5;
   --color-sea-300: #8ea0c4;
   --color-sea-200: #bcc8e0;
   --color-sea-100: #e3e9f5;
@@ -56,12 +58,27 @@
 
 :root {
   color-scheme: dark;
+  /* Space taken by the app chrome: the sticky header, and the fixed bottom nav below lg. */
+  --shell-top: 4rem;
+  --shell-bottom: calc(3.875rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --shell-bottom: 0px;
+  }
 }
 
 html,
 body {
   background-color: var(--color-sea-950);
   color: var(--color-sea-100);
+}
+
+/* Keep focused elements and scrollIntoView targets clear of the sticky header and bottom nav (WCAG 2.4.11). */
+html {
+  scroll-padding-top: calc(var(--shell-top) + 1rem);
+  scroll-padding-bottom: calc(var(--shell-bottom) + 1rem);
 }
 
 body {
@@ -78,9 +95,15 @@ body {
   color: #fff;
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-bronze-400);
-  outline-offset: 2px;
+/*
+ * The default focus ring lives in the base layer so components can replace it
+ * (e.g. `focus:outline-none` plus a ring) — unlayered CSS would beat every utility.
+ */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-bronze-400);
+    outline-offset: 2px;
+  }
 }
 
 /* Thin, unobtrusive scrollbars */
@@ -106,6 +129,30 @@ body {
   /* A slate of text rendered like a screenplay page */
   .screenplay {
     font-family: "Courier Prime", "Courier New", Courier, ui-monospace, monospace;
+  }
+}
+
+@layer utilities {
+  /* sea-500 fails WCAG AA as a text colour; where it is used for text, render the sea-400 shade. */
+  .text-sea-500,
+  .placeholder\:text-sea-500::placeholder {
+    color: var(--color-sea-400);
+  }
+
+  /* Touch browsers (iOS Safari) zoom the page when a field under 16px gets focus. */
+  @media (pointer: coarse) {
+    :is(input, textarea, select):is(
+        .text-xs,
+        .text-sm,
+        [class*="text-[10px]"],
+        [class*="text-[11px]"],
+        [class*="text-[12px]"],
+        [class*="text-[13px]"],
+        [class*="text-[14px]"],
+        [class*="text-[15px]"]
+      ) {
+      font-size: 1rem;
+    }
   }
 }
 

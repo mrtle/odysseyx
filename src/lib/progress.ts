@@ -13,7 +13,7 @@ import type {
   SkillObservation,
   Track,
 } from "@/lib/types";
-import type { LoglineComponent } from "@/lib/ai/schemas";
+import type { LoglineComponent } from "@/lib/constants";
 
 // ---------------------------------------------------------------------------
 // XP and ranks
@@ -28,6 +28,9 @@ export const XP_REWARDS = {
   labAnalysis: 40,
   daily: 30,
 } as const;
+
+/** Story Lab analyses per local day that earn XP (repeats of an earlier submission never do). */
+export const LAB_XP_DAILY_LIMIT = 5;
 
 export interface Rank {
   level: number;
@@ -311,4 +314,26 @@ export function recommendNext(
 
 export function lessonKey(trackId: string, lessonId: string): string {
   return `${trackId}/${lessonId}`;
+}
+
+// ---------------------------------------------------------------------------
+// Session recency
+// ---------------------------------------------------------------------------
+
+/** When the user last did something in a session: scored, else their latest message, else the start. */
+export function sessionActivityAt(session: Pick<PracticeSession, "startedAt" | "endedAt" | "messages">): string {
+  let latest = session.startedAt;
+  for (const at of [session.endedAt, session.messages[session.messages.length - 1]?.at]) {
+    if (at && at > latest) latest = at;
+  }
+  return latest;
+}
+
+/** Sessions ordered by most recent activity (stored order is by start time). Use with `sessionActivityAt` for the label. */
+export function sortSessionsByActivity<T extends Pick<PracticeSession, "startedAt" | "endedAt" | "messages">>(sessions: readonly T[]): T[] {
+  const time = (s: T) => {
+    const t = new Date(sessionActivityAt(s)).getTime();
+    return Number.isFinite(t) ? t : 0;
+  };
+  return [...sessions].sort((a, b) => time(b) - time(a));
 }

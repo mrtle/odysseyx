@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { ArrowLeft, ArrowUp, Flag, Mic, MicOff, RotateCcw, Square, Volume2, VolumeX } from "lucide-react";
 import { useCoachStatus } from "@/components/layout/coach-status";
 import { Alert } from "@/components/ui/alert";
@@ -11,6 +11,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { toCoachProfile } from "@/lib/api";
 import { useSpeechRecognition, useSpeechSynthesis } from "@/lib/hooks/use-speech";
 import { useAppStore } from "@/lib/store";
+import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ChatBubble } from "./chat-bubble";
 import { PersonaAvatar } from "./persona-avatar";
@@ -19,6 +20,21 @@ import { MAX_MESSAGES, toRequestMessages, usePersonaReply } from "./use-persona-
 
 const MIN_TURNS_TO_SCORE = 2;
 const MAX_INPUT = 2000;
+
+/**
+ * Learner turns as the persona counts them: non-empty lines, with back-to-back
+ * lines (say, a retry after a failed reply) counted once.
+ */
+export function countTurns(messages: Pick<ChatMessage, "role" | "content">[]): number {
+  let turns = 0;
+  let previous: ChatMessage["role"] | null = null;
+  for (const m of messages) {
+    if (!m.content.trim()) continue;
+    if (m.role === "user" && previous !== "user") turns++;
+    previous = m.role;
+  }
+  return turns;
+}
 
 export interface PracticeChatProps {
   scenario: PublicScenario;
@@ -38,7 +54,7 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
   const status = useCoachStatus();
 
   const reply = usePersonaReply(scenario.id);
-  const { request: requestPersona } = reply;
+  const { request: requestPersona, takeInterrupted } = reply;
   const { supported: canSpeak, speak: speakText, cancel: cancelSpeech } = useSpeechSynthesis();
   const [input, setInput] = useState("");
   const dictation = useSpeechRecognition({ onText: setInput });
@@ -55,7 +71,7 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
   }, [autoSpeak]);
 
   const messages = session?.messages ?? [];
-  const userTurns = messages.filter((m) => m.role === "user").length;
+  const userTurns = countTurns(messages);
   const last = messages[messages.length - 1];
   const atLimit = messages.length >= MAX_MESSAGES - 1;
   const awaitingReply = !reply.streaming && last?.role === "user";
@@ -84,20 +100,26 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
   useEffect(() => {
     const log = logRef.current;
     if (log && stickToBottom.current) log.scrollTop = log.scrollHeight;
-  }, [messages.length, reply.draft]);
+  }, [messages.length, reply.draft, reply.interrupted]);
 
   const onScroll = () => {
     const log = logRef.current;
     if (log) stickToBottom.current = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
   };
 
-  // Grow the composer with its content, up to a limit.
+  // Grow the composer with its content, up to a limit. Measure only real
+  // text: an empty box stays one row, whatever the placeholder's length.
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
+    el.style.height = "";
+    if (input) el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   }, [input]);
+
+  const record = useCallback(
+    (message: Pick<ChatMessage, "role" | "content">) => addMessage(sessionId, message),
+    [addMessage, sessionId],
+  );
 
   const requestReply = useCallback(() => {
     const state = useAppStore.getState();
@@ -105,20 +127,35 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
     if (!current) return;
     stickToBottom.current = true;
     void requestPersona(toRequestMessages(current.messages), toCoachProfile(state.profile), (result) => {
-      addMessage(sessionId, { role: "persona", content: result.text });
+      record({ role: "persona", content: result.text });
       setAnnouncement(`${persona.name}: ${result.text}`);
       if (autoSpeakRef.current && !result.stopped) speak(result.text);
     });
-  }, [addMessage, persona.name, requestPersona, sessionId, speak]);
+  }, [persona.name, record, requestPersona, sessionId, speak]);
+
+  /** Keep a reply the server cut short as the persona's (unfinished) line. The notice itself is never saved. */
+  const keepInterrupted = useCallback(() => {
+    const partial = takeInterrupted();
+    if (partial) record({ role: "persona", content: `${partial.text}…` });
+  }, [record, takeInterrupted]);
 
   const send = () => {
     const text = input.trim();
     if (!text || reply.streaming || atLimit) return;
     dictation.cancel();
     cancelSpeech();
-    addMessage(sessionId, { role: "user", content: text });
+    keepInterrupted();
+    record({ role: "user", content: text });
     setInput("");
     requestReply();
+  };
+
+  const stopReply = (event: MouseEvent<HTMLButtonElement>) => {
+    // Never let this click reach the form: the button can be swapped for Send before its default action runs.
+    event.preventDefault();
+    reply.stop();
+    // The Stop button unmounts; keep focus in the composer rather than dropping it to the page.
+    textareaRef.current?.focus();
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -155,6 +192,7 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
     if (!canScore) return;
     dictation.cancel();
     cancelSpeech();
+    keepInterrupted();
     onEnd();
   };
 
@@ -169,8 +207,8 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
   const endLabel = userTurns < MIN_TURNS_TO_SCORE ? `Take at least ${MIN_TURNS_TO_SCORE} turns before ending the scene` : undefined;
 
   return (
-    <div className="flex flex-col animate-fade-in">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="flex flex-col animate-fade-in [@media(max-height:32rem)]:-mt-5">
+      <div className="mb-4 flex items-center justify-between gap-3 [@media(max-height:32rem)]:mb-2">
         <Link
           href="/practice"
           className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-sea-300 transition-colors hover:bg-sea-800/70 hover:text-sea-100"
@@ -178,26 +216,36 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
           <ArrowLeft className="size-4" aria-hidden />
           Leave
         </Link>
-        <h1 className="truncate font-display text-lg font-semibold text-sea-100 sm:text-xl">{scenario.title}</h1>
+        <h1 className="min-w-0 truncate font-display text-lg font-semibold text-sea-100 sm:text-xl">{scenario.title}</h1>
         <span className="w-16 shrink-0" aria-hidden />
       </div>
 
-      <div className="flex h-[calc(100dvh-15rem)] min-h-[26rem] flex-col overflow-hidden rounded-2xl border border-sea-700/80 bg-sea-900/60 shadow-xl shadow-black/20 backdrop-blur-sm lg:h-[calc(100dvh-12rem)]">
-        {/* Scene header */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-sea-800 px-4 py-3 sm:px-5">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+      {/*
+        Below lg the panel sits between the sticky header and the fixed bottom nav, so its height is
+        whatever is left of the viewport (never a fixed minimum that would push the composer under
+        the nav). Short, landscape screens trim the chrome around it.
+      */}
+      <div className="flex h-[calc(100dvh_-_15rem_-_env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-sea-700/80 bg-sea-900/60 shadow-xl shadow-black/20 backdrop-blur-sm max-lg:[@media(max-height:32rem)]:h-[calc(100dvh_-_11.25rem_-_env(safe-area-inset-bottom))] lg:h-[calc(100dvh-12rem)] lg:min-h-[26rem]">
+        {/* Scene header: the controls wrap under the persona on narrow screens rather than squeezing the name away. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-sea-800 px-4 py-3 sm:px-5 [@media(max-height:32rem)]:py-2">
+          <div className="flex min-w-[12rem] flex-1 items-center gap-3">
             <PersonaAvatar persona={persona} category={scenario.category} />
             <div className="min-w-0">
               <p className="truncate font-medium text-sea-100">{persona.name}</p>
-              <p className="truncate text-xs text-sea-400">{persona.role}</p>
+              <p className="truncate text-xs text-sea-400 [@media(max-height:32rem)]:hidden">{persona.role}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             <div className="hidden w-28 sm:block" aria-hidden>
               <ProgressBar value={userTurns / scenario.suggestedTurns} />
             </div>
             <p className="text-xs whitespace-nowrap text-sea-400 tabular-nums" aria-live="polite">
-              Turn <span className="font-semibold text-sea-200">{userTurns}</span> of ~{scenario.suggestedTurns}
+              <span className="sr-only sm:not-sr-only">Turn </span>
+              <span className="font-semibold text-sea-200">{userTurns}</span>
+              <span className="sr-only sm:not-sr-only"> of ~{scenario.suggestedTurns}</span>
+              <span className="sm:hidden" aria-hidden>
+                /{scenario.suggestedTurns}
+              </span>
             </p>
             {canSpeak ? (
               <button
@@ -239,7 +287,7 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
           tabIndex={0}
           className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 focus-visible:outline-offset-[-2px] sm:px-5"
         >
-          {mode === "demo" ? <DemoNotice mode={mode} className="mb-5" /> : null}
+          {mode === "demo" ? <DemoNotice mode={mode} className="mb-5 [@media(max-height:32rem)]:hidden" /> : null}
           <ol className="space-y-5" aria-busy={reply.streaming}>
             {messages.map((m) => (
               <ChatBubble
@@ -253,6 +301,8 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
             ))}
             {reply.draft !== null ? (
               <ChatBubble role="persona" content={reply.draft} persona={persona} category={scenario.category} streaming />
+            ) : reply.interrupted ? (
+              <ChatBubble role="persona" content={`${reply.interrupted.text}…`} persona={persona} category={scenario.category} />
             ) : null}
           </ol>
         </div>
@@ -268,6 +318,18 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
               <Button size="sm" variant="secondary" className="mt-2" onClick={requestReply} icon={<RotateCcw className="size-3.5" aria-hidden />}>
                 Try again
               </Button>
+            </Alert>
+          ) : reply.interrupted && !reply.streaming ? (
+            <Alert tone="error" title={`${name} was cut off`} className="mt-3">
+              <p>{reply.interrupted.notice}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" onClick={requestReply} icon={<RotateCcw className="size-3.5" aria-hidden />}>
+                  Try again
+                </Button>
+                <Button size="sm" variant="ghost" onClick={keepInterrupted}>
+                  Keep the unfinished line
+                </Button>
+              </div>
             </Alert>
           ) : awaitingReply ? (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sea-700 bg-sea-800/50 px-3.5 py-2.5 text-sm text-sea-300">
@@ -293,7 +355,7 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
 
         {/* Composer */}
         <form
-          className="border-t border-sea-800 p-3 sm:p-4"
+          className="border-t border-sea-800 p-3 sm:p-4 [@media(max-height:32rem)]:p-2"
           onSubmit={(event) => {
             event.preventDefault();
             send();
@@ -318,10 +380,8 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
               maxLength={MAX_INPUT}
               disabled={atLimit}
               aria-describedby={hintId}
-              placeholder={
-                dictation.listening ? "Listening…" : reply.streaming ? `${name} is speaking…` : `Say something to ${name}…`
-              }
-              className="max-h-[180px] min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] leading-relaxed text-sea-100 placeholder:text-sea-500 focus:outline-none disabled:opacity-50"
+              placeholder={dictation.listening ? "Listening…" : reply.streaming ? `${name} is speaking…` : `Reply to ${name}…`}
+              className="max-h-[180px] min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-base leading-relaxed text-sea-100 placeholder:text-sea-400 focus:outline-none disabled:opacity-50 sm:text-[15px]"
             />
             {dictation.supported ? (
               <button
@@ -344,8 +404,9 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
             ) : null}
             {reply.streaming ? (
               <button
+                key="stop"
                 type="button"
-                onClick={reply.stop}
+                onClick={stopReply}
                 aria-label={`Stop ${name}'s reply`}
                 title="Stop (Esc)"
                 className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-sea-600 bg-sea-800/70 text-sea-100 transition hover:border-sea-500 hover:bg-sea-700/70 active:scale-95"
@@ -354,6 +415,7 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
               </button>
             ) : (
               <button
+                key="send"
                 type="submit"
                 disabled={!input.trim() || atLimit}
                 aria-label="Send"
@@ -363,13 +425,15 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
               </button>
             )}
           </div>
-          <div id={hintId} className="mt-1.5 flex items-center justify-between gap-3 px-1 text-xs text-sea-500">
+          <div id={hintId} className="mt-1.5 flex items-center justify-between gap-3 px-1 text-xs text-sea-400 [@media(max-height:32rem)]:mt-1">
             {dictation.error ? (
               <span className="text-wine-400" role="alert">
                 {dictation.error}
               </span>
             ) : (
-              <span className="hidden sm:inline">Enter to send · Shift+Enter for a new line{reply.streaming ? " · Esc to stop" : ""}</span>
+              <span className="hidden sm:inline [@media(max-height:32rem)]:hidden">
+                Enter to send · Shift+Enter for a new line{reply.streaming ? " · Esc to stop" : ""}
+              </span>
             )}
             {input.length > MAX_INPUT - 300 ? (
               <span className="ml-auto tabular-nums">

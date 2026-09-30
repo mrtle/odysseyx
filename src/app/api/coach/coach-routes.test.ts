@@ -1,11 +1,19 @@
 /**
  * The practice API routes, exercised in demo mode (no network).
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { EvaluationSchema } from "@/lib/ai/schemas";
 import { getScenario } from "@/content/scenarios";
+import { demoEvaluate } from "@/lib/demo/practice";
 import { POST as chat } from "./chat/route";
 import { POST as evaluate } from "./evaluate/route";
+
+const ai = vi.hoisted(() => ({ streamText: vi.fn(), generateStructured: vi.fn() }));
+
+vi.mock("@/lib/ai/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/ai/client")>();
+  return { ...actual, streamText: ai.streamText, generateStructured: ai.generateStructured };
+});
 
 const scenario = getScenario("elevator-pitch")!;
 const previousMode = process.env.ODYSSEUSX_MODE;
@@ -76,5 +84,39 @@ describe("POST /api/coach/evaluate", () => {
   it("404s for an unknown scenario", async () => {
     const res = await evaluate(post({ scenarioId: "nope", messages: [opening, pitch] }));
     expect(res.status).toBe(404);
+  });
+});
+
+describe("live mode", () => {
+  beforeAll(() => {
+    process.env.ODYSSEUSX_MODE = "live";
+  });
+  afterAll(() => {
+    process.env.ODYSSEUSX_MODE = "demo";
+  });
+  afterEach(() => {
+    ai.streamText.mockReset();
+    ai.generateStructured.mockReset();
+  });
+
+  it("chat passes the request's abort signal and sends pacing as a trailing system message", async () => {
+    ai.streamText.mockResolvedValue(new ReadableStream({ start: (c) => c.close() }));
+    const req = post({ scenarioId: scenario.id, messages: [opening, pitch] });
+    const res = await chat(req);
+    expect(res.status).toBe(200);
+    expect(ai.streamText).toHaveBeenCalledOnce();
+    const opts = ai.streamText.mock.calls[0][0];
+    expect(opts.signal).toBe(req.signal);
+    const last = opts.messages[opts.messages.length - 1];
+    expect(last.role).toBe("system");
+    expect(last.content).toMatch(/<director_note>Learner turn 1 of about/);
+  });
+
+  it("evaluate passes the request's abort signal", async () => {
+    ai.generateStructured.mockResolvedValue(demoEvaluate(scenario, [opening, pitch]));
+    const req = post({ scenarioId: scenario.id, messages: [opening, pitch] });
+    const res = await evaluate(req);
+    expect(res.status).toBe(200);
+    expect(ai.generateStructured.mock.calls[0][0].signal).toBe(req.signal);
   });
 });

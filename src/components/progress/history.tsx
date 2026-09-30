@@ -153,10 +153,10 @@ export function DailyHistory({ daily, className }: { daily: Record<string, Daily
                 <li key={entry.date} className="flex items-center gap-3 px-2 py-2.5">
                   <details className="group min-w-0 flex-1">
                     <summary className="cursor-pointer list-none rounded-md [&::-webkit-details-marker]:hidden">
-                      <span className="block truncate text-sm font-medium text-sea-100 group-open:text-bronze-200">
+                      <span className="line-clamp-2 text-sm font-medium break-words text-sea-100 group-open:text-bronze-200">
                         {prompt?.title ?? "Daily challenge"}
                       </span>
-                      <span className="flex items-center gap-2 text-xs text-sea-400">
+                      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-sea-400">
                         <time dateTime={entry.date}>
                           {date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
                         </time>
@@ -179,7 +179,7 @@ export function DailyHistory({ daily, className }: { daily: Record<string, Daily
         </>
       )}
       {entries.length > 0 ? (
-        <p className="mt-3 text-xs text-sea-500">
+        <p className="mt-3 text-xs text-sea-400">
           Tomorrow&apos;s prompt appears on{" "}
           <Link href="/" className="text-bronze-300 hover:text-bronze-200">
             Home

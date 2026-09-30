@@ -20,6 +20,7 @@ export async function POST(req: Request) {
             messages: [{ role: "user", content: buildLoglinePrompt(parsed.data) }],
             schema: LoglineAnalysisSchema,
             effort: "high",
+            signal: req.signal,
           })
         : demoLogline(parsed.data),
     );

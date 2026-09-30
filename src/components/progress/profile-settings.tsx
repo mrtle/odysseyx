@@ -78,7 +78,7 @@ export function ProfileSettings({ profile, className }: { profile: Profile; clas
         ) : null}
         <div className="sm:col-span-2">
           <dt className="text-xs font-medium text-sea-400">Working on</dt>
-          <dd className="mt-1 text-sea-100">{profile.project || <span className="text-sea-500">Nothing named yet</span>}</dd>
+          <dd className="mt-1 text-sea-100">{profile.project || <span className="text-sea-400">Nothing named yet</span>}</dd>
         </div>
       </dl>
 

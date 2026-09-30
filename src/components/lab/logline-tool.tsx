@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { Shuffle, Stethoscope } from "lucide-react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,16 @@ function LengthMeter({ words }: { words: number }) {
   );
 }
 
+/**
+ * The Logline Doctor reading "Run again" (`?from=<entry id>`) from the URL on
+ * the client, so the page itself can be prerendered. Render inside
+ * <Suspense> (useSearchParams suspends during prerendering).
+ */
+export function LoglineToolFromUrl() {
+  const from = useSearchParams().get("from");
+  return <LoglineTool fromEntryId={from ?? undefined} />;
+}
+
 /** Logline Doctor: form, loading state and results. Pre-fills from a saved entry for "Run again". */
 export function LoglineTool({ fromEntryId }: { fromEntryId?: string }) {
   const { ready, entry } = useEntryPrefill("logline", fromEntryId);
@@ -75,10 +86,12 @@ function LoglineWorkbench({ initialLogline, initialGenre }: { initialLogline: st
   const [genre, setGenre] = useState(initialGenre);
   const [example, setExample] = useState<number | null>(null);
   const [showValidation, setShowValidation] = useState(false);
-  const [result, setResult] = useState<(LoglineResponse & { entryId: string; logline: string }) | null>(null);
+  const [result, setResult] = useState<(LoglineResponse & { entryId: string; runId: number; xpGained: number; replaced: boolean; logline: string }) | null>(null);
   const request = useLabRequest<LoglineRequest, LoglineResponse>("/api/lab/logline");
   const addLabEntry = useAppStore((s) => s.addLabEntry);
-  const headingRef = useRevealOnChange<HTMLHeadingElement>(result?.entryId);
+  const headingRef = useRevealOnChange<HTMLHeadingElement>(result?.runId);
+  /** Counts submissions, so a re-run that updates the same saved entry still reveals the fresh result. */
+  const runs = useRef(0);
 
   const trimmed = logline.trim();
   const words = wordCount(logline);
@@ -106,7 +119,7 @@ function LoglineWorkbench({ initialLogline, initialGenre }: { initialLogline: st
       result: data.analysis,
       mode: data.mode,
     });
-    setResult({ ...data, entryId: saved.id, logline: trimmed });
+    setResult({ ...data, entryId: saved.id, runId: ++runs.current, xpGained: saved.xpGained, replaced: saved.replaced, logline: trimmed });
   }
 
   function onSubmit(e: FormEvent) {
@@ -239,7 +252,7 @@ function LoglineWorkbench({ initialLogline, initialGenre }: { initialLogline: st
           <RequestError message={request.error} onRetry={() => void submit()} onDismiss={request.clearError} />
         ) : result ? (
           <>
-            <SavedNotice entryId={result.entryId} />
+            <SavedNotice entryId={result.entryId} xpGained={result.xpGained} replaced={result.replaced} />
             <LoglineResult analysis={result.analysis} mode={result.mode} logline={result.logline} headingRef={headingRef} />
           </>
         ) : null}

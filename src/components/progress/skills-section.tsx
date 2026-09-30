@@ -10,7 +10,7 @@ const TREND_STYLE = {
   up: { icon: TrendingUp, className: "text-emerald-300" },
   down: { icon: TrendingDown, className: "text-rose-400" },
   flat: { icon: Minus, className: "text-sea-300" },
-  none: { icon: null, className: "text-sea-500" },
+  none: { icon: null, className: "text-sea-400" },
 } as const;
 
 /** Radar plus its table twin: score, trend and sample count per skill. */
@@ -63,7 +63,7 @@ export function SkillsSection({ profile, className }: { profile: Record<SkillId,
                     </th>
                     <td className="px-2 py-2.5 text-right tabular-nums">
                       {stat.score === null ? (
-                        <span className="text-sea-500">
+                        <span className="text-sea-400">
                           —<span className="sr-only">not yet measured</span>
                         </span>
                       ) : (

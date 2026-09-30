@@ -90,24 +90,24 @@ export const characterLessons: Lesson[] = [
         id: "q1",
         prompt: "Which of these is a *want* rather than a *need*?",
         options: [
-          "To learn to trust other people",
+          "To learn to trust people again after her business partner cheated her",
           "To stop the bank from auctioning the family restaurant on Friday",
-          "To forgive her father",
-          "To accept that she can't control everything",
+          "To forgive her father for walking out on the family when she was twelve",
+          "To accept that she can't control everything, least of all her children",
         ],
         answerIndex: 1,
         explanation:
-          "Saving the restaurant from Friday's auction is external, specific and visible: a camera could show whether she succeeds. The other three are inner changes. They're needs, the kind of thing a story reveals through the pursuit of a want like this one.",
+          "Saving the restaurant from Friday's auction is external, specific and visible: a camera could show whether she succeeds. The other three are inner changes, however specific their backstory. They're needs, the kind of thing a story reveals through the pursuit of a want like this one.",
       },
       {
         id: "q2",
         prompt:
           "A writer's protagonist wants to become head chef, and what she needs is also to become head chef. What's the main problem?",
         options: [
-          "The want is too specific to be interesting.",
-          "Nothing. When want and need align, the story is clearer.",
+          "The want is too specific; a broader goal like success would leave more room to grow.",
+          "Nothing: when want and need align, the story is clearer and easier to follow.",
           "There's no inner tension: chasing the want never forces a painful choice.",
-          "The need should be stated in the first scene instead.",
+          "The need should be stated outright in the first scene, so the audience knows what's at stake.",
         ],
         answerIndex: 2,
         explanation:
@@ -117,10 +117,10 @@ export const characterLessons: Lesson[] = [
         id: "q3",
         prompt: "In *Up*, why does the moment Carl throws his furniture out of the house land so hard?",
         options: [
-          "It's the moment he chooses his need, a living connection with Russell, over the want he's clung to all film.",
-          "It's a twist the audience couldn't possibly have seen coming.",
-          "It reveals that Carl was never really attached to the house.",
-          "It works as comic relief after the emotional adventure-book scene.",
+          "He chooses his need, a living connection with Russell, over the want he's clung to all film.",
+          "It's a twist nobody could see coming, and surprise is what makes a climax land hardest.",
+          "It reveals that Carl never really cared about the house, which frees him to be a hero.",
+          "It works as comic relief, releasing the tension after the emotional adventure-book scene.",
         ],
         answerIndex: 0,
         explanation:
@@ -130,10 +130,10 @@ export const characterLessons: Lesson[] = [
         id: "q4",
         prompt: "Your protagonist's need is to stop hiding from people. What's the most effective way to handle it?",
         options: [
-          "Have her explain it to a friend in the first act so the audience understands.",
-          "Leave it out entirely, because audiences only follow the want.",
-          "Reveal it in voiceover over the final scene.",
-          "Let another character name it early while she brushes it off, then force choices that make hiding increasingly costly.",
+          "Have her explain it to a close friend in the first act, so the audience knows what to watch for.",
+          "Leave it out entirely, because audiences follow the want and rarely notice the need anyway.",
+          "Save it for a voiceover over the final scene, where she reflects on everything she's learned.",
+          "Let someone else name it early while she brushes it off, then make hiding cost her more and more.",
         ],
         answerIndex: 3,
         explanation:
@@ -142,7 +142,7 @@ export const characterLessons: Lesson[] = [
     ],
     exercise: {
       prompt:
-        "Write a logline for your project that puts your protagonist's want on the surface. Underneath it, add one sentence naming their need and where the two collide. Then run the logline through the Logline Lab.",
+        "Write a logline for your project that puts your protagonist's want on the surface. Underneath it, add one sentence naming their need and where the two collide. Then run the logline through the Logline Doctor.",
       tips: [
         "The logline carries the want and the obstacle; the need usually lives underneath it.",
         "Test the want: could a camera tell whether they've achieved it?",
@@ -256,10 +256,10 @@ export const characterLessons: Lesson[] = [
         id: "q1",
         prompt: "What's the relationship between a character's wound and their lie?",
         options: [
-          "They're two names for the same backstory event.",
+          "They're two names for the same backstory event, used by different screenwriting teachers.",
           "The wound is the painful event; the lie is the false belief the character concluded from it.",
-          "The lie is what other characters wrongly believe about the protagonist.",
-          "The wound is internal; the lie is the external obstacle in the plot.",
+          "The lie is what other characters wrongly believe about the protagonist until the truth comes out.",
+          "The wound is internal and hidden; the lie is the external obstacle the plot puts in their way.",
         ],
         answerIndex: 1,
         explanation:
@@ -269,10 +269,10 @@ export const characterLessons: Lesson[] = [
         id: "q2",
         prompt: "Why does Marlin's overprotectiveness in *Finding Nemo* feel sympathetic rather than simply irritating?",
         options: [
-          "He's funny, so the audience forgives him.",
-          "Other characters explain his behaviour on his behalf.",
-          "We witness the wound in the opening scene, so his lie feels completely logical even as we see its cost.",
-          "He's right: the ocean really is too dangerous for Nemo.",
+          "He's funny and neurotic, and audiences forgive almost anything in a character who makes them laugh.",
+          "Other characters, especially Dory, keep explaining his behaviour on his behalf.",
+          "We see the wound in the opening scene, so his lie feels logical even as we watch its cost.",
+          "He's right all along: the ocean really is too dangerous for a small fish like Nemo.",
         ],
         answerIndex: 2,
         explanation:
@@ -284,9 +284,9 @@ export const characterLessons: Lesson[] = [
           "A draft opens with a four-minute flashback of the hero's childhood trauma, followed by the hero explaining to a friend how it shaped her. What's the best note?",
         options: [
           "Show the lie in her present-day choices, and let the wound surface later, partially.",
-          "Make the flashback longer so it lands harder.",
-          "Cut the wound entirely, because backstory never matters.",
-          "Move the explanation into voiceover.",
+          "Make the flashback longer and more vivid, so the trauma lands harder with the audience.",
+          "Cut the wound entirely: backstory never matters as long as the present-day plot is strong.",
+          "Keep the flashback but move her explanation into voiceover, so it feels more private.",
         ],
         answerIndex: 0,
         explanation:
@@ -296,14 +296,14 @@ export const characterLessons: Lesson[] = [
         id: "q4",
         prompt: "Which of these is the strongest *lie* for a character to believe?",
         options: [
-          "She's sad because her mother left.",
-          "She's always hated Mondays.",
-          "She's afraid of spiders.",
+          "She's been sad and withdrawn ever since her mother left when she was nine.",
+          "She's a perfectionist who can't bear to be late for anything, ever.",
+          "She's been terrified of spiders ever since she was a small child.",
           "*If I'm the best at everything, no one will ever leave me again.*",
         ],
         answerIndex: 3,
         explanation:
-          "A lie is a belief that dictates behaviour. The first option names a wound and a feeling, but no conclusion; the others are traits. *If I'm the best, no one will leave* tells you what she'll chase, how she'll treat people and what truth could set her free.",
+          "A lie is a belief that dictates behaviour. The first option names a wound and a feeling, but no conclusion. The others are traits: perfectionism might even be a symptom of a lie, but it isn't the belief itself. *If I'm the best, no one will leave* tells you what she'll chase, how she'll treat people and what truth could set her free.",
       },
     ],
     exercise: {
@@ -406,10 +406,10 @@ export const characterLessons: Lesson[] = [
         id: "q1",
         prompt: "Which protagonist is the most *active*?",
         options: [
-          "A soldier who survives a battle because an airstrike arrives just in time.",
-          "A bedridden grandmother who secretly coaches her grandson through a chess tournament by phone, against her doctor's orders.",
-          "A teenager whose parents decide to move the family to Tokyo.",
-          "A detective whose partner solves the case while she's in hospital.",
+          "A young soldier who survives three days behind enemy lines because an airstrike arrives just in time.",
+          "A bedridden grandmother who defies her doctor to coach her grandson through a chess tournament.",
+          "A teenager whose parents suddenly decide to move the whole family from Ohio to Tokyo.",
+          "A brilliant detective whose partner cracks the case while she's recovering in hospital.",
         ],
         answerIndex: 1,
         explanation:
@@ -419,10 +419,10 @@ export const characterLessons: Lesson[] = [
         id: "q2",
         prompt: "Using McKee's distinction, which moment reveals *true character* rather than characterisation?",
         options: [
-          "We learn the heroine is a surgeon with a sharp sense of humour.",
-          "A friend's wedding toast describes the hero as the bravest man he knows.",
+          "We learn the heroine is a gifted surgeon with a sharp, self-deprecating sense of humour.",
+          "At the wedding, the best man's toast calls the groom the bravest man he has ever known.",
           "A nurse reports the doctor she loves, knowing it will end both his career and their relationship.",
-          "The villain wears a black coat and speaks softly.",
+          "The villain wears a long black coat and speaks softly, never raising his voice even when he threatens.",
         ],
         answerIndex: 2,
         explanation:
@@ -434,23 +434,23 @@ export const characterLessons: Lesson[] = [
           "At the climax, your hero must choose between saving the city and taking the villain's bribe. What's the best note?",
         options: [
           "Turn it into a dilemma: make both options things she genuinely values, so either choice costs her.",
-          "Add more explosions to raise the stakes.",
-          "Let her mentor make the decision for her.",
-          "Keep it as it is; the clearer the moral choice, the better.",
+          "Raise the stakes: make the villain's bomb threaten the whole state, not just the city.",
+          "Let her mentor make the decision for her, so the hero stays sympathetic and blameless.",
+          "Keep it as it is: the clearer the moral choice, the louder the audience will cheer for her.",
         ],
         answerIndex: 0,
         explanation:
-          "Good versus money is no contest for a hero, so the choice reveals nothing. If the bribe were, say, the only way to pay for her daughter's treatment, the audience would genuinely not know what she'll do, and whatever she chooses would define her.",
+          "Good versus money is no contest for a hero, so the choice reveals nothing, however big the bomb. Raising the scale doesn't turn an easy choice into a hard one. If the bribe were, say, the only way to pay for her daughter's treatment, the audience would genuinely not know what she'll do, and whatever she chooses would define her.",
       },
       {
         id: "q4",
         prompt:
           "In your draft's climax, the hero is cornered by the villain until the police burst in unexpectedly. What's the core problem?",
         options: [
-          "The scene runs too long.",
-          "The police should arrive earlier.",
-          "The villain isn't threatening enough.",
-          "The resolution comes from outside the protagonist, so her choices don't answer the story's central question.",
+          "The scene runs too long; cut the standoff so the police arrive before the tension drops.",
+          "The police should arrive earlier, so the audience isn't left wondering where they've been.",
+          "The villain isn't threatening enough; if he were scarier, the rescue would feel earned.",
+          "The rescue comes from outside, so her own choices don't decide how the story ends.",
         ],
         answerIndex: 3,
         explanation:
@@ -459,7 +459,7 @@ export const characterLessons: Lesson[] = [
     ],
     exercise: {
       prompt:
-        "Break your story into its major turns. Rebuild any turn caused by luck or by another character so that it's caused by your protagonist's choice under pressure. Then test it in the Writers' Room, where a showrunner will push on every act break.",
+        "Break your story into its major turns. Rebuild any turn caused by luck or by another character so that it's caused by your protagonist's choice under pressure. Then test it in the Break the Episode drill, where a showrunner will push on every act break.",
       tips: [
         "For each act break, ask: what does my protagonist decide here, and what does it cost?",
         "Replace at least one rescue with a choice.",
@@ -557,10 +557,10 @@ export const characterLessons: Lesson[] = [
         id: "q1",
         prompt: "Which antagonist setup is strongest?",
         options: [
-          "A warlord who destroys villages because he enjoys it.",
-          "A rival chef who wants the same Michelin star as the hero, and genuinely believes the hero's cooking is a gimmick that cheapens the craft.",
-          "A storm that appears without warning in the final act.",
-          "A shadowy figure whose motives are never revealed or felt.",
+          "A ruthless warlord who burns villages for the pleasure of it and laughs as his victims beg.",
+          "A rival chef who wants the same Michelin star and sincerely thinks the hero's cooking is a gimmick.",
+          "A once-in-a-century storm that hits the town without warning in the final act.",
+          "A shadowy figure pulling the strings, whose identity and motives are never revealed.",
         ],
         answerIndex: 1,
         explanation:
@@ -570,10 +570,10 @@ export const characterLessons: Lesson[] = [
         id: "q2",
         prompt: "What makes Killmonger in *Black Panther* more than a standard villain?",
         options: [
-          "His fighting skills exceed T'Challa's.",
-          "He's given a tragic death scene.",
+          "He's as skilled a fighter as T'Challa, so every clash between them is a real contest.",
+          "He's given a tragic, dignified death scene that makes the audience sympathise with him.",
           "His critique of Wakanda's isolation is partly right, so the hero has to grow in response to it.",
-          "He's related to the hero.",
+          "He's T'Challa's cousin, and a family tie always makes a villain more interesting.",
         ],
         answerIndex: 2,
         explanation:
@@ -584,9 +584,9 @@ export const characterLessons: Lesson[] = [
         prompt: "In *Heat*, what does the coffee-shop scene between Hanna and McCauley achieve?",
         options: [
           "It reveals the two men as mirrors, so their final confrontation feels like a duel with a reflection.",
-          "It gives the audience a break from the action with some comic relief.",
-          "It resolves their conflict so the finale can focus on the heist.",
-          "It reveals that Hanna secretly sympathises with crime.",
+          "It gives the audience a breather from the action, with a warm, funny exchange between two big movie stars.",
+          "It settles their differences, so the finale can focus on the heist instead of their rivalry.",
+          "It reveals that Hanna secretly admires the criminal life and wishes he could live it himself.",
         ],
         answerIndex: 0,
         explanation:
@@ -597,19 +597,19 @@ export const characterLessons: Lesson[] = [
         prompt:
           "Your protagonist is a whistleblower deciding whether to go public. Which *mirror* character would sharpen the theme the most?",
         options: [
-          "A comic-relief colleague at the same company.",
-          "A journalist who wants the scoop.",
-          "A love interest from outside the company.",
-          "A former colleague who stayed silent years ago and has since built a comfortable, hollow life on that silence.",
+          "A comic-relief colleague at the same company who jokes about the scandal to cope.",
+          "A hungry journalist who wants the scoop and will push her to go public, whatever it costs her.",
+          "A love interest from outside the company who begs her to protect herself and stay quiet.",
+          "A former colleague who kept quiet years ago and has built a comfortable, hollow life on it.",
         ],
         answerIndex: 3,
         explanation:
-          "The former colleague faced the same dilemma and chose the other way. Every scene with him shows the hero one possible future, which dramatises the theme far more vividly than any conversation about it could. The others have roles to play, but they don't reflect her choice back at her.",
+          "The former colleague faced the same dilemma and chose the other way. Every scene with him shows the hero one possible future, which dramatises the theme far more vividly than any conversation about it could. The others have roles to play, pushing her one way or the other, but they don't reflect her choice back at her.",
       },
     ],
     exercise: {
       prompt:
-        "Write a paragraph from your antagonist's point of view, as if they were pitching their own film. Then pitch your story to a skeptical development exec in the Studio Pitch drill, and be ready for the question every exec asks: who, or what, stands in the way?",
+        "Write a paragraph from your antagonist's point of view, as if they were pitching their own film. Then pitch your story to a skeptical development exec in the Studio Pitch drill, and be ready when she asks what the hero stands to lose: your antagonist is the one who can take it.",
       tips: [
         "Give your antagonist a want, a wound and a worldview, not just a plan.",
         "Find the one thing your antagonist says that your hero can't easily answer.",
@@ -746,9 +746,9 @@ export const characterLessons: Lesson[] = [
         prompt: "Why is Michael Corleone's story a *negative* arc even though he ends up on top?",
         options: [
           "He gains everything he pursues but loses the self and the relationships he started with.",
-          "The film ends on a sad note.",
-          "He's the antagonist of the film.",
-          "He never makes an active choice.",
+          "The film ends on a dark note, and a sad ending is what makes an arc negative.",
+          "He's really the film's antagonist, and antagonists by definition have negative arcs.",
+          "He never makes an active choice; events drag him into the family business against his will.",
         ],
         answerIndex: 0,
         explanation:
@@ -758,9 +758,9 @@ export const characterLessons: Lesson[] = [
         id: "q3",
         prompt: "What's the strongest way to show that a workaholic has changed?",
         options: [
-          "A monologue in which he explains what he's learned.",
-          "A voiceover over the final scene.",
-          "Other characters remarking on how different he seems.",
+          "A heartfelt monologue near the end in which he explains exactly what he's learned.",
+          "A voiceover over the final scene, reflecting on how much his priorities have shifted.",
+          "Other characters remarking on how different he seems since the start of the film.",
           "A late choice that mirrors an early one, with the opposite answer and a real cost.",
         ],
         answerIndex: 3,
@@ -771,10 +771,10 @@ export const characterLessons: Lesson[] = [
         id: "q4",
         prompt: "In a positive arc, what typically happens around the midpoint?",
         options: [
-          "The character fully overcomes the lie.",
+          "The character fully overcomes the lie, and spends the second half proving it.",
           "The character glimpses the truth or its value, but hasn't yet embraced it.",
-          "The antagonist is finally defeated.",
-          "The wound is revealed for the first time.",
+          "The antagonist is defeated for the first time, only to return stronger.",
+          "The wound is finally revealed, explaining why the character believes the lie.",
         ],
         answerIndex: 1,
         explanation:
@@ -784,10 +784,10 @@ export const characterLessons: Lesson[] = [
         id: "q5",
         prompt: "In a corruption arc like Walter White's in *Breaking Bad*, what's the essential movement?",
         options: [
-          "A bad person gradually becomes good.",
-          "A character learns the truth but is powerless to act on it.",
+          "A bad person gradually becomes good, as the people around them wear down their defences.",
+          "A character learns a devastating truth but is powerless to change anything with it.",
           "A person who starts out decent trades that decency, choice by choice, for a seductive lie.",
-          "A character stays the same while the world around him changes.",
+          "A character stays steady and decent while the world around him grows more corrupt.",
         ],
         answerIndex: 2,
         explanation:

@@ -60,7 +60,7 @@ export function PracticeCatalog({ scenarios }: { scenarios: PublicScenario[] }) 
                   )}
                 >
                   {f.label}
-                  <span className={cn("text-xs tabular-nums", active ? "text-bronze-300/80" : "text-sea-500")}>{f.count}</span>
+                  <span className={cn("text-xs tabular-nums", active ? "text-bronze-300/80" : "text-sea-400")}>{f.count}</span>
                 </button>
               );
             })}
@@ -70,9 +70,9 @@ export function PracticeCatalog({ scenarios }: { scenarios: PublicScenario[] }) 
         <p className="sr-only" role="status">
           {filter === "all" ? `Showing all ${visible.length} drills` : `Showing ${visible.length} ${CATEGORY_META[filter].label} drill${visible.length === 1 ? "" : "s"}`}
         </p>
-        <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((scenario) => (
-            <li key={scenario.id} className="animate-fade-in">
+            <li key={scenario.id} className="min-w-0 animate-fade-in">
               <ScenarioCard scenario={scenario} stats={hydrated ? (stats.get(scenario.id) ?? null) : undefined} />
             </li>
           ))}

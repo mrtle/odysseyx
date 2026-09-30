@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowLeft, Gauge, MessageSquareDashed, Play, RotateCcw, Trash2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { formatRelative } from "@/lib/utils";
 import type { LessonPicks } from "./lesson-picks";
 import { firstName, type PublicScenario } from "./public-scenario";
 import { Scorecard } from "./scorecard";
+import { lastActivity } from "./session-time";
 import { Transcript } from "./transcript";
 import { useSessionScoring } from "./use-session-scoring";
 
@@ -29,26 +30,46 @@ function ReviewSkeleton() {
   );
 }
 
+/**
+ * Delete with an inline confirm. Focus lands on the safe choice (Cancel),
+ * Escape backs out, and backing out returns focus to the Delete button.
+ */
 function DeleteSession({ onDelete }: { onDelete: () => void }) {
   const [confirming, setConfirming] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const returnFocus = useRef(false);
+
+  useEffect(() => {
+    if (confirming || !returnFocus.current) return;
+    returnFocus.current = false;
+    triggerRef.current?.focus();
+  }, [confirming]);
+
+  const cancel = () => {
+    returnFocus.current = true;
+    setConfirming(false);
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    cancel();
+  };
+
   if (!confirming) {
     return (
-      <Button variant="ghost" size="sm" onClick={() => setConfirming(true)} icon={<Trash2 className="size-4" aria-hidden />}>
+      <Button ref={triggerRef} variant="ghost" size="sm" onClick={() => setConfirming(true)} icon={<Trash2 className="size-4" aria-hidden />}>
         Delete
       </Button>
     );
   }
   return (
-    <span className="inline-flex items-center gap-2" role="group" aria-label="Confirm delete">
-      <Button
-        variant="danger"
-        size="sm"
-        autoFocus
-        onClick={onDelete}
-      >
+    <span className="inline-flex items-center gap-2" role="group" aria-label="Confirm delete" onKeyDown={onKeyDown}>
+      <Button variant="danger" size="sm" onClick={onDelete}>
         Delete session
       </Button>
-      <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+      <Button variant="ghost" size="sm" autoFocus onClick={cancel}>
         Cancel
       </Button>
     </span>
@@ -156,6 +177,7 @@ export function SessionReview({
   if (!session) {
     return (
       <EmptyState
+        headingLevel={1}
         icon={<MessageSquareDashed className="size-8" aria-hidden />}
         title="That session has drifted off the map"
         description="It may have been deleted, or it was recorded in another browser — practice history lives on this device."
@@ -171,7 +193,7 @@ export function SessionReview({
   const scenario = scenarios.find((s) => s.id === session.scenarioId);
   const persona = scenario?.persona ?? { name: "Scene partner", avatar: "🎬" };
   const turns = session.messages.filter((m) => m.role === "user").length;
-  const when = formatRelative(session.endedAt ?? session.startedAt);
+  const when = formatRelative(lastActivity(session));
 
   return (
     <div className="animate-fade-in">

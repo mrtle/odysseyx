@@ -20,6 +20,7 @@ export async function POST(req: Request) {
             messages: [{ role: "user", content: buildStoryPrompt(parsed.data) }],
             schema: StoryAnalysisSchema,
             effort: "high",
+            signal: req.signal,
           })
         : demoStory(parsed.data),
       parsed.data.framework,

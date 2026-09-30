@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Sailboat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/loading";
 import { PageHeader } from "@/components/ui/page-header";
 import { SkillChip } from "@/components/ui/skill-chip";
-import type { ExperienceLevel, GoalId } from "@/lib/ai/schemas";
+import { writeProfileCookie } from "@/components/home/profile-cookie";
+import type { ExperienceLevel, GoalId } from "@/lib/constants";
 import { EXPERIENCES, EXPERIENCE_LIST, GOALS, GOAL_LIST, isExperienceLevel, isGoalId } from "@/lib/goals";
 import { useAppStore, useHasHydrated } from "@/lib/store";
 import type { Profile } from "@/lib/types";
@@ -16,10 +17,11 @@ import { cn } from "@/lib/utils";
 import { GoalIcon } from "./goal-icon";
 
 export const ONBOARDING_STEPS = [
-  { id: "name", label: "Name" },
-  { id: "goal", label: "Goal" },
-  { id: "experience", label: "Experience" },
-  { id: "project", label: "Project" },
+  { id: "name", label: "Name", short: "Name" },
+  { id: "goal", label: "Goal", short: "Goal" },
+  // "Experience" doesn't fit a quarter of a phone-width card, so phones show the short label.
+  { id: "experience", label: "Experience", short: "Level" },
+  { id: "project", label: "Project", short: "Project" },
 ] as const;
 
 const NAME_MAX = 60;
@@ -39,6 +41,22 @@ const PROJECT_EXAMPLES: Record<GoalId, string[]> = {
 };
 
 const DEFAULT_EXAMPLES = ["A short film", "A pitch deck story", "A personal essay"];
+
+/** Where to go after saving: only known in-app destinations are allowed. */
+const RETURN_TO: Record<string, string> = { progress: "/progress", home: "/" };
+
+export function returnToFor(from: string | null | undefined): string {
+  return (from && Object.hasOwn(RETURN_TO, from) && RETURN_TO[from]) || "/";
+}
+
+/**
+ * Reads `?from=` on the client, so the page itself can be prerendered.
+ * Render inside <Suspense> (useSearchParams suspends during prerendering).
+ */
+export function OnboardingFlowFromUrl() {
+  const from = useSearchParams().get("from");
+  return <OnboardingFlow returnTo={returnToFor(from)} />;
+}
 
 /** Waits for the store so an existing profile can pre-fill the form. */
 export function OnboardingFlow({ returnTo = "/" }: { returnTo?: string }) {
@@ -104,6 +122,8 @@ export function OnboardingForm({ initial, returnTo }: { initial: Profile | null;
       experience,
       ...(trimmedProject ? { project: trimmedProject } : {}),
     });
+    // Lets the server render the dashboard shell (not the landing page) on the next visit to Home.
+    writeProfileCookie(true);
     router.push(returnTo);
   }
 
@@ -416,7 +436,7 @@ function RadioMark({ checked }: { checked: boolean }) {
 
 function StepIndicator({ step, onJump }: { step: number; onJump: (step: number) => void }) {
   return (
-    <ol className="grid grid-cols-4 gap-2" aria-label="Onboarding steps">
+    <ol className="grid grid-cols-4 gap-1.5 sm:gap-2" aria-label="Onboarding steps">
       {ONBOARDING_STEPS.map((s, i) => {
         const state = i < step ? "done" : i === step ? "current" : "todo";
         const content = (
@@ -431,7 +451,7 @@ function StepIndicator({ step, onJump }: { step: number; onJump: (step: number) 
             <span
               className={cn(
                 "mt-2 flex items-center gap-1 text-xs font-medium",
-                state === "current" ? "text-bronze-200" : state === "done" ? "text-sea-200" : "text-sea-500",
+                state === "current" ? "text-bronze-200" : state === "done" ? "text-sea-200" : "text-sea-400",
               )}
             >
               {state === "done" ? (
@@ -441,7 +461,14 @@ function StepIndicator({ step, onJump }: { step: number; onJump: (step: number) 
                   {i + 1}.
                 </span>
               )}
-              <span className="truncate">{s.label}</span>
+              <span className="truncate">
+                {s.short !== s.label ? (
+                  <span aria-hidden className="sm:hidden">
+                    {s.short}
+                  </span>
+                ) : null}
+                <span className={s.short !== s.label ? "max-sm:sr-only" : undefined}>{s.label}</span>
+              </span>
               <span className="sr-only">{state === "done" ? " (done)" : state === "todo" ? " (to do)" : ""}</span>
             </span>
           </>
@@ -497,14 +524,14 @@ function VoyagePreview({
                   <GoalIcon icon={g.icon} className="size-4 text-bronze-300" /> {g.label}
                 </>
               ) : (
-                <span className="text-sea-500">—</span>
+                <span className="text-sea-400">—</span>
               )}
             </dd>
           </div>
           <div>
             <dt className="text-xs font-medium text-sea-400">Experience</dt>
             <dd className="mt-1 text-sea-100">
-              {experience ? EXPERIENCES[experience].label : <span className="text-sea-500">—</span>}
+              {experience ? EXPERIENCES[experience].label : <span className="text-sea-400">—</span>}
             </dd>
           </div>
           <div>
@@ -513,13 +540,13 @@ function VoyagePreview({
               {g ? (
                 g.preferredSkills.map((skill) => <SkillChip key={skill} skill={skill} />)
               ) : (
-                <span className="text-sea-500">Pick a goal</span>
+                <span className="text-sea-400">Pick a goal</span>
               )}
             </dd>
           </div>
           <div>
             <dt className="text-xs font-medium text-sea-400">Working on</dt>
-            <dd className="mt-1 line-clamp-3 text-sea-100">{project.trim() || <span className="text-sea-500">—</span>}</dd>
+            <dd className="mt-1 line-clamp-3 text-sea-100">{project.trim() || <span className="text-sea-400">—</span>}</dd>
           </div>
         </dl>
         {!editing ? (

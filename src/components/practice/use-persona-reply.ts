@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessageInput, CoachProfile } from "@/lib/ai/schemas";
+import { NOTICE_MARKER, splitNotice } from "@/lib/ai/stream-protocol";
 import { modeFromResponse } from "@/lib/api";
 import type { ChatMessage, CoachMode } from "@/lib/types";
 import { readError } from "@/lib/utils";
@@ -21,15 +22,51 @@ export interface ReplyResult {
   stopped: boolean;
 }
 
+/** A reply the server cut short with an out-of-character notice (an error or a refusal mid-stream). */
+export interface InterruptedReply {
+  /** The in-character text that arrived before the notice. Never includes the notice. */
+  text: string;
+  notice: string;
+}
+
+const EMPTY_REPLY = "The reply came back empty. Try again.";
+const INTERRUPTED = "The reply was interrupted. Try again.";
+
+/** How a finished stream should be handled: committed as dialogue, held as a cut-off reply, or treated as a failed turn. */
+export type SettledReply =
+  | { kind: "reply"; text: string }
+  | { kind: "interrupted"; text: string; notice: string }
+  | { kind: "failed"; error: string };
+
+/**
+ * Split a complete response body per the stream protocol. The notice (the
+ * text after NOTICE_MARKER) is never part of the persona's words; when no
+ * in-character text arrived before it, the turn failed.
+ */
+export function settleReply(body: string): SettledReply {
+  const { reply, notice } = splitNotice(body);
+  const text = reply.trim();
+  if (!body.includes(NOTICE_MARKER)) return text ? { kind: "reply", text } : { kind: "failed", error: EMPTY_REPLY };
+  if (!text) return { kind: "failed", error: notice ?? INTERRUPTED };
+  return { kind: "interrupted", text, notice: notice ?? INTERRUPTED };
+}
+
+/** The in-character part of a body that may still be streaming (hides a notice as soon as its marker arrives). */
+export function visibleReply(body: string): string {
+  return splitNotice(body).reply;
+}
+
 /**
  * Streams the persona's next line from /api/coach/chat. `draft` holds the
  * text so far while a reply is streaming (null otherwise); `onReply` fires
  * once, before the draft clears, so the caller can commit the message in
- * the same render.
+ * the same render. A reply the server cut short is held in `interrupted`
+ * (not committed) so the caller can offer a retry or keep the partial line.
  */
 export function usePersonaReply(scenarioId: string) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [interrupted, setInterrupted] = useState<InterruptedReply | null>(null);
   const [mode, setMode] = useState<CoachMode | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const stoppedRef = useRef(false);
@@ -41,6 +78,7 @@ export function usePersonaReply(scenarioId: string) {
       controllerRef.current = controller;
       stoppedRef.current = false;
       setError(null);
+      setInterrupted(null);
       setDraft("");
 
       let text = "";
@@ -63,22 +101,25 @@ export function usePersonaReply(scenarioId: string) {
             const { done, value } = await reader.read();
             if (done) break;
             text += decoder.decode(value, { stream: true });
-            setDraft(text);
+            setDraft(visibleReply(text));
           }
           text += decoder.decode();
         } else {
           text = await res.text();
         }
-        if (text.trim()) onReply({ text: text.trim(), mode: replyMode, stopped: false });
-        else setError("The reply came back empty. Try again.");
+        const settled = settleReply(text);
+        if (settled.kind === "reply") onReply({ text: settled.text, mode: replyMode, stopped: false });
+        else if (settled.kind === "interrupted") setInterrupted({ text: settled.text, notice: settled.notice });
+        else setError(settled.error);
       } catch (err) {
         if (controller.signal.aborted) {
-          // Stopped by the learner: keep whatever arrived. Aborted by unmount: drop it.
-          if (stoppedRef.current && text.trim()) onReply({ text: `${text.trim()}…`, mode: replyMode, stopped: true });
+          // Stopped by the learner: keep whatever in-character text arrived. Aborted by unmount: drop it.
+          const partial = visibleReply(text).trim();
+          if (stoppedRef.current && partial) onReply({ text: `${partial}…`, mode: replyMode, stopped: true });
         } else if (err instanceof TypeError) {
           setError("Couldn't reach the coach. Check your connection and try again.");
         } else {
-          setError(err instanceof Error && err.message ? err.message : "The reply was interrupted. Try again.");
+          setError(err instanceof Error && err.message ? err.message : INTERRUPTED);
         }
       } finally {
         if (controllerRef.current === controller) {
@@ -98,6 +139,13 @@ export function usePersonaReply(scenarioId: string) {
 
   const clearError = useCallback(() => setError(null), []);
 
+  /** Hand back the cut-off reply (to keep it in the transcript) and clear it. */
+  const takeInterrupted = useCallback((): InterruptedReply | null => {
+    const current = interrupted;
+    setInterrupted(null);
+    return current;
+  }, [interrupted]);
+
   useEffect(
     () => () => {
       stoppedRef.current = false;
@@ -106,5 +154,5 @@ export function usePersonaReply(scenarioId: string) {
     [],
   );
 
-  return { draft, streaming: draft !== null, error, mode, request, stop, clearError };
+  return { draft, streaming: draft !== null, error, interrupted, mode, request, stop, clearError, takeInterrupted };
 }

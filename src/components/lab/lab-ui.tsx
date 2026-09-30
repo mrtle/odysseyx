@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { ArrowLeft, ArrowRight, BookmarkCheck, RotateCcw } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { XP_REWARDS } from "@/lib/progress";
+import { LAB_XP_DAILY_LIMIT } from "@/lib/progress";
 import { cn } from "@/lib/utils";
 import { entryHref } from "./lab-meta";
 
@@ -58,8 +58,25 @@ export function SectionHeading({
   );
 }
 
-/** Confirmation that an analysis was saved to the logbook, with the XP it earned. */
-export function SavedNotice({ entryId, className }: { entryId: string; className?: string }) {
+/** Confirmation that an analysis was saved to the logbook, with the XP it actually earned. */
+export function SavedNotice({
+  entryId,
+  xpGained,
+  replaced = false,
+  className,
+}: {
+  entryId: string;
+  /** XP the save earned (0 for a repeat submission or past the daily Story Lab limit). */
+  xpGained: number;
+  /** True when an identical earlier submission was updated instead of a new entry being added. */
+  replaced?: boolean;
+  className?: string;
+}) {
+  const detail = replaced
+    ? "Same text as a saved analysis, so that entry was updated rather than duplicated — no new XP."
+    : xpGained > 0
+      ? null
+      : `You've earned today's Story Lab XP (${LAB_XP_DAILY_LIMIT} analyses a day). Keep analysing — the notes are still saved.`;
   return (
     <div
       className={cn(
@@ -67,14 +84,19 @@ export function SavedNotice({ entryId, className }: { entryId: string; className
         className,
       )}
     >
-      <p className="flex items-center gap-2 text-emerald-200">
-        <BookmarkCheck className="size-4 shrink-0" aria-hidden />
-        <span>
-          Saved to your Story Lab logbook
-          <span className="ml-2 rounded-full bg-bronze-500/15 px-2 py-0.5 text-xs font-semibold text-bronze-300">+{XP_REWARDS.labAnalysis} XP</span>
-        </span>
-      </p>
-      <Link href={entryHref(entryId)} className="inline-flex items-center gap-1 font-medium text-emerald-200 hover:text-emerald-100">
+      <div className="flex items-start gap-2 text-emerald-200">
+        <BookmarkCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <div>
+          <p>
+            {replaced ? "Updated in your Story Lab logbook" : "Saved to your Story Lab logbook"}
+            {xpGained > 0 ? (
+              <span className="ml-2 rounded-full bg-bronze-500/15 px-2 py-0.5 text-xs font-semibold text-bronze-300">+{xpGained} XP</span>
+            ) : null}
+          </p>
+          {detail ? <p className="mt-0.5 text-xs text-emerald-200/80">{detail}</p> : null}
+        </div>
+      </div>
+      <Link href={entryHref(entryId)} className="inline-flex shrink-0 items-center gap-1 font-medium text-emerald-200 hover:text-emerald-100">
         Open saved copy
         <ArrowRight className="size-4" aria-hidden />
       </Link>

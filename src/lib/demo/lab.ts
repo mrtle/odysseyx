@@ -28,12 +28,11 @@ import { FRAMEWORKS, type FrameworkBeat } from "@/lib/frameworks";
 import type { SkillId } from "@/lib/skills";
 import {
   LEXICON,
-  averageSentenceLength,
   dialogueLines,
   lexicalVariety,
+  normalizeForMatch,
   paragraphs,
   scale,
-  sentenceLengthVariance,
   sentences,
   specificityMarkers,
   words,
@@ -43,10 +42,12 @@ import {
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-/** Lower-case, punctuation-free, space-padded text for phrase matching. */
-function norm(text: string): string {
-  return ` ${text.toLowerCase().replace(/[’‘]/g, "'").replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim()} `;
-}
+/**
+ * Lower-case, punctuation-free, space-padded text for phrase matching, with
+ * possessives reduced ("his daughter's" → "his daughter") so lexicon terms
+ * still match. Shared with the other demo coaches via ./text.
+ */
+const norm = normalizeForMatch;
 
 /** The subset of `terms` (words or phrases) that appear in `text`. */
 function hits(text: string, terms: readonly string[]): string[] {
@@ -59,6 +60,21 @@ function hits(text: string, terms: readonly string[]): string[] {
   return found;
 }
 
+/** Total occurrences of `terms` in `text` (every repeat counts), each weighted by `weight(term)`. */
+function occurrences(text: string, terms: readonly string[], weight: (term: string) => number = () => 1): number {
+  const hay = norm(text);
+  let total = 0;
+  for (const term of new Set(terms)) {
+    const needle = norm(term);
+    if (!needle.trim()) continue;
+    let count = 0;
+    // Step past the needle but keep its trailing space, so adjacent repeats ("no no") both count.
+    for (let at = hay.indexOf(needle); at >= 0; at = hay.indexOf(needle, at + needle.length - 1)) count++;
+    total += count * weight(term);
+  }
+  return total;
+}
+
 function truncateWords(text: string, max: number): string {
   const parts = text.trim().split(/\s+/);
   if (parts.length <= max) return text.trim();
@@ -67,6 +83,10 @@ function truncateWords(text: string, max: number): string {
 
 function stripEnd(text: string): string {
   return text.trim().replace(/[\s.,;:!?—–-]+$/, "").trim();
+}
+
+function lowerFirst(text: string): string {
+  return text ? text[0].toLowerCase() + text.slice(1) : text;
 }
 
 function capitalize(text: string): string {
@@ -101,14 +121,44 @@ function clamp(value: number, min: number, max: number): number {
 
 /** The logline length window the heuristics reward (and the UI hints at). */
 export const IDEAL_LOGLINE_WORDS = { min: 20, max: 45 } as const;
+/** Past this a logline reads as a synopsis: its verdict and score are capped. */
+const SPRAWL_WORDS = 60;
 
 const INCIDENT_RE = /^(when|after|as|once|while|following|in the wake of|on the eve of|the day|the night)\s+(.+?)\s*[,;:—–]\s*(.+)$/i;
 
 const GOAL_RE =
   /\b(must|has to|have to|needs to|need to|is forced to|are forced to|sets out to|set out to|sets off to|tries to|try to|wants to|want to|fights to|fight to|races to|race to|struggles to|scrambles to|vows to|plans to|decides to|attempts to|hopes to|is determined to|risks everything to|embarks on an? (?:quest|mission|journey) to|teams up with [^,.;]{1,40}? to|joins [^,.;]{1,40}? to|goes undercover to)\s+/i;
 
-const FALLBACK_PROTAGONIST_RE =
-  /^((?:an?|the|two|three|four|five|six|a pair of|a group of|a band of|\d+)\s+[^,.;]{2,60}?|[A-Z][a-z]+(?:,\s*an?\s+[^,]{2,40},)?)\s+(?=(?:who|is|are|was|were|has|have|discovers?|finds?|learns?|goes|go|travels?|gets?|becomes?|falls?|meets?|realizes|realises|realize|returns?|inherits?|wakes?|lands?|joins?|takes?|starts?|begins?|moves?|decides?|agrees?|embarks?|sets? off|team up|teams up)\b)/i;
+/** Verbs that can follow a protagonist noun phrase ("a shy librarian finds…"), present and simple past. */
+const SUBJECT_VERBS =
+  "is|are|was|were|has|have|had|discovers?|discovered|finds?|found|learns?|learned|learnt|goes|go|went|travels?|travelled|traveled|gets?|got|becomes?|became|falls?|fell|meets?|met|realizes|realises|realize|realized|realised|returns?|returned|inherits?|inherited|wakes?|woke|lands?|landed|joins?|joined|takes?|took|starts?|started|begins?|began|moves?|moved|decides?|decided|agrees?|agreed|embarks?|embarked|sets? off|team up|teams up|receives?|received|loses|lost|uncovers?|uncovered|witnesses|witnessed|stumbles?|stumbled";
+const PROTAGONIST_PHRASE = String.raw`(?:an?|the|two|three|four|five|six|a pair of|a group of|a band of|\d+)\s+[^,.;]{2,60}?|[A-Z][a-z]+(?:,\s*an?\s+[^,]{2,40},)?`;
+/** "A retired cop who lands a job… discovers" — the phrase may carry a relative clause, but never ends on "who". */
+const FALLBACK_PROTAGONIST_RE = new RegExp(String.raw`^(${PROTAGONIST_PHRASE})(?<!\b(?:who|whose|that|which))\s+(?=(?:${SUBJECT_VERBS})\b)`, "i");
+/** Second pass when no main verb follows the relative clause: "A shy kid who wants to be a pilot." */
+const FALLBACK_WHO_RE = new RegExp(String.raw`^(${PROTAGONIST_PHRASE})\s+(?=who\b)`, "i");
+
+/** An action that is really an inciting event rather than a goal ("discovers she can rewind time"). */
+const INCIDENT_ACTION_RE =
+  /^(?:discovers?|discovered|finds?|found|learns?|learned|learnt|realizes|realises|realized|realised|inherits?|inherited|wakes?(?: up)?|woke(?: up)?|receives?|received|(?:is|was) (?:diagnosed|framed|fired|dumped|kidnapped|abducted|accused|arrested)|loses|lost|gets? (?:fired|dumped|framed)|got (?:fired|dumped|framed)|meets?|met|lands?|landed|becomes?|became|uncovers?|uncovered|witnesses|witnessed|stumbles?|stumbled)\b/i;
+
+/** Simple past → present for the first verb of an incident, so it sits in a present-tense logline. */
+const PRESENT_TENSE: Record<string, string> = {
+  discovered: "discovers", found: "finds", learned: "learns", learnt: "learns", realized: "realizes", realised: "realises",
+  inherited: "inherits", woke: "wakes", received: "receives", was: "is", were: "are", lost: "loses", got: "gets", met: "meets",
+  landed: "lands", became: "becomes", uncovered: "uncovers", witnessed: "witnesses", stumbled: "stumbles",
+};
+
+/** Verb agreement after a pronoun: "they discovers" → "they discover" (first word only). */
+function agree(pronoun: string, phrase: string): string {
+  return pronoun === "they" ? toBaseForm(phrase) : phrase;
+}
+
+function presentTense(action: string): string {
+  const [first, ...rest] = action.split(/\s+/);
+  const present = PRESENT_TENSE[first.toLowerCase()];
+  return present ? [present, ...rest].join(" ") : action;
+}
 
 const STRONG_GOAL_VERBS = ["must", "races to", "fights to", "vows to", "is forced to", "risks everything to", "scrambles to", "has to"];
 const WEAK_GOAL_VERBS = ["wants to", "want to", "hopes to", "tries to", "try to", "plans to"];
@@ -143,7 +193,7 @@ const TIME_PRESSURE_RE =
   /\b(before|by|within|in)\s+(dawn|midnight|sunrise|sunset|nightfall|morning|the (?:end|storm|wedding|election|trial|deadline|tide|funeral|verdict|execution|eclipse|harvest|season)|(?:a|one|\d+|two|three|four|five|seven|ten|twenty[- ]four)\s+(?:hours?|days?|minutes?|weeks?|nights?))\b|\b(deadline|countdown|ticking|last chance|running out)\b/i;
 
 const ANTAGONIST_TERMS = [
-  "killer", "murderer", "serial", "cartel", "mob", "mafia", "gang", "army", "regime", "empire", "corporation", "storm",
+  "coast guard", "border patrol", "smugglers", "traffickers", "kidnappers", "poachers", "authorities", "killer", "murderer", "serial", "cartel", "mob", "mafia", "gang", "army", "regime", "empire", "corporation", "storm",
   "hurricane", "monster", "creature", "demon", "ghost", "rival", "enemy", "nemesis", "boss", "dictator", "cult", "virus",
   "plague", "police", "fbi", "detective", "hitman", "assassin", "warlord", "witch", "dragon", "shark", "government",
   "sheriff", "bully", "landlord", "tycoon", "developer", "bureaucracy", "flood", "fire", "wildfire", "judge", "tribunal",
@@ -241,6 +291,14 @@ interface LoglineParts {
   incident: string | null;
   /** The conjunction that introduced the incident ("when", "after"…). */
   incidentLead: string;
+  /**
+   * The incident as it reads once the protagonist has been named ("she learns
+   * her crew is smuggling refugees"), when the incident is where the logline
+   * introduces them.
+   */
+  incidentAfterNamed: string | null;
+  /** The subject the writer used in the main clause, when it's a pronoun standing in for the protagonist. */
+  subjectPronoun: string | null;
   protagonist: string | null;
   descriptors: string[];
   head: string | null;
@@ -248,7 +306,13 @@ interface LoglineParts {
   whoClause: string | null;
   goalVerb: string | null;
   goal: string | null;
+  /** A goal only implied by a relative clause ("the only surgeon who can save the president"). */
+  impliedGoal: string | null;
+  /** "X is the woman he deported" — who the protagonist turns out to be. */
+  identity: string | null;
   action: string | null;
+  /** True when the action is an inciting event ("discovers she can rewind time"), not a goal. */
+  actionIsIncident: boolean;
   obstacle: string | null;
   connector: string | null;
   stakes: string | null;
@@ -256,11 +320,96 @@ interface LoglineParts {
   plural: boolean;
 }
 
+const SHE_NOUNS = /\b(woman|women|girl|mother|mom|daughter|wife|sister|widow|queen|princess|actress|waitress|nun|grandmother|grandma|aunt|niece|bride|heiress|lady|housewife|matriarch|stepmother|ballerina|mistress|duchess|empress|sorceress|goddess|priestess|countess|baroness|landlady|spokeswoman|policewoman|businesswoman|congresswoman|chairwoman|diva|debutante|schoolgirl|cowgirl)\b/i;
+const HE_NOUNS = /\b(man|men|boy|father|dad|son|husband|brother|widower|king|prince|actor|waiter|monk|grandfather|grandpa|uncle|nephew|groom|heir|gentleman|stepfather|patriarch|duke|emperor|sorcerer|god|priest|count|baron|landlord|spokesman|policeman|businessman|congressman|chairman|schoolboy|cowboy|fisherman|fireman|lawman|doorman|conman|con man)\b/i;
+
+/** "she"/"he" when the phrase's own noun is gendered ("a single mother", "the woman he deported"). */
+function genderOf(phrase: string): "she" | "he" | null {
+  const core = phrase.replace(/\s+(?:who|whose|that|with)\s+.+$/i, "");
+  if (SHE_NOUNS.test(core)) return "she";
+  if (HE_NOUNS.test(core)) return "he";
+  return null;
+}
+
+/** Heads that look like agent nouns (-er, -or…) but aren't people. */
+const NON_PERSON_HEADS = new Set([
+  "letter", "stranger", "murder", "danger", "power", "answer", "border", "water", "winter", "summer", "matter", "dinner", "number",
+  "computer", "order", "paper", "monster", "fever", "cancer", "disaster", "weather", "center", "centre", "poster", "meteor", "mirror",
+  "elevator", "tractor", "error", "terror", "horror", "rumor", "rumour", "tumor", "tumour", "trailer", "flyer", "folder", "recorder",
+]);
+const PERSON_HEADS = new Set([
+  "captain", "pilot", "nurse", "surgeon", "paramedic", "pianist", "librarian", "cop", "detective", "soldier", "chef", "widow",
+  "teen", "teenager", "student", "girl", "boy", "woman", "man", "orphan", "veteran", "sheriff", "mayor", "judge", "clerk", "prodigy",
+  "thief", "spy", "agent", "priest", "nun", "actress", "actor", "mother", "father", "kid", "child", "diver", "doctor", "medic",
+  "lawyer", "journalist", "scientist", "astronaut", "hacker", "janitor", "waitress", "bartender", "boxer", "athlete", "coach",
+  "monk", "witch", "wizard", "knight", "princess", "prince", "queen", "king", "heir", "heiress", "rookie", "intern", "immigrant",
+  "refugee", "convict", "inmate", "addict", "alcoholic", "mom", "dad", "grandmother", "grandfather", "twin", "twins", "couple",
+  "friends", "siblings", "sisters", "brothers", "family", "crew", "team", "outcast", "loner", "misfit", "genius", "comedian",
+  "musician", "artist", "dancer", "novelist", "poet", "sommelier", "surgeon", "therapist", "psychiatrist", "chemist", "professor",
+  "cadet", "officer", "marine", "sailor", "fisherman", "farmer", "rancher", "cowboy", "mechanic", "courier", "assassin", "mercenary",
+]);
+
+function headNoun(phrase: string): string {
+  const core = phrase.replace(/\s+(?:who|whose|that|with|on|in|at|from|of|aboard)\s+.+$/i, "");
+  const tokens = core.split(/\s+/);
+  return (tokens[tokens.length - 1] ?? "").toLowerCase().replace(/[^a-z'-]/g, "");
+}
+
+function looksLikePerson(phrase: string): boolean {
+  const head = headNoun(phrase);
+  if (!head || NON_PERSON_HEADS.has(head)) return false;
+  if (PERSON_HEADS.has(head)) return true;
+  // Agent nouns: keeper, painter, dentist, librarian, accountant, detective, prodigy…
+  return /(?:er|or|ist|ian|ant|ent|ive|ess)$/.test(head);
+}
+
+/** Match a protagonist phrase at the start of a clause; returns the phrase and what follows it. */
+function matchProtagonist(clause: string): { phrase: string; rest: string; viaWho: boolean } | null {
+  const main = clause.match(FALLBACK_PROTAGONIST_RE);
+  if (main) return { phrase: stripEnd(main[1]), rest: clause.slice(main[0].length), viaWho: false };
+  const who = clause.match(FALLBACK_WHO_RE);
+  if (who) return { phrase: stripEnd(who[1]), rest: clause.slice(who[0].length), viaWho: true };
+  return null;
+}
+
+const PRONOUN_SUBJECT_RE = /^(she|he|they)$/i;
+
+/**
+ * In "When a disgraced ferry captain learns…, she must…" the protagonist is
+ * introduced in the incident and the main clause only has a pronoun. Lift
+ * the incident's subject when it plausibly is that person: not the
+ * antagonist, not someone else's relative ("her father"), not acting on
+ * the protagonist ("a stranger saves him"), gender-compatible with the
+ * pronoun, and named, flawed ("an aging pianist") or a person noun.
+ */
+function liftFromIncident(incident: string, pronoun: string): { phrase: string; rest: string } | null {
+  const m = matchProtagonist(incident);
+  if (!m || m.viaWho) return null;
+  const { phrase, rest } = m;
+  const nameLed = /^[A-Z][a-z]+\b/.test(phrase) && !ARTICLES.has(phrase.split(/\s+/)[0].toLowerCase());
+  if (!nameLed && !/^(?:an?|the|two|three|four|five|six|a pair of|a group of|a band of|\d+)\s/i.test(phrase)) return null;
+  if (hits(phrase, ANTAGONIST_TERMS).length > 0) return null;
+  const gender = genderOf(phrase);
+  const p = pronoun.toLowerCase();
+  if (gender && p !== "they" && gender !== p) return null;
+  // "When a stranger saves him…": the incident's subject acts on the protagonist, so it's someone else.
+  const actsOnProtagonist =
+    p === "he"
+      ? /\b(him|himself)\b/i.test(rest)
+      : p === "she"
+        ? /\bher\b(?=\s*(?:[,.;:—–]|$|\s(?:to|from|with|for|in|on|at|into|out|away|up|down|back|off|over|again|alone|and|but)\b))/i.test(rest)
+        : /\bthem\b/i.test(rest);
+  if (actsOnProtagonist) return null;
+  if (!nameLed && hits(phrase, FLAW_WORDS).length === 0 && !looksLikePerson(phrase)) return null;
+  return { phrase, rest: stripEnd(rest) };
+}
+
 function parseLogline(raw: string): LoglineParts {
   const text = raw.replace(/\s+/g, " ").trim();
-  const body = stripEnd(text);
+  // "What if a shy teenager discovered…?" is a premise question: read what follows it.
+  const body = stripEnd(text).replace(/^what if\s+/i, "");
   const incidentMatch = body.match(INCIDENT_RE);
-  const incident = incidentMatch ? stripEnd(incidentMatch[2]) : null;
+  let incident = incidentMatch ? stripEnd(incidentMatch[2]) : null;
   const incidentLead = incidentMatch ? incidentMatch[1].toLowerCase() : "when";
   const rest = incidentMatch ? incidentMatch[3] : body;
 
@@ -269,6 +418,7 @@ function parseLogline(raw: string): LoglineParts {
   let goal: string | null = null;
   let action: string | null = null;
   let afterGoal = "";
+  let viaWho = false;
 
   const goalMatch = rest.match(GOAL_RE);
   if (goalMatch && goalMatch.index !== undefined) {
@@ -277,10 +427,37 @@ function parseLogline(raw: string): LoglineParts {
     goalVerb = goalMatch[1].toLowerCase();
     afterGoal = rest.slice(goalMatch.index + goalMatch[0].length);
   } else {
-    const fallback = rest.match(FALLBACK_PROTAGONIST_RE);
+    const fallback = matchProtagonist(rest);
     if (fallback) {
-      protagonist = stripEnd(fallback[1]);
-      action = stripEnd(rest.slice(fallback[0].length));
+      protagonist = fallback.phrase;
+      viaWho = fallback.viaWho;
+      action = stripEnd(fallback.rest.replace(viaWho ? /^who\s+/i : /^$/, ""));
+    }
+  }
+
+  // A pronoun subject after an incident that names the protagonist: lift the name.
+  let subjectPronoun: string | null = null;
+  let incidentAfterNamed: string | null = incident ? `${incidentLead} ${incident}` : null;
+  if (protagonist && PRONOUN_SUBJECT_RE.test(protagonist) && incident) {
+    const lifted = liftFromIncident(incident, protagonist);
+    if (lifted) {
+      subjectPronoun = protagonist.toLowerCase();
+      protagonist = lifted.phrase;
+      incidentAfterNamed = `${incidentLead} ${subjectPronoun} ${lifted.rest}`;
+    }
+  }
+
+  // "…X is the woman he deported": the copula names who the protagonist really is.
+  let identity: string | null = null;
+  let impliedGoal: string | null = null;
+  let actionIsIncident = false;
+  if (action) {
+    const copula = action.match(/^(?:is|are|was|were)\s+((?:an?|the|his|her|their|my)\s+.+)$/i);
+    if (copula) {
+      identity = stripEnd(copula[1]);
+      action = null;
+    } else if (!viaWho && INCIDENT_ACTION_RE.test(action)) {
+      actionIsIncident = true;
     }
   }
 
@@ -340,24 +517,43 @@ function parseLogline(raw: string): LoglineParts {
     } else if (named) {
       head = namedMatch?.[1] ?? null;
     }
+    // "the only surgeon who can save the president": the relative clause carries the goal.
+    if (!goalVerb && whoClause) {
+      const wants = whoClause.match(/^who\s+(?:alone\s+)?(?:can|could|must|has to|have to|needs to|need to|is able to|are able to)\s+(.+)$/i);
+      if (wants) impliedGoal = stripEnd(wants[1]);
+    }
   }
+  // An incident told as the protagonist's action becomes the incident.
+  if (actionIsIncident && protagonist && action && !incident) incident = `${midSentence(protagonist)} ${presentTense(action)}`;
 
   const lower = ` ${text.toLowerCase()} `;
   const plural = protagonist !== null && /^(two|three|four|five|six|a pair of|a group of|a band of|\d+)\b/i.test(protagonist);
+  const gendered = genderOf(identity ?? protagonist ?? "");
+  // Subject and possessive pronouns usually point at the protagonist ("When her father…, a diver must…"); object
+  // pronouns often point at someone else ("…buries it — and him —"), so they only count when nothing else does.
+  const textPronoun = lower.match(/\b(she|he|his|her|hers)\b/)?.[1] ?? lower.match(/\b(him|himself|herself)\b/)?.[1] ?? null;
   const pronoun = plural
     ? "they"
-    : /\b(she|her|hers|herself)\b/.test(lower)
-      ? "she"
-      : /\b(he|him|his|himself)\b/.test(lower)
-        ? "he"
-        : "they";
+    : subjectPronoun === "she" || subjectPronoun === "he" || subjectPronoun === "they"
+      ? subjectPronoun
+      : gendered
+        ? gendered
+        : textPronoun === null
+          ? "they"
+          : /^(she|her|hers|herself)$/.test(textPronoun)
+            ? "she"
+            : "he";
+  if (actionIsIncident && protagonist && action) incidentAfterNamed = `when ${pronoun} ${agree(pronoun, presentTense(action))}`;
+  else if (subjectPronoun && incidentAfterNamed) incidentAfterNamed = incidentAfterNamed.replace(/^(\S+ \S+) (\S+)/, (m, lead: string, verb: string) => `${lead} ${agree(pronoun, verb)}`);
 
   return {
     text,
     wordCount: words(text).length,
     sentenceCount: sentences(text).length,
     incident,
-    incidentLead,
+    incidentLead: actionIsIncident && !incidentMatch ? "when" : incidentLead,
+    incidentAfterNamed: incident ? incidentAfterNamed : null,
+    subjectPronoun,
     protagonist,
     descriptors,
     head,
@@ -365,7 +561,10 @@ function parseLogline(raw: string): LoglineParts {
     whoClause,
     goalVerb,
     goal: goal && goal.length > 0 ? goal : null,
+    impliedGoal,
+    identity,
     action: action && action.length > 0 ? action : null,
+    actionIsIncident,
     obstacle: obstacle && obstacle.length > 0 ? obstacle : null,
     connector,
     stakes: stakes && stakes.length > 0 ? stakes : null,
@@ -418,7 +617,10 @@ function scoreProtagonist(p: LoglineParts, flaws: string[]): ComponentResult {
   if (score >= 8) {
     note = `${quoted} is a specific person${flaws.length > 0 ? ` with a built-in flaw (${flaws[0]})` : ""} — we can already picture who to cast.`;
   } else if (score >= 6) {
-    note = `${quoted} is clear, but one sharper descriptor — a flaw or contradiction that makes this goal hard for them — would make them castable.`;
+    note =
+      flaws.length > 0
+        ? `${quoted} comes with a built-in flaw (${flaws[0]}). One more specific detail — a job, a world, a contradiction — would make them castable.`
+        : `${quoted} is clear, but one sharper descriptor — a flaw or contradiction that makes this goal hard for them — would make them castable.`;
   } else if (generic) {
     note = `${quoted} is a placeholder rather than a person. Give them a role and a flaw: not "a man" but "a washed-up stunt driver".`;
   } else {
@@ -429,6 +631,21 @@ function scoreProtagonist(p: LoglineParts, flaws: string[]): ComponentResult {
 
 function scoreGoal(p: LoglineParts, vague: string[]): ComponentResult {
   if (!p.goalVerb || !p.goal) {
+    if (p.impliedGoal) {
+      return {
+        key: "goal",
+        score: 4,
+        note: `The goal is only implied — "${truncateWords(p.impliedGoal, 10)}" — and no one is pursuing it yet. Make it the protagonist's active objective: "must ${truncateWords(p.impliedGoal, 8)}…".`,
+      };
+    }
+    if (p.actionIsIncident && p.action) {
+      const them = p.pronoun === "she" ? "her" : p.pronoun === "he" ? "him" : "them";
+      return {
+        key: "goal",
+        score: 3,
+        note: `"${truncateWords(p.action, 10)}" is an inciting event, not a goal. What does ${p.pronoun} set out to do about it? Try "must…" and name something we could watch ${them} attempt.`,
+      };
+    }
     if (p.action) {
       return {
         key: "goal",
@@ -541,6 +758,9 @@ function scoreSpecificity(p: LoglineParts, vague: string[], genreHits: number, u
   if (p.wordCount < 12) score -= 2;
   if (p.wordCount > 50) score -= 1.5;
   score = clamp(Math.round(score), 1, 10);
+  // A sprawling logline can't score well on specificity, however many details it piles up.
+  if (p.wordCount > 60) score = Math.min(score, 4);
+  else if (p.wordCount > 50) score = Math.min(score, 6);
   let note: string;
   if (vague.length > 0) {
     note = `Generic phrasing ("${vague.slice(0, 2).join("\", \"")}") could describe a thousand stories. Swap it for the concrete detail only yours has.`;
@@ -589,9 +809,13 @@ function readGenre(p: LoglineParts, userGenre: string | undefined): { text: stri
   };
 }
 
-function verdictFor(overall: number, best: LoglineComponent, worst: LoglineComponent): string {
+function verdictFor(overall: number, best: LoglineComponent, worst: LoglineComponent, p: Pick<LoglineParts, "wordCount" | "sentenceCount">): string {
   const praise = COMPONENT_PRAISE[best];
   const gap = COMPONENT_GAP[worst];
+  if (p.wordCount > SPRAWL_WORDS || p.sentenceCount > 2) {
+    const size = p.wordCount > SPRAWL_WORDS ? `at ${p.wordCount} words` : `in ${p.sentenceCount} sentences`;
+    return `Not pitchable yet: ${size} this is a synopsis, not a logline. ${capitalize(praise)} — now cut to one sentence of ${IDEAL_LOGLINE_WORDS.min}–${IDEAL_LOGLINE_WORDS.max} words: who, wants what, against what, or else.`;
+  }
   if (overall >= 80) return `Pitch-ready: ${praise}, and every element is doing work. Polish, don't rebuild.`;
   if (overall >= 65) return `Strong bones — ${praise}, but ${gap}. One pass on that and it's ready to pitch.`;
   if (overall >= 50) return `A real premise is in here: ${praise}, though ${gap}.`;
@@ -625,24 +849,56 @@ function cleanHedges(text: string): string {
   return out.replace(/\s+/g, " ").trim();
 }
 
+const RELATION_NOUN_RE =
+  /\b(her|his|their)\s+((?:own|estranged|only|last|little|younger|older|missing|sick|dying|beloved|family)\s+)?(son|daughter|children|child|brother|sister|wife|husband|mother|father|family|career|freedom|farm|home|job|marriage|company|reputation|sanity|life|kingdom|crew|town|best friend|partner)\b/gi;
+
+/** Words after a relation noun that make it the subject of its own clause ("her father sold…", "her partner is selling…"). */
+const SUBJECT_OF_CLAUSE_RE =
+  /^\s+(?:is|was|are|were|has|had|will|would|can|could|must|who|sold|stole|killed|murdered|framed|betrayed|abandoned|left|drove|took|kidnapped|sabotaged|ruined|lied|cheated|blackmails?|betrays?|sells|steals|kills|frames|abandons|[a-z]+ed)\b/i;
+
+/**
+ * The personal loss to name in a rewrite ("his daughter"), skipping relation
+ * nouns that can't be lost: people doing the harm ("her partner is selling
+ * organs", "the spot her father sold") and people already dead ("widowed…
+ * her husband", "avenge his brother", "drove her husband to his death").
+ */
 function stakesNoun(p: LoglineParts): string | null {
-  const m = p.text.match(
-    /\b(her|his|their)\s+((?:own|estranged|only|last|little|younger|older|missing|sick|dying|beloved|family)\s+)?(son|daughter|children|child|brother|sister|wife|husband|mother|father|family|career|freedom|farm|home|job|marriage|company|reputation|sanity|life|kingdom|crew|town|best friend|partner)\b/i,
-  );
-  return m ? m[0].toLowerCase() : null;
+  const widowed = /\b(widow|widowed|widower)\b/i.test(p.text);
+  for (const m of p.text.matchAll(RELATION_NOUN_RE)) {
+    const noun = m[3].toLowerCase();
+    const before = p.text.slice(0, m.index);
+    const after = p.text.slice((m.index ?? 0) + m[0].length);
+    if (SUBJECT_OF_CLAUSE_RE.test(after)) continue;
+    if (widowed && (noun === "husband" || noun === "wife")) continue;
+    if (/\b(late|dead|murdered|slain|deceased|avenge|avenges|avenging|mourn|mourns|mourning|buried|buries|killed|kills|murders|lost|drove|drives)\s+$/i.test(before)) continue;
+    if (/^\s+(?:to|into)\s+(?:his|her|their)\s+(?:death|grave|suicide)\b/i.test(after)) continue;
+    return m[0].toLowerCase();
+  }
+  return null;
 }
 
-const TRAILING_FUNCTION_WORDS = /\s+(a|an|the|of|to|from|and|but|with|what|that|her|his|their|its|in|on|at|for|by|or|as|—|–|-)$/i;
+const TRAILING_FUNCTION_WORDS =
+  /\s+(a|an|the|of|to|from|and|but|with|what|that|her|his|their|its|in|on|at|for|by|or|as|toward|towards|only|into|onto|across|through|own|about|over|under|after|before|while|until|who|which|whose|when|where|if|than|so|just|very|more|most|—|–|-)$/i;
 
-/** Shorten to at most `max` words without leaving a dangling function word or an ellipsis. */
-function trimAtBoundary(text: string, max: number): string {
-  const parts = text.trim().split(/\s+/);
-  if (parts.length <= max) return text.trim();
-  let out = parts.slice(0, max).join(" ");
-  const dash = out.search(/\s[—–]\s/);
-  if (dash > out.length / 2) out = out.slice(0, dash);
-  while (TRAILING_FUNCTION_WORDS.test(out)) out = out.replace(TRAILING_FUNCTION_WORDS, "");
-  return stripEnd(out);
+/** Points where a phrase can end cleanly: before punctuation or a subordinate clause — never inside a noun phrase. */
+const CLAUSE_CUT_RE = /\s*(?:[,;:]|\s[—–-])\s+|\s+(?=(?:to|so that|in order to|while|before|until|as|when|because|after|only to|even as|without)\s)/gi;
+
+/**
+ * Shorten a phrase to at most `max` words by cutting at a clause boundary.
+ * Returns the whole phrase when it already fits, and null when there's no
+ * clean cut — callers drop the element rather than mangle it.
+ */
+function clauseCut(text: string, max: number): string | null {
+  const clean = stripEnd(text);
+  if (words(clean).length <= max) return clean;
+  let best: string | null = null;
+  for (const m of clean.matchAll(CLAUSE_CUT_RE)) {
+    let head = stripEnd(clean.slice(0, m.index));
+    while (TRAILING_FUNCTION_WORDS.test(head)) head = head.replace(TRAILING_FUNCTION_WORDS, "");
+    const n = words(head).length;
+    if (n >= 3 && n <= max) best = head;
+  }
+  return best;
 }
 
 /** "goes on a journey" → "go on a journey": third-person verb to base form (first word only). */
@@ -670,34 +926,57 @@ function consequenceClause(consequence: string, pronoun: LoglineParts["pronoun"]
   return `${pronoun} ${third[m[1].toLowerCase()]}${m[2]}`;
 }
 
-function buildRewrites(p: LoglineParts, order: LoglineComponent[]): { angle: string; logline: string }[] {
+type RewriteKey = "classic" | "irony" | "stakes" | "tighter";
+
+/** Protagonist for the "Tighter" rewrite: drop trailing where/who detail ("a reluctant keeper on a remote island" → "a reluctant keeper"). */
+function tightenProtagonist(core: string): string {
+  if (/^[A-Z][a-z]+,/.test(core)) return core;
+  const cut = core.match(/^(.+?)\s+(?:on|in|at|from|with|aboard|inside|near|who|whose|that)\s+/i);
+  const shorter = cut && words(cut[1]).length >= 2 ? cut[1] : core;
+  return words(shorter).length <= 6 ? shorter : core;
+}
+
+/** All four rewrite candidates for a parsed logline (the doctor returns the three that fit it best). */
+function rewriteOptions(p: LoglineParts): Record<RewriteKey, string> {
   const they = p.pronoun;
   const fails = they === "they" ? "they fail" : `${they} fails`;
   const loses = they === "they" ? "they lose" : `${they} loses`;
   const possessive = they === "she" ? "her" : they === "he" ? "his" : "their";
   const placeholderProtagonist = "[a specific, flawed protagonist]";
-  const full = p.protagonist ? midSentence(cleanHedges(p.protagonist)) : placeholderProtagonist;
-  const core = p.protagonist ? midSentence(cleanHedges(p.protagonist.replace(/\s+(who|whose|that|with)\s+.+$/i, ""))) : placeholderProtagonist;
+  // "The only surgeon who can save the president is the woman he deported": the reveal is the person.
+  // A bare pronoun ("she must…") isn't a protagonist yet: rewrites ask for one rather than repeat it.
+  const who = p.identity ?? (p.protagonist && !PRONOUN_SUBJECT_RE.test(p.protagonist) ? p.protagonist : null);
+  const full = who ? midSentence(cleanHedges(who)) : placeholderProtagonist;
+  const core = who ? midSentence(cleanHedges(who.replace(/\s+(who|whose|that|with)\s+.+$/i, ""))) : placeholderProtagonist;
   /** Close an appositive ("Maya, a nurse" → "Maya, a nurse,") when a verb follows. */
   const asSubject = (phrase: string) => (/^[A-Z][a-z]+,\s/.test(phrase) ? `${phrase},` : phrase);
 
   const goal = p.goal
     ? cleanHedges(p.goal)
-    : p.action
-      ? toBaseForm(cleanHedges(p.action.split(/\s+and\s+|,\s*/)[0]))
-      : "[a concrete goal]";
-  const purposeSplit = goal.match(/^(\S+(?:\s+\S+){2,}?)\s+(to|so that|in order to)\s+(.+)$/i);
+    : p.impliedGoal
+      ? cleanHedges(p.impliedGoal)
+      : p.action && !p.actionIsIncident
+        ? toBaseForm(cleanHedges(p.action.split(/\s+and\s+|,\s*/)[0]))
+        : "[a concrete goal]";
+  // "to pay off his debts" is a purpose; "to the mainland" is a destination and stays in the goal.
+  const purposeSplit = goal.match(/^(\S+(?:\s+\S+){2,}?)\s+(to(?!\s+(?:the|a|an|his|her|their|its|my|our|your|this|that|these|those|[A-Z])\b)|so that|in order to)\s+(.+)$/);
   const goalHead = purposeSplit ? purposeSplit[1] : goal;
   const purpose = purposeSplit ? `${purposeSplit[2]} ${purposeSplit[3]}` : null;
 
-  const incident = p.incident
+  // The incident as written (it may name the protagonist), and as it reads once they've been named.
+  const incidentFull = p.incident
     ? `${p.incidentLead} ${cleanHedges(p.incident)}`
     : p.connector === "when" && p.obstacle
       ? `when ${cleanHedges(p.obstacle)}`
       : null;
+  const incidentNamed = p.incident && p.incidentAfterNamed ? cleanHedges(p.incidentAfterNamed) : incidentFull;
+  const incidentNamesProtagonist = Boolean(p.subjectPronoun) || p.actionIsIncident;
   const obstacle = p.obstacle && p.connector && !(p.connector === "when" && !p.incident) ? `${p.connector} ${cleanHedges(p.obstacle)}` : null;
   const deadline = p.stakes && /^before\b/i.test(p.stakes) ? cleanHedges(p.stakes) : null;
   const consequence = p.stakes && !deadline ? cleanHedges(p.stakes).replace(/^(or else|or|lest)\s+/i, "") : null;
+  // "before midnight — or lose her only child": the loss is already spelled out.
+  const lossStated = consequence !== null || (deadline !== null && /(?:[,;—–]|\s-\s)\s*or\s|\bor\s+(?:else|lose|die|watch|be)\b/i.test(deadline));
+  const deadlineCore = deadline ? (deadline.split(/\s*(?:[,;—–]|\s-\s)\s*(?=or\b)/i)[0] ?? deadline) : null;
   const loss = stakesNoun(p);
 
   // Classic shape: When [incident], [protagonist] must [goal] before [stakes].
@@ -711,16 +990,18 @@ function buildRewrites(p: LoglineParts, order: LoglineComponent[]): { angle: str
   // Clause-like obstacles ("but the crew thinks he's the rat") read best at the end.
   const clauseObstacle = obstacle && (p.connector === "but" || p.connector === "only to") ? obstacle : null;
   const inlineObstacle = obstacle && !clauseObstacle ? ` ${obstacle}` : "";
-  const opening = incident ? capitalize(incident) : "When [the inciting incident]";
-  let classic = `${opening}, ${asSubject(full)} must ${goal}${inlineObstacle}${classicStakes}${clauseObstacle ? ` — ${clauseObstacle}` : ""}.`;
+  const opening = incidentFull ? capitalize(incidentFull) : "When [the inciting incident]";
+  // When the incident already names the protagonist, the main clause keeps the writer's pronoun.
+  const classicSubject = incidentFull && incidentNamesProtagonist ? they : asSubject(full);
+  let classic = `${opening}, ${classicSubject} must ${goal}${inlineObstacle}${classicStakes}${clauseObstacle ? ` — ${clauseObstacle}` : ""}.`;
   if (words(classic).length > 50 && obstacle) {
-    classic = `${opening}, ${asSubject(full)} must ${goal}${classicStakes}.`;
+    classic = `${opening}, ${classicSubject} must ${goal}${classicStakes}.`;
   }
 
   // Sharpen the irony: frame the protagonist as the last person for this job.
   const has = p.plural ? "have" : "has";
-  const ironyTail = incident
-    ? `${has} no choice ${incident}`
+  const ironyTail = incidentNamed
+    ? `${has} no choice ${incidentNamed}`
     : purpose
       ? `must do it ${purpose}`
       : obstacle
@@ -730,12 +1011,12 @@ function buildRewrites(p: LoglineParts, order: LoglineComponent[]): { angle: str
         : deadline
           ? `${has} to do it ${deadline}`
           : `${has} no choice — [what forces ${possessive} hand]`;
-  const deadlineUsed = !incident && !purpose && !obstacle && deadline !== null;
+  const deadlineUsed = !incidentNamed && !purpose && !obstacle && deadline !== null;
   const ironyLead = `${p.plural ? "The last people" : "The last person"} who should ${goalHead} — ${full} —`;
   let irony = `${ironyLead} ${ironyTail}${deadline && !deadlineUsed ? `, ${deadline}` : ""}.`;
   if (words(irony).length > 42 && deadline && !deadlineUsed) irony = `${ironyLead} ${ironyTail}.`;
 
-  // Raise the stakes: one chance, and a personal, irreversible loss.
+  // Raise the stakes: one chance, and a personal, irreversible loss (unless the writer already named one).
   const forever = deadline !== null && /\b(forever|for good)\b/i.test(deadline);
   const lossPart = consequence
     ? consequenceClause(consequence, they)
@@ -743,29 +1024,53 @@ function buildRewrites(p: LoglineParts, order: LoglineComponent[]): { angle: str
       ? `${loses} ${loss}${forever ? "" : " for good"}`
       : `${loses} [the one thing ${they} can't bear to lose]`;
   const joiner = deadline?.match(/[—–]/) ? ", and" : " — and";
-  const stakesLine = (withObstacle: boolean) =>
-    `${capitalize(asSubject(core))} ${p.plural ? "have" : "has"} one chance to ${goal}${withObstacle ? inlineObstacle : ""}${deadline ? ` ${deadline}` : ""}${
-      withObstacle && clauseObstacle ? ` — ${clauseObstacle}, and` : joiner
-    } if ${fails}, ${lossPart}.`;
+  const stakesLine = (withObstacle: boolean) => {
+    const lead = `${capitalize(asSubject(core))} ${p.plural ? "have" : "has"} one chance to ${goal}${withObstacle ? inlineObstacle : ""}${deadline ? ` ${deadline}` : ""}`;
+    if (lossStated && deadline) return `${lead}${withObstacle && clauseObstacle ? ` — ${clauseObstacle}` : ""}.`;
+    return `${lead}${withObstacle && clauseObstacle ? ` — ${clauseObstacle}, and` : joiner} if ${fails}, ${lossPart}.`;
+  };
   let stakes = stakesLine(true);
   if (words(stakes).length > 46 && obstacle) stakes = stakesLine(false);
 
-  // Tighter: protagonist core, goal, one obstacle, one deadline — nothing else.
-  const coreTokens = core.split(/\s+/);
-  const tightProtagonist = coreTokens.length > 4 && !/^[A-Z][a-z]+,/.test(core) ? [coreTokens[0], ...coreTokens.slice(-3)].join(" ") : core;
-  const tightGoal = words(goal).length > 12 ? trimAtBoundary(goalHead, 10) : goal;
-  const tightObstacle = (n: number) => (obstacle ? `${clauseObstacle ? " —" : ""} ${trimAtBoundary(obstacle, n)}` : "");
-  let tighter = `${capitalize(asSubject(tightProtagonist))} must ${tightGoal}${tightObstacle(8)}${deadline ? ` ${trimAtBoundary(deadline, 7)}` : ""}.`;
-  if (words(tighter).length > 30) tighter = `${capitalize(asSubject(tightProtagonist))} must ${trimAtBoundary(goalHead, 8)}${tightObstacle(6)}.`;
+  // Tighter: protagonist core, goal, then as much obstacle and deadline as fits — whole clauses only.
+  const tightProtagonist = capitalize(asSubject(tightenProtagonist(core)));
+  const tightGoal = clauseCut(goalHead, 12) ?? goalHead;
+  const tightObstacle = obstacle ? clauseCut(obstacle, 12) : null;
+  const tightDeadline = deadline ? clauseCut(deadline, 12) ?? (deadlineCore ? clauseCut(deadlineCore, 12) : null) : null;
+  const obstaclePart = tightObstacle ? `${clauseObstacle ? " —" : ""} ${tightObstacle}` : "";
+  const candidates = [
+    `${tightProtagonist} must ${tightGoal}${obstaclePart}${tightDeadline ? ` ${tightDeadline}` : ""}.`,
+    `${tightProtagonist} must ${tightGoal}${tightDeadline ? ` ${tightDeadline}` : ""}.`,
+    `${tightProtagonist} must ${tightGoal}${obstaclePart}.`,
+    `${tightProtagonist} must ${tightGoal}.`,
+  ];
+  const tighter = candidates.find((c) => words(c).length <= 28) ?? candidates[candidates.length - 1];
 
-  const tidy = (s: string) =>
-    capitalizeLead(s.replace(/\s+/g, " ").replace(/\s+([,.;])/g, "$1").replace(/,,/g, ",").replace(/\.\.+/g, ".").replace(/,\./g, ".").trim());
+  return { classic, irony, stakes, tighter };
+}
+
+const tidyRewrite = (s: string) =>
+  capitalizeLead(s.replace(/\s+/g, " ").replace(/\s+([,.;])/g, "$1").replace(/,,/g, ",").replace(/\.\.+/g, ".").replace(/,\./g, ".").trim());
+
+/** Test hook: every rewrite candidate the Logline Doctor considers, tidied, before it picks three. */
+export function loglineRewriteCandidates(logline: string): Record<RewriteKey, string> {
+  const options = rewriteOptions(parseLogline(logline));
+  return {
+    classic: tidyRewrite(options.classic),
+    irony: tidyRewrite(options.irony),
+    stakes: tidyRewrite(options.stakes),
+    tighter: tidyRewrite(options.tighter),
+  };
+}
+
+function buildRewrites(p: LoglineParts, order: LoglineComponent[]): { angle: string; logline: string }[] {
+  const raw = rewriteOptions(p);
   const same = (a: string, b: string) => norm(a) === norm(b);
 
   const options: Record<"irony" | "stakes" | "tighter", { angle: string; logline: string }> = {
-    irony: { angle: "Sharpen the irony", logline: tidy(irony) },
-    stakes: { angle: "Raise the stakes", logline: tidy(stakes) },
-    tighter: { angle: "Tighter", logline: tidy(tighter) },
+    irony: { angle: "Sharpen the irony", logline: tidyRewrite(raw.irony) },
+    stakes: { angle: "Raise the stakes", logline: tidyRewrite(raw.stakes) },
+    tighter: { angle: "Tighter", logline: tidyRewrite(raw.tighter) },
   };
 
   const priority: ("irony" | "stakes" | "tighter")[] = [];
@@ -778,8 +1083,10 @@ function buildRewrites(p: LoglineParts, order: LoglineComponent[]): { angle: str
   priority.push("irony", "stakes", "tighter");
   const ranked = Array.from(new Set(priority));
 
-  const classicOption = { angle: "Classic shape", logline: tidy(classic) };
+  const classicOption = { angle: "Classic shape", logline: tidyRewrite(raw.classic) };
   const result: { angle: string; logline: string }[] = [];
+  // Past the ideal length, cutting comes first.
+  if (p.wordCount > IDEAL_LOGLINE_WORDS.max && !same(options.tighter.logline, p.text)) result.push(options.tighter);
   // The classic shape is only useful when it actually changes the writer's sentence.
   if (!same(classicOption.logline, p.text)) result.push(classicOption);
   for (const key of ranked) {
@@ -818,10 +1125,12 @@ export function demoLogline(req: Pick<LoglineRequest, "logline" | "genre">): Log
   const weighted = sum(components.map((c) => c.score * weights[c.key])) / sum(Object.values(weights));
   let overall = weighted * 10;
   if (p.wordCount < 12) overall -= 8;
-  else if (p.wordCount > 55) overall -= 8;
-  else if (p.wordCount > 45) overall -= 3;
+  // Every word past the ideal window costs more, up to 30 points for a pasted paragraph.
+  else if (p.wordCount > IDEAL_LOGLINE_WORDS.max) overall -= Math.min(30, (p.wordCount - IDEAL_LOGLINE_WORDS.max) * 0.6);
   if (p.sentenceCount > 2) overall -= 4;
   else if (p.sentenceCount === 2) overall -= 2;
+  // A synopsis can't read as "strong bones", whatever its parts score.
+  if (p.wordCount > SPRAWL_WORDS || p.sentenceCount > 2) overall = Math.min(overall, 55);
   overall = clampScore(clamp(overall, 8, 96));
 
   // Ascending by score; ties broken by the canonical component order.
@@ -831,7 +1140,7 @@ export function demoLogline(req: Pick<LoglineRequest, "logline" | "genre">): Log
 
   return {
     overall,
-    verdict: verdictFor(overall, best, worst),
+    verdict: verdictFor(overall, best, worst, p),
     genreRead: genre.text,
     components: components.map((c) => ({ key: c.key, score: c.score, note: c.note })),
     rewrites: buildRewrites(p, order),
@@ -927,12 +1236,29 @@ function kindForBeat(beat: FrameworkBeat): BeatKind {
   return "resolution";
 }
 
-/** Extra conflict, desire and sensory vocabulary for prose (the shared lexicon is tuned for short answers). */
-const STORY_CONFLICT = [
-  ...LEXICON.conflict, "should", "instead", "searching", "betrayed", "betray", "missing", "police", "secret", "lie", "lied", "truth",
-  "hide", "hiding", "sold", "buyer", "never", "nothing", "stopped", "wouldn't", "couldn't", "doesn't", "don't", "no one", "too late",
-  "caught", "trapped", "waiting", "warned", "threatened", "argue", "argued", "shouted", "demanded", "deadline",
+/**
+ * Conflict vocabulary for prose, in two strengths. Real opposition — threat,
+ * fear, loss, secrets, pursuit — counts in full; connectives, modals and
+ * negations ("but", "must", "should", "never", "don't") are everywhere in
+ * calm writing too, so they only count for a quarter.
+ */
+const STRONG_CONFLICT = [
+  "against", "struggle", "struggled", "fight", "fights", "fought", "refuse", "refused", "refuses", "forbidden", "obstacle", "threat",
+  "threatened", "threatens", "enemy", "rival", "trapped", "afraid", "fear", "feared", "scared", "terrified", "panicked", "panic", "lose",
+  "losing", "lost", "loses", "failed", "fails", "crashed", "died", "dies", "dying", "stole", "stolen", "betrayed", "betray", "risk",
+  "danger", "dangerous", "problem", "conflict", "secret", "lie", "lied", "lying", "hide", "hiding", "hid", "caught", "warned", "argue",
+  "argued", "argument", "shouted", "shouts", "screamed", "screams", "demanded", "demands", "deadline", "police", "searching", "missing",
+  "sold", "too late", "chased", "chase", "escape", "escaped", "attacked", "attack", "accused", "fired", "hurt", "pain", "blood", "gun",
+  "knife", "trouble", "desperate", "furious", "angry", "guards", "sabotaged", "blackmail", "hunted", "cornered", "evicted", "debt",
+  "betrayal", "refusal", "confront", "confronts", "confronted", "no way out",
 ];
+const WEAK_CONFLICT = [
+  "but", "however", "until", "must", "can't", "cannot", "won't", "should", "instead", "never", "nothing", "stopped", "wouldn't",
+  "couldn't", "doesn't", "don't", "no one", "waiting", "truth", "buyer", "hard", "difficult", "worried", "nervous",
+];
+const STORY_CONFLICT = [...STRONG_CONFLICT, ...WEAK_CONFLICT];
+const WEAK_CONFLICT_SET = new Set(WEAK_CONFLICT);
+const conflictWeight = (term: string) => (WEAK_CONFLICT_SET.has(term) ? 0.25 : 1);
 const STORY_DESIRE = [...LEXICON.desire, "going to", "trying to", "has to", "have to", "needs to", "had to", "promised", "vowed", "determined", "longing", "chooses", "decides to"];
 const STORY_SENSORY = [
   ...LEXICON.sensory, "fog", "mist", "lights", "lamp", "soaked", "wet", "crackles", "hum", "hums", "rattle", "tin", "salt", "steam",
@@ -1035,8 +1361,52 @@ interface SentenceInfo {
   position: number;
 }
 
-function sentenceMap(text: string): SentenceInfo[] {
-  const list = sentences(text);
+interface Draft {
+  /** The text the lexicons read: the prose itself, or a screenplay with its sluglines, cues and parentheticals folded away. */
+  text: string;
+  /** Units for beats and line notes: sentences, with a screenplay speech kept whole ("Sam: \u201cI sold the truck. Not it.\u201d"). */
+  sentences: string[];
+  /** What characters say out loud. */
+  dialogue: string[];
+  screenplay: boolean;
+  paragraphs: number;
+}
+
+/**
+ * Read a draft for the Story Doctor. Screenplay format (a slugline, or two or
+ * more character cues) is parsed rather than read as prose: sluglines,
+ * transitions and parentheticals drop out, and each speech becomes one
+ * quoted line attributed to its speaker. Prose is split into sentences that
+ * keep quoted speech whole.
+ */
+function readDraft(raw: string): Draft {
+  const blocks = paragraphs(raw).length;
+  const read = readScreenplay(raw, 1);
+  if (read.slugs > 0 || read.cues >= 2) {
+    const units = read.units.map((u) => (u.kind === "dialogue" ? `${u.speaker ?? "Someone"}: \u201c${u.text}\u201d` : u.text));
+    return {
+      text: units.join(" "),
+      sentences: units,
+      dialogue: read.units.filter((u) => u.kind === "dialogue").map((u) => u.text),
+      screenplay: true,
+      paragraphs: blocks,
+    };
+  }
+  // Standalone caps lines — a title, "ACT ONE" — head the prose rather than start its first sentence.
+  const prose = raw
+    .split("\n")
+    .filter((line) => !(line.trim() === line.trim().toUpperCase() && /[A-Z]/.test(line) && words(line).length <= 8 && !/[.!?]["”]?$/.test(line.trim())))
+    .join("\n");
+  return {
+    text: prose,
+    sentences: proseSentences(prose),
+    dialogue: (prose.match(/["“][^"”]{2,}["”]/g) ?? []).map((q) => q.slice(1, -1)),
+    screenplay: false,
+    paragraphs: blocks,
+  };
+}
+
+function sentenceMap(list: string[]): SentenceInfo[] {
   const counts = list.map((s) => Math.max(1, words(s).length));
   const total = sum(counts);
   let before = 0;
@@ -1170,9 +1540,8 @@ function alignBeats(map: SentenceInfo[], beats: FrameworkBeat[], kinds: BeatKind
   return { assigned, signals };
 }
 
-function readBeats(text: string, frameworkId: StoryRequest["framework"], format: StoryFormat): BeatReading[] {
+function readBeats(map: SentenceInfo[], frameworkId: StoryRequest["framework"], format: StoryFormat): BeatReading[] {
   const framework = FRAMEWORKS[frameworkId];
-  const map = sentenceMap(text);
   const beats = framework.beats;
   const kinds = beats.map(kindForBeat);
   const unit = FORMAT_INFO[format].beatUnit;
@@ -1187,7 +1556,8 @@ function readBeats(text: string, frameworkId: StoryRequest["framework"], format:
         kind,
         status: "missing" as const,
         evidence: "",
-        suggestion: `Nothing in the draft lands here yet. ${beat.description} ${KIND_TIP[kind]} In this format it can be as small as ${unit}.`,
+        // The beat map already shows the beat's definition and that nothing lands here; the suggestion is the fix.
+        suggestion: `${KIND_TIP[kind]} In this format it can be as small as ${unit}.`,
         signal: 0,
       };
     }
@@ -1269,17 +1639,24 @@ function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+/** Weighted conflict density (per 100 words) below which a draft reads as calm, and above which it reads as fraught. */
+const CONFLICT_DENSITY = { low: 0.6, high: 4.5 } as const;
+/** Sensory-detail occurrences per 100 words. */
+const SENSORY_DENSITY = { low: 0.5, high: 5 } as const;
+
 /** Offline Story Doctor. */
 export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format" | "title">): StoryAnalysis {
-  const text = req.text.trim();
+  const draft = readDraft(req.text.trim());
+  const text = draft.text;
   const format = req.format;
   const framework = FRAMEWORKS[req.framework];
   const formatInfo = FORMAT_INFO[format];
-  const map = sentenceMap(text);
+  const map = sentenceMap(draft.sentences);
   const totalWords = words(text).length;
-  const beats = readBeats(text, req.framework, format);
+  const beats = readBeats(map, req.framework, format);
   const firstSentence = map[0]?.text ?? text;
   const lastSentence = map[map.length - 1]?.text ?? text;
+  // Densities count every occurrence per 100 words, so a long draft is judged by its texture, not its length.
   const per100 = (n: number) => (n / Math.max(totalWords, 1)) * 100;
 
   // --- Skill scores -------------------------------------------------------
@@ -1294,18 +1671,25 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   const weakestBeat = [...beats].sort((a, b) => statusRank[a.status] - statusRank[b.status] || a.signal - b.signal)[0];
   const landed = strong + present;
 
-  const structureScore = clampScore(scale(coverage, 0.2, 0.92, 22, 90) + (endsWithChange ? 4 : 0));
+  const lessonEnding = hits(lastSentence, LESSON_ENDINGS).length > 0;
+  const structureScore = clampScore(scale(coverage, 0.2, 0.92, 22, 90) + (endsWithChange && !lessonEnding ? 4 : 0));
   const structure: SkillScore = {
     skill: "structure",
     score: structureScore,
-    comment: `${landed} of ${beats.length} ${framework.name} beats land clearly; the thinnest is "${weakestBeat.beat}".${endsWithChange ? " The ending registers a change, which gives the shape a payoff." : " The ending doesn't yet show what changed."}`,
+    comment: `${landed} of ${beats.length} ${framework.name} beats land clearly; the thinnest is "${weakestBeat.beat}".${
+      lessonEnding
+        ? " The ending states the lesson instead of showing what changed."
+        : endsWithChange
+          ? " The ending registers a change, which gives the shape a payoff."
+          : " The ending doesn't yet show what changed."
+    }`,
   };
 
   const openerGeneric = hits(firstSentence, GENERIC_OPENERS).length > 0;
   const firstWords = words(firstSentence).length;
   const openingSignals =
-    hits(firstSentence, LEXICON.conflict).length +
-    hits(firstSentence, LEXICON.stakes).length +
+    hits(firstSentence, STRONG_CONFLICT).length +
+    hits(firstSentence, LEXICON.stakes).length * 0.5 +
     hits(firstSentence, LEXICON.emotion).length +
     (firstSentence.includes("?") ? 1 : 0) +
     Math.min(specificityMarkers(firstSentence), 2) +
@@ -1334,10 +1718,18 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
       : "I can't find a clear statement of what the protagonist wants. Name the desire early — it's the line the audience follows.",
   };
 
-  const conflictTerms = [...STORY_CONFLICT, ...LEXICON.stakes];
-  const conflictSentence = bestSentence(map, conflictTerms);
-  const conflictDensity = per100(hits(text, STORY_CONFLICT).length + hits(text, LEXICON.stakes).length);
-  const conflictScore = clampScore(scale(conflictDensity, 0.5, 5, 26, 90));
+  // Conflict: weighted occurrences per 100 words. Stakes words ("home", "family", "life") only count in a sentence that
+  // also has real opposition or desire, and without at least two distinct real-conflict words the score stays below 60.
+  const strongConflict = hits(text, STRONG_CONFLICT);
+  const stakesInContext = map.reduce(
+    (n, s) => (hits(s.text, STRONG_CONFLICT).length + hits(s.text, STORY_DESIRE).length > 0 ? n + occurrences(s.text, LEXICON.stakes) * 0.5 : n),
+    0,
+  );
+  const conflictDensity = per100(occurrences(text, STORY_CONFLICT, conflictWeight) + stakesInContext);
+  let conflictScore = clampScore(scale(conflictDensity, CONFLICT_DENSITY.low, CONFLICT_DENSITY.high, 26, 90));
+  if (strongConflict.length < 2) conflictScore = Math.min(conflictScore, 52);
+  const conflictReal = conflictScore >= 60;
+  const conflictSentence = bestSentence(map, STRONG_CONFLICT);
   const contrastFramework = req.framework === "kishotenketsu";
   const conflict: SkillScore = {
     skill: "conflict",
@@ -1345,16 +1737,17 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
     comment: contrastFramework && conflictScore < 65
       ? "Kishōtenketsu doesn't need a villain — tension here comes from contrast and juxtaposition. Make sure the twist reframes what we've seen."
       : conflictSentence
-      ? `Pressure peaks at "${truncateWords(stripEnd(conflictSentence.text), 14)}".${conflictScore < 65 ? " Elsewhere the opposition is implied rather than felt — make it active." : " The opposition feels real."}`
-      : "The draft is short on opposition: nothing actively resists the protagonist. Give the obstacle a face and a cost.",
+        ? `Pressure peaks at "${truncateWords(stripEnd(conflictSentence.text), 14)}".${conflictReal ? " The opposition feels real." : " Elsewhere the opposition is implied rather than felt — make it active."}`
+        : "The draft is short on opposition: nothing actively resists the protagonist. Give the obstacle a face and a cost.",
   };
 
-  const avgLen = averageSentenceLength(text);
-  const variance = sentenceLengthVariance(text);
-  const paras = paragraphs(text).length;
+  const lengths = map.map((s) => s.wordCount);
+  const avgLen = lengths.length > 0 ? sum(lengths) / lengths.length : 0;
+  const variance = lengths.length < 2 ? 0 : Math.sqrt(sum(lengths.map((l) => (l - avgLen) ** 2)) / lengths.length);
+  const paras = draft.paragraphs;
   let pacingRaw = scale(variance, 2, 11, 35, 88);
   if (avgLen > 26) pacingRaw -= 10;
-  if (avgLen < 7) pacingRaw -= 6;
+  if (avgLen < 7 && !draft.screenplay) pacingRaw -= 6;
   if (totalWords > 350 && paras <= 1) pacingRaw -= 10;
   const pacingScore = clampScore(pacingRaw);
   const pacing: SkillScore = {
@@ -1373,10 +1766,11 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   const skillScores: SkillScore[] = [structure, character, conflict, hook, pacing];
 
   const sensoryHits = hits(text, STORY_SENSORY).length;
-  const sensorySentence = bestSentence(map, STORY_SENSORY);
+  const sensorySentence = bestSentence(map, STORY_SENSORY, 4);
   const visualFormats: StoryFormat[] = ["scene", "short-film", "feature", "tv-episode"];
+  let visualScore = 0;
   if (sensoryHits >= 2 || visualFormats.includes(format)) {
-    const visualScore = clampScore(scale(per100(sensoryHits), 0.4, 4, 28, 90));
+    visualScore = clampScore(scale(per100(occurrences(text, STORY_SENSORY)), SENSORY_DENSITY.low, SENSORY_DENSITY.high, 28, 90));
     skillScores.push({
       skill: "visual",
       score: visualScore,
@@ -1386,9 +1780,8 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
     });
   }
 
-  const dialogueCount = dialogueLines(text);
-  const quoted = text.match(/["“][^"”]{2,}["”]/g) ?? [];
-  const onTheNose = quoted.filter((q) => TELLING_RE.test(q) || /\bi (love|hate|feel|am afraid)\b/i.test(q));
+  const dialogueCount = draft.dialogue.length;
+  const onTheNose = draft.dialogue.filter((q) => TELLING_RE.test(q) || /\bi (love|hate|feel|am afraid)\b/i.test(q));
   if (dialogueCount >= 1 || format === "scene") {
     const dialogueScore = clampScore(scale(Math.min(dialogueCount, 8), 0, 6, 30, 86) - onTheNose.length * 8);
     skillScores.push({
@@ -1396,7 +1789,7 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
       score: dialogueScore,
       comment:
         onTheNose.length > 0
-          ? `${onTheNose[0]} says the feeling out loud. Let characters talk around what they mean — subtext is where the tension lives.`
+          ? `"${truncateWords(onTheNose[0], 16)}" says the feeling out loud. Let characters talk around what they mean — subtext is where the tension lives.`
           : dialogueCount > 0
             ? `${plural(dialogueCount, "line", "lines")} of dialogue, none spelling out emotions — good instinct. Make sure each line is someone trying to get something.`
             : "No dialogue yet. Even in a scene built on silence, one line where someone wants something can carry it.",
@@ -1422,12 +1815,20 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   const top = ranked[0];
   const gapCandidates = contrastFramework ? ranked.filter((r) => r.skill !== "conflict") : ranked;
   const bottom = gapCandidates[gapCandidates.length - 1];
+  const gapText = (skill: SkillId) =>
+    skill === "dialogue"
+      ? dialogueCount === 0
+        ? "there's no dialogue yet"
+        : onTheNose.length > 0
+          ? "the dialogue says too much out loud"
+          : "the dialogue could work harder"
+      : SKILL_GAP[skill];
   const headline =
     bottom.score >= 70
       ? `${SKILL_PRAISE[top.skill]} — this draft is close; the notes below are polish.`
       : top.score < 50
         ? "The raw material is here — now it needs a spine."
-        : `${SKILL_PRAISE[top.skill]}, but ${SKILL_GAP[bottom.skill]}.`;
+        : `${SKILL_PRAISE[top.skill]}, but ${gapText(bottom.skill)}.`;
 
   const title = req.title?.trim();
   const needWork = weak + missing;
@@ -1440,22 +1841,33 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   ].join(" ");
 
   // --- Strengths ------------------------------------------------------------
-  const praise: Partial<Record<SkillId, string | null>> = {
-    structure: `A shape you can feel: ${landed} of ${beats.length} ${framework.name} beats land.`,
-    character: desireSentence ? `A clear, active want: "${truncateWords(stripEnd(desireSentence.text), 18)}"` : null,
-    conflict: conflictSentence ? `Real pressure on the page: "${truncateWords(stripEnd(conflictSentence.text), 18)}"` : null,
-    hook: `A first line that earns the second: "${truncateWords(stripEnd(firstSentence), 18)}"`,
-    pacing: "Rhythm with range — your short sentences land the big moments.",
-    visual: sensorySentence ? `Filmable, sensory detail: "${truncateWords(stripEnd(sensorySentence.text), 18)}"` : null,
-    dialogue: onTheNose.length === 0 && dialogueCount > 0 ? "Dialogue that talks around feelings instead of naming them." : null,
+  // Each strength quotes a different line: one sentence shouldn't be praised three ways.
+  const praise: Partial<Record<SkillId, { line: string; source: string | null } | null>> = {
+    structure: { line: `A shape you can feel: ${landed} of ${beats.length} ${framework.name} beats land.`, source: null },
+    character: desireSentence ? { line: `A clear, active want: "${truncateWords(stripEnd(desireSentence.text), 18)}"`, source: desireSentence.text } : null,
+    conflict: conflictSentence && conflictReal ? { line: `Real pressure on the page: "${truncateWords(stripEnd(conflictSentence.text), 18)}"`, source: conflictSentence.text } : null,
+    hook: hookScore >= 50 ? { line: `A first line that earns the second: "${truncateWords(stripEnd(firstSentence), 18)}"`, source: firstSentence } : null,
+    pacing: { line: "Rhythm with range — your short sentences land the big moments.", source: null },
+    visual: sensorySentence ? { line: `Filmable, sensory detail: "${truncateWords(stripEnd(sensorySentence.text), 18)}"`, source: sensorySentence.text } : null,
+    dialogue: onTheNose.length === 0 && dialogueCount > 0 ? { line: "Dialogue that talks around feelings instead of naming them.", source: null } : null,
   };
   const strengths: string[] = [];
+  const praisedSources = new Set<string>();
   const strongBeat = beats.find((b) => b.status === "strong");
-  if (strongBeat) strengths.push(`Your "${strongBeat.beat}" beat lands: "${truncateWords(stripEnd(strongBeat.evidence), 18)}"`);
+  if (strongBeat) {
+    strengths.push(`Your "${strongBeat.beat}" beat lands: "${truncateWords(stripEnd(strongBeat.evidence), 18)}"`);
+    praisedSources.add(strongBeat.evidence.replace(/…$/, ""));
+  }
+  const alreadyQuoted = (source: string | null) =>
+    source !== null && [...praisedSources].some((p) => p.length > 0 && (source.startsWith(p) || p.startsWith(source)));
   for (const s of ranked) {
     if (strengths.length >= 4) break;
-    const line = praise[s.skill];
-    if (line && (s.score >= 60 || strengths.length < 2)) strengths.push(line);
+    const item = praise[s.skill];
+    if (!item || alreadyQuoted(item.source)) continue;
+    if (s.score >= 60 || (strengths.length < 2 && s.score >= 50)) {
+      strengths.push(item.line);
+      if (item.source) praisedSources.add(item.source);
+    }
   }
   if (strengths.length === 0) strengths.push(`You've got a complete draft of ${totalWords} words on the page — the hardest part. Now it's revision.`);
 
@@ -1475,14 +1887,13 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   if (tellingSentence && tellingMatch) {
     addNote(tellingSentence.text, `This names the emotion ("${tellingMatch[0]}"). Show it through behaviour instead${tellingCue ? ` — something like "${tellingCue}."` : "."}`);
   }
-  const lessonEnding = hits(lastSentence, LESSON_ENDINGS).length > 0;
   if (lessonEnding) {
     addNote(lastSentence, "The ending explains the lesson. Trust the audience: end on an image or action that proves it instead.");
   }
   for (const s of map) {
     const hedges = hits(s.text, HEDGE_TERMS);
     if (hedges.length > 0 && s.wordCount >= 6 && !usedQuotes.has(s.text)) {
-      addNote(s.text, `Hedge words (${hedges.map((h) => `"${h}"`).join(", ")}) soften the moment. Without them: "${cleanHedges(s.text)}"`);
+      addNote(s.text, `Hedge words (${hedges.map((h) => `"${h}"`).join(", ")}) soften the moment. Without them: "${truncateWords(cleanHedges(s.text), 30)}"`);
       break;
     }
   }
@@ -1519,8 +1930,9 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   // --- Improvements ---------------------------------------------------------
   const improvements: Improvement[] = [];
   if (hookScore < 70) {
+    // Suggest a later line to open on only if it actually carries pressure or feeling.
     const earlyHalf = map.slice(1, Math.max(2, Math.ceil(map.length * 0.6)));
-    const opener = bestSentence(earlyHalf, [...conflictTerms, ...LEXICON.time, ...LEXICON.emotion]);
+    const opener = bestSentence(earlyHalf, [...STRONG_CONFLICT, ...LEXICON.emotion]);
     improvements.push({
       title: "Open closer to the disruption",
       detail: `Your first line — "${truncateWords(stripEnd(firstSentence), 14)}" — ${openerGeneric ? "announces the story rather than starting it" : "takes its time"}. Audiences commit in the first few seconds; start where something is already at stake.`,
@@ -1538,11 +1950,14 @@ export function demoStory(req: Pick<StoryRequest, "text" | "framework" | "format
   if (gapBeat) {
     improvements.push({
       title: `Build out "${gapBeat.beat}"`,
-      detail: gapBeat.suggestion,
+      detail:
+        gapBeat.status === "missing"
+          ? `Nothing in the draft does this job yet: ${lowerFirst(FRAMEWORKS[req.framework].beats[beats.indexOf(gapBeat)]?.description ?? "")} ${gapBeat.suggestion}`
+          : gapBeat.suggestion,
       example: gapBeat.evidence ? `The closest passage right now: "${truncateWords(gapBeat.evidence, 20)}" — rework it so it does this job.` : "",
     });
   }
-  if (conflictScore < 60 && improvements.length < 4) {
+  if (conflictScore < 60 && improvements.length < 4 && !contrastFramework) {
     improvements.push({
       title: "Make the opposition concrete",
       detail: "The story tells us things are hard without showing who or what is making them hard. Give the obstacle a face, a voice, or a deadline.",
@@ -1604,6 +2019,8 @@ interface SceneUnit {
   kind: "action" | "dialogue";
   text: string;
   speaker?: string;
+  /** Prose dialogue only: who the sentence says spoke ("Sam said", "she asked"), resolved later. */
+  speakerHint?: string;
 }
 
 interface ParsedScene {
@@ -1614,12 +2031,25 @@ interface ParsedScene {
   time: string | null;
   exterior: boolean;
   characters: string[];
+  /** Characters' pronouns where the scene makes them clear ("her father" → he; "Nadia… She…" → she). */
+  genders: Map<string, "she" | "he">;
   units: SceneUnit[];
 }
 
 const SLUG_RE = /^(INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?|INT\.|EXT\.|INT |EXT |EST\.)\s*(.+)$/i;
 const TRANSITION_RE = /^(FADE IN:?|FADE OUT\.?|FADE TO BLACK\.?|CUT TO:?|SMASH CUT TO:?|DISSOLVE TO:?|MATCH CUT TO:?|CUT TO BLACK\.?|THE END\.?)$/i;
 const CUE_RE = /^([A-Z][A-Z0-9 .'’-]{1,28}?)(\s*\((?:V\.O\.|O\.S\.|O\.C\.|CONT'D|CONT’D|CONTINUING)\))*\s*$/;
+/** "NADIA: You sold it." — a speaker and their line on one line. */
+const INLINE_CUE_RE = /^([A-Z][A-Z0-9 .'’-]{1,28}?)(?:\s*\((?:V\.O\.|O\.S\.|O\.C\.|CONT'D|CONT’D)\))?:\s+(.*[a-z].*)$/;
+const PARENTHETICAL_RE = /^\(.*\)$/;
+/** Caps lines that head a section of a treatment or outline rather than name a speaker. */
+const SECTION_HEADING_RE =
+  /^(?:(?:ACT|PART|CHAPTER|SCENE|SEQUENCE|EPISODE|BOOK|REEL)\b.*|PROLOGUE|EPILOGUE|TEASER|COLD OPEN|TAG|INTRODUCTION|CONCLUSION|LOGLINE|SYNOPSIS|TREATMENT|OUTLINE|TITLE|NOTES?|BACKGROUND|CHARACTERS?|SETTING|THEME|ENDING|BEGINNING|MIDDLE)[.:]?$/;
+const TIME_OF_DAY = "DAY|NIGHT|MORNING|EVENING|AFTERNOON|DAWN|DUSK|SUNRISE|SUNSET|TWILIGHT|MIDNIGHT|NOON|CONTINUOUS|MOMENTS LATER|LATER|SAME TIME|SAME|MAGIC HOUR";
+/** "KITCHEN - NIGHT. Maria stares…": a heading with the first action line run into it. */
+const INLINE_SLUG_RE = new RegExp(String.raw`^(.*?\s[-–—]\s*(?:(?:${TIME_OF_DAY})\b\.?|\d{1,2}(?::\d{2})?\s?[AP]\.?M\.?))\s+(?=.*[a-z])(\S.*)$`, "i");
+/** "ROOFTOP. Rain hammers…": an all-caps heading followed by a mixed-case sentence. */
+const CAPS_HEADING_RE = /^([^a-z]*?[A-Z][^a-z]*?)[.:]\s+(\S*[a-z].*)$/;
 
 const NAME_STOPWORDS = new Set([
   "The", "When", "Then", "She", "He", "They", "It", "Her", "His", "Their", "We", "You", "And", "But", "Int", "Ext", "Night",
@@ -1628,16 +2058,57 @@ const NAME_STOPWORDS = new Set([
   "Now", "Just", "Still", "Even", "Nothing", "Everything", "Someone", "Something", "I", "Mom", "Dad", "God", "Sorry", "Hey",
   "Please", "Thanks", "Well", "So", "If", "Our", "My", "Your", "Its", "One", "Two", "Three", "Beat", "Silence", "Close",
   "Rain", "Behind", "Across", "Somewhere", "Everyone", "Nobody", "Only", "Without", "With", "From", "Into", "Over", "Under",
+  "Where", "For", "While", "Because", "Though", "Although", "Until", "Once", "Every", "Each", "Some", "Many", "Most", "All",
+  "Both", "Neither", "Either", "None", "Not", "Never", "Always", "Sometimes", "Maybe", "Perhaps", "Thank", "Good", "Goodbye",
+  "Hello", "Let", "Don't", "Can't", "Won't", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+  "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December",
+  "Christmas", "Easter", "Mister", "Miss", "Sir", "Madam", "Ma'am", "Grandma", "Grandpa", "Mum", "Mama", "Papa", "Love",
+  "Honey", "Baby", "Darling", "Cut", "Fade", "Title", "Scene", "Pause", "Meanwhile", "Again", "Soon", "Too", "Very",
 ]);
 
-const ROLE_NOUN_RE =
-  /\b(?:a|an|the)\s+((?:young|old|older|elderly|tired|lone|small|tall)\s+)?(woman|man|girl|boy|kid|child|stranger|driver|waitress|waiter|bartender|nurse|doctor|officer|cop|soldier|mother|father|teenager|couple|figure|guard|clerk|priest|pilot|captain|detective|widow)\b/gi;
+const ROLE_NOUNS =
+  "woman|man|girl|boy|kid|child|stranger|driver|waitress|waiter|bartender|nurse|doctor|officer|cop|soldier|mother|father|teenager|couple|figure|guard|clerk|priest|pilot|captain|detective|widow|grandmother|grandfather|aunt|uncle|son|daughter|brother|sister|husband|wife|boyfriend|girlfriend|boss|landlord|landlady|neighbour|neighbor|teacher|coach|manager|receptionist|cook|chef|customer|patient|mechanic|janitor|cashier|stepfather|stepmother";
+const ROLE_NOUN_RE = new RegExp(String.raw`\b(?:a|an|the|her|his|their|my|our)\s+((?:young|old|older|elderly|tired|lone|small|tall|little|teenage|younger|estranged)\s+)?(${ROLE_NOUNS})\b`, "gi");
+/** Roles that usually describe a named character ("Maria, a woman in her forties") rather than someone new. */
+const GENERIC_ROLES = new Set(["woman", "man", "girl", "boy", "kid", "child", "figure", "couple", "teenager"]);
 
 function titleCase(name: string): string {
   return name.toLowerCase().replace(/(^|[\s-])([a-z])/g, (_, lead: string, ch: string) => `${lead}${ch.toUpperCase()}`);
 }
 
-function parseScene(scene: string): ParsedScene {
+/** Split a slugline's text into heading and any action run into it on the same line. */
+function splitSlug(text: string): { heading: string; remainder: string } {
+  const timed = text.match(INLINE_SLUG_RE);
+  if (timed) return { heading: timed[1], remainder: timed[2] };
+  const caps = text.match(CAPS_HEADING_RE);
+  if (caps) return { heading: caps[1], remainder: caps[2] };
+  return { heading: text, remainder: "" };
+}
+
+const SPEECH_VERBS = "said|says|asks|asked|replies|replied|whispers|whispered|shouts|shouted|tells|told|mutters|muttered|snaps|snapped|calls|called|answers|answered|adds|added|cries|cried";
+const SPEAKER_BEFORE_RE = new RegExp(String.raw`\b([A-Z][a-z]+|she|he|they)\s+(?:${SPEECH_VERBS})\b`, "i");
+const SPEAKER_AFTER_RE = new RegExp(String.raw`\b(?:${SPEECH_VERBS})\s+([A-Z][a-z]+)\b`);
+
+interface ScreenplayRead {
+  /** True once a slugline or a character cue has been seen. */
+  screenplay: boolean;
+  slugs: number;
+  /** Speeches introduced by a character cue. */
+  cues: number;
+  location: string | null;
+  time: string | null;
+  exterior: boolean;
+  cueNames: string[];
+  units: SceneUnit[];
+}
+
+/**
+ * Read a scene line by line: sluglines (including a heading with action run
+ * into it), transitions, character cues with their parentheticals and
+ * speeches, and action or prose split into sentences — lifting quoted
+ * speech out of prose.
+ */
+function readScreenplay(scene: string, minActionWords = 3): ScreenplayRead {
   const lines = scene.replace(/\r/g, "").split("\n").map((l) => l.trim());
   let location: string | null = null;
   let time: string | null = null;
@@ -1645,6 +2116,28 @@ function parseScene(scene: string): ParsedScene {
   const units: SceneUnit[] = [];
   const cueNames: string[] = [];
   let screenplay = false;
+  let slugs = 0;
+  let cues = 0;
+
+  const addSpeech = (name: string, spoken: string[]) => {
+    const speaker = titleCase(name.trim());
+    if (!cueNames.includes(speaker)) cueNames.push(speaker);
+    if (spoken.length > 0) units.push({ kind: "dialogue", text: spoken.join(" "), speaker });
+  };
+
+  const addAction = (line: string) => {
+    for (const s of proseSentences(line)) {
+      const quote = s.match(/["“]([^"”]{2,})["”]/);
+      const action = s.replace(/["“][^"”]{2,}["”]/g, "").replace(/\s+,/g, ",").trim();
+      if (quote && !screenplay) {
+        const hint = action.match(SPEAKER_BEFORE_RE)?.[1] ?? action.match(SPEAKER_AFTER_RE)?.[1];
+        units.push({ kind: "dialogue", text: quote[1].trim(), ...(hint ? { speakerHint: hint } : {}) });
+        // "she said" alone is attribution, not action.
+        if (words(action.replace(SPEAKER_BEFORE_RE, "").replace(SPEAKER_AFTER_RE, "")).length < 3) continue;
+      }
+      if (words(action).length >= minActionWords) units.push({ kind: "action", text: action });
+    }
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -1652,41 +2145,183 @@ function parseScene(scene: string): ParsedScene {
     const slug = line.match(SLUG_RE);
     if (slug) {
       screenplay = true;
+      slugs++;
+      const { heading, remainder } = splitSlug(slug[2]);
       if (!location) {
         const prefix = slug[1].toUpperCase();
         exterior = prefix.startsWith("EXT") || prefix.startsWith("EST");
-        const [where, when] = slug[2].split(/\s+[-–—]\s+/);
+        const [where, when] = heading.split(/\s+[-–—]\s+/);
         location = where ? titleCase(where.replace(/[.]+$/, "")) : null;
         time = when ? when.toLowerCase().trim().replace(/(?<![ap]\.m)\.+$/, "") : null;
       }
+      if (remainder) addAction(remainder);
       continue;
     }
+    const inline = line.match(INLINE_CUE_RE);
+    if (inline && inline[1] === inline[1].toUpperCase() && !/^(INT|EXT|EST|FADE|CUT|NOTE|TITLE|SUPER)\b/.test(inline[1])) {
+      screenplay = true;
+      cues++;
+      addSpeech(inline[1], [inline[2]]);
+      continue;
+    }
+    if (SECTION_HEADING_RE.test(line) && line === line.toUpperCase()) continue;
     const next = lines[i + 1] ?? "";
     const cue = line.match(CUE_RE);
     const isCue = cue !== null && line === line.toUpperCase() && /[A-Z]/.test(line) && next !== "" && next !== next.toUpperCase();
     if (isCue && cue) {
-      screenplay = true;
-      const speaker = titleCase(cue[1].trim());
-      if (!cueNames.includes(speaker)) cueNames.push(speaker);
       const spoken: string[] = [];
       let j = i + 1;
       while (j < lines.length && lines[j]) {
-        if (!/^\(.*\)$/.test(lines[j])) spoken.push(lines[j]);
+        if (!PARENTHETICAL_RE.test(lines[j])) spoken.push(lines[j]);
         j++;
       }
-      if (spoken.length > 0) units.push({ kind: "dialogue", text: spoken.join(" "), speaker });
-      i = j;
+      // A speech is a few lines; a caps line over a long paragraph is a heading in a treatment.
+      if (words(spoken.join(" ")).length <= 90) {
+        screenplay = true;
+        cues++;
+        addSpeech(cue[1], spoken);
+        i = j;
+        continue;
+      }
       continue;
     }
-    if (/^\(.*\)$/.test(line)) continue;
-    // Action line or prose: split into sentences, lifting quoted speech out.
-    for (const s of sentences(line)) {
-      const quote = s.match(/["“]([^"”]{2,})["”]/);
-      if (quote && !screenplay) units.push({ kind: "dialogue", text: quote[1].trim() });
-      const action = s.replace(/["“][^"”]{2,}["”]/g, "").replace(/\s+,/g, ",").trim();
-      if (words(action).length >= 3) units.push({ kind: "action", text: action });
-    }
+    if (PARENTHETICAL_RE.test(line)) continue;
+    addAction(line);
   }
+  return { screenplay, slugs, cues, location, time, exterior, cueNames, units };
+}
+
+const QUOTE_SPAN_RE = /"[^"\n]{1,600}"|“[^”\n]{1,600}”/g;
+const HELD = { ".": "\uE000", "!": "\uE001", "?": "\uE002" } as const;
+
+/**
+ * Sentences that keep quoted speech whole: `"Florida. Your aunt has a room."`
+ * stays one unit, and an attribution that follows a quote ("…go?" he asks.)
+ * stays with it. The text itself is unchanged, so units can be quoted back.
+ */
+function proseSentences(text: string): string[] {
+  const held = text.replace(QUOTE_SPAN_RE, (span) => {
+    const inner = span.slice(1, -1);
+    // Keep the quote's final terminator live, so the quote can still end a sentence.
+    const body = inner.replace(/[.!?]+$/, "");
+    const tail = inner.slice(body.length);
+    return `${span[0]}${body.replace(/[.!?]/g, (c) => HELD[c as keyof typeof HELD])}${tail}${span[span.length - 1]}`;
+  });
+  const restored = sentences(held).map((s) => s.replace(/[\uE000-\uE002]/g, (c) => (c === HELD["."] ? "." : c === HELD["!"] ? "!" : "?")));
+  const merged: string[] = [];
+  for (const s of restored) {
+    // Lower case straight after a closed quote is its attribution ("Where will you go?" he asks.).
+    if (merged.length > 0 && /^[a-z]/.test(s) && /[.!?,]["”]$/.test(merged[merged.length - 1])) merged[merged.length - 1] += ` ${s}`;
+    else merged.push(s);
+  }
+  return merged;
+}
+
+/** Common nouns that open scene description ("Steam rises", "Traffic crawls") and so look like names. */
+const SCENE_NOUNS = new Set([
+  "Rain", "Snow", "Wind", "Steam", "Smoke", "Fog", "Mist", "Traffic", "Thunder", "Lightning", "Light", "Lights", "Darkness",
+  "Shadows", "Music", "Water", "Waves", "Sirens", "Fire", "Flames", "Dust", "Glass", "Blood", "Sunlight", "Moonlight",
+  "Headlights", "Footsteps", "Voices", "People", "Cars", "Birds", "Dogs", "Leaves", "Trees", "Noise", "Laughter", "Applause",
+  "Children", "Kids", "Men", "Women", "Police", "Guards", "Soldiers", "Tears", "Sweat", "Time", "Hours", "Minutes", "Seconds",
+  "Days", "Years", "Upstairs", "Downstairs", "Nearby", "Slowly", "Quietly", "Silently", "Somewhere", "Nothing", "Everything",
+  "Static", "Gravel", "Sand", "Ice", "Heat", "Sweat", "Ash", "Ashes", "Paper", "Papers", "Plates", "Bottles", "Pigeons", "Crowds",
+  "Passengers", "Dishes", "Keys", "Coffee", "Bells", "Engines", "Horns", "Neon", "Snowflakes", "Raindrops", "Droplets",
+]);
+
+/** True when the capitalised word at `index` starts a sentence, a line or a quotation. */
+function sentenceInitial(text: string, index: number): boolean {
+  if (/^\s*$/.test(text.slice(0, index))) return true;
+  return /(?:[.!?…:]["”’)\]]*\s+|["“‘(]\s*|\n\s*|[—–]\s+)$/.test(text.slice(Math.max(0, index - 8), index));
+}
+
+/**
+ * Characters in a prose scene: capitalised words that appear at least once
+ * mid-sentence (so "Where", "Steam" or a quoted "Florida." don't count), plus
+ * people named by role ("her father" → "the father").
+ */
+function proseCharacters(scene: string): string[] {
+  const counts = new Map<string, { count: number; evidence: boolean; first: number }>();
+  for (const m of scene.matchAll(/\b([A-Z][a-z]{2,})\b/g)) {
+    const name = m[1];
+    if (NAME_STOPWORDS.has(name) || SCENE_NOUNS.has(name)) continue;
+    const index = m.index ?? 0;
+    const entry = counts.get(name) ?? { count: 0, evidence: false, first: index };
+    entry.count++;
+    const after = scene.slice(index + name.length, index + name.length + 24);
+    if (!sentenceInitial(scene, index)) {
+      // Mid-sentence capitals are names — except places ("in Florida", "from Denver").
+      if (!/\b(?:in|from|at|near|across|through|into|toward|towards|outside|inside|of)\s+$/i.test(scene.slice(Math.max(0, index - 12), index))) entry.evidence = true;
+    } else if (/^(?:\s*\([^)]*\))?\s+[a-z]+(?:s|ed)\b|^['’]s\b|^,\s/.test(after) && !new RegExp(`\\b${name.toLowerCase()}\\b`).test(scene)) {
+      // Sentence-initial, but acting like a person ("Kai sprints", "Maria's hands"), and never used as a common noun.
+      entry.evidence = true;
+    }
+    counts.set(name, entry);
+  }
+  const names = [...counts.entries()]
+    .filter(([, e]) => e.evidence)
+    .sort((a, b) => b[1].count - a[1].count || a[1].first - b[1].first)
+    .map(([n]) => n)
+    .slice(0, 3);
+
+  const roles: string[] = [];
+  for (const m of scene.matchAll(ROLE_NOUN_RE)) {
+    const noun = m[2].toLowerCase();
+    if (names.length > 0 && GENERIC_ROLES.has(noun)) continue;
+    // "Tom, her father," describes a named character.
+    const before = scene.slice(Math.max(0, (m.index ?? 0) - 24), m.index);
+    if (/\b[A-Z][a-z]+(?:\s*\([^)]*\))?,\s*$/.test(before)) continue;
+    const role = `the ${noun}`;
+    if (!roles.includes(role)) roles.push(role);
+  }
+  return [...names, ...roles].slice(0, 3);
+}
+
+/**
+ * Which characters are "she" and which "he", from the scene itself: role
+ * nouns ("the father"), appositives ("SAM (60s), her father") and a pronoun
+ * opening the sentence after one that names a single character.
+ */
+function characterGenders(scene: string, units: SceneUnit[], characters: string[]): Map<string, "she" | "he"> {
+  const votes = new Map<string, { she: number; he: number }>();
+  const vote = (name: string, g: "she" | "he", weight = 1) => {
+    const v = votes.get(name) ?? { she: 0, he: 0 };
+    v[g] += weight;
+    votes.set(name, v);
+  };
+  for (const c of characters) {
+    const role = genderOf(c);
+    if (role) vote(c, role, 10);
+    const first = c.replace(/^the\s+/i, "").split(" ")[0];
+    const appositive = scene.match(new RegExp(String.raw`\b${first}\b(?:\s*\([^)]*\))?,\s*(?:her|his|their|the|a|an)\s+(?:\w+\s+)?(\w+)`, "i"));
+    const appositiveGender = appositive ? genderOf(appositive[1]) : null;
+    if (appositiveGender) vote(c, appositiveGender, 5);
+  }
+  for (let i = 0; i < units.length; i++) {
+    const named = namesIn(units[i].text, characters);
+    const subject = named.length === 1 ? named[0] : null;
+    if (!subject) continue;
+    const next = units[i + 1];
+    const pronoun = next && next.kind === "action" ? next.text.match(/^(she|he)\b/i)?.[1].toLowerCase() : undefined;
+    if (pronoun && namesIn(next.text, characters).length === 0) vote(subject, pronoun as "she" | "he", 2);
+    // "Maria stares at her phone": a possessive after the only name in the sentence.
+    const after = units[i].text.slice(units[i].text.search(new RegExp(`\\b${subject.replace(/^the\s+/i, "").split(" ")[0]}\\b`, "i")));
+    if (/\b(her|herself)\b/i.test(after) && !/\b(his|him|himself)\b/i.test(after)) vote(subject, "she", 0.5);
+    else if (/\b(his|him|himself)\b/i.test(after) && !/\b(her|herself)\b/i.test(after)) vote(subject, "he", 0.5);
+  }
+  const genders = new Map<string, "she" | "he">();
+  for (const [name, v] of votes) if (v.she !== v.he) genders.set(name, v.she > v.he ? "she" : "he");
+  return genders;
+}
+
+const PLACE_RE =
+  /\b(kitchen|living room|bedroom|bathroom|hallway|office|diner|bar|car|truck|bus|train|station|platform|street|alley|rooftop|roof|beach|shore|forest|woods|field|farm|barn|church|hospital|ward|classroom|school|gym|warehouse|garage|apartment|motel|hotel room|elevator|stairwell|lighthouse|boat|ship|deck|harbour|harbor|dock|cabin|tent|desert|mountain|lake|river|bridge|parking lot|restaurant|cafe|café|library|courtroom|cell|prison|lab|studio|theatre|theater|backstage|stage|crosswalk|corner|sidewalk|pavement|intersection|square|plaza|park|subway|market|porch|yard|backyard|garden|cemetery|graveyard|airport|terminal|gas station|supermarket|laundromat|pier|boardwalk|highway|bus stop|taxi|cab)\b/gi;
+const EXTERIOR_PLACE_RE =
+  /street|alley|rooftop|roof|beach|shore|forest|woods|field|farm|desert|mountain|lake|river|bridge|parking lot|dock|harbou?r|deck|crosswalk|corner|sidewalk|pavement|intersection|square|plaza|park|porch|yard|garden|cemetery|graveyard|pier|boardwalk|highway|bus stop/i;
+
+function parseScene(scene: string): ParsedScene {
+  const read = readScreenplay(scene);
+  let { location, time, exterior } = read;
+  const { units, cueNames } = read;
 
   let characters: string[];
   if (cueNames.length > 0) {
@@ -1694,29 +2329,24 @@ function parseScene(scene: string): ParsedScene {
     const lower = scene.toLowerCase();
     characters = [...cueNames].sort((a, b) => lower.indexOf(a.toLowerCase()) - lower.indexOf(b.toLowerCase()));
   } else {
-    const counts = new Map<string, number>();
-    for (const m of scene.matchAll(/\b([A-Z][a-z]{2,})\b/g)) {
-      if (NAME_STOPWORDS.has(m[1])) continue;
-      counts.set(m[1], (counts.get(m[1]) ?? 0) + 1);
-    }
-    characters = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n]) => n);
-    if (characters.length === 0) {
-      const roles: string[] = [];
-      for (const m of scene.matchAll(ROLE_NOUN_RE)) {
-        const role = `the ${m[2].toLowerCase()}`;
-        if (!roles.includes(role)) roles.push(role);
-      }
-      characters = roles.slice(0, 3);
-    }
+    characters = proseCharacters(scene);
   }
 
   if (!location) {
-    const found = scene.match(
-      /\b(kitchen|living room|bedroom|bathroom|hallway|office|diner|bar|car|truck|bus|train|station|platform|street|alley|rooftop|beach|shore|forest|woods|field|farm|barn|church|hospital|ward|classroom|school|gym|warehouse|garage|apartment|motel|hotel room|elevator|stairwell|lighthouse|boat|ship|deck|harbour|harbor|dock|cabin|tent|desert|mountain|lake|river|bridge|parking lot|restaurant|cafe|café|library|courtroom|cell|prison|lab|studio|theatre|theater|backstage|stage)\b/i,
-    );
-    if (found) {
-      location = titleCase(found[1]);
-      exterior = /street|alley|rooftop|beach|shore|forest|woods|field|farm|desert|mountain|lake|river|bridge|parking lot|dock|harbou?r|deck/i.test(found[1]);
+    // Prefer the place people are *in* ("at the crosswalk") over a landmark they pass ("past the church").
+    let best: { word: string; score: number; index: number } | null = null;
+    for (const m of scene.matchAll(PLACE_RE)) {
+      const before = scene.slice(Math.max(0, (m.index ?? 0) - 16), m.index).toLowerCase();
+      const score = /\b(in|inside|into|at|on|across|through|onto)\s+(the|a|an|his|her|their|our|my)?\s*$/.test(before)
+        ? 2
+        : /\b(past|near|beyond|toward|towards|behind|outside|from|of|above|below|over)\s+(the|a|an|his|her|their|our|my)?\s*$/.test(before)
+          ? -1
+          : 0;
+      if (!best || score > best.score) best = { word: m[1], score, index: m.index ?? 0 };
+    }
+    if (best && best.score >= 0) {
+      location = titleCase(best.word);
+      exterior = EXTERIOR_PLACE_RE.test(best.word);
     }
   }
   if (!time) {
@@ -1724,7 +2354,8 @@ function parseScene(scene: string): ParsedScene {
     time = when ? when[1].toLowerCase() : null;
   }
 
-  return { location, place: location ? `the ${location.toLowerCase()}` : "the location", time, exterior, characters, units };
+  const genders = characterGenders(scene, units, characters);
+  return { location, place: location ? `the ${location.toLowerCase()}` : "the location", time, exterior, characters, genders, units };
 }
 
 const OBJECT_TERMS = [
@@ -1830,6 +2461,50 @@ interface CoverageState {
   lastSubject: string;
   lastSpeaker: string | null;
   turnIndex: number;
+  /** Characters by most recent mention, for resolving "she"/"he". */
+  recent: string[];
+}
+
+/** Who "she"/"he" most likely is: the most recently mentioned character with that pronoun. */
+function resolvePronoun(pronoun: string, scene: ParsedScene, state: CoverageState): string {
+  const p = pronoun.toLowerCase();
+  if (p !== "she" && p !== "he") return state.lastSubject;
+  const pool = [...state.recent, ...scene.characters.filter((c) => !state.recent.includes(c))];
+  const match = pool.find((c) => scene.genders.get(c) === p);
+  if (match) return match;
+  // No character is known to be "she"/"he": stay with the current subject unless it's known to be the other one.
+  if (scene.genders.get(state.lastSubject) && scene.genders.get(state.lastSubject) !== p) {
+    return pool.find((c) => !scene.genders.has(c)) ?? state.lastSubject;
+  }
+  return state.lastSubject;
+}
+
+/** The character a unit is about: its speaker, the attributed speaker, the first name in it, or whoever its pronoun points to. */
+function unitSubject(unit: SceneUnit, scene: ParsedScene, state: CoverageState): string {
+  if (unit.speaker) return unit.speaker;
+  const hint = unit.speakerHint;
+  if (hint) {
+    const known = scene.characters.find((c) => c.toLowerCase() === hint.toLowerCase());
+    if (known) return known;
+    if (/^(she|he)$/i.test(hint)) return resolvePronoun(hint, scene, state);
+  }
+  const named = namesIn(unit.text, scene.characters);
+  if (named.length > 0 && unit.kind === "action") return named[0];
+  const pronoun = unit.text.match(/^(she|he)\b/i)?.[1];
+  if (pronoun) return resolvePronoun(pronoun, scene, state);
+  return named[0] ?? state.lastSubject;
+}
+
+/** Record who the unit was about, so the next "she"/"he" resolves to the right person. */
+function noteMentions(unit: SceneUnit, subject: string, scene: ParsedScene, state: CoverageState) {
+  const lower = unit.text.toLowerCase();
+  const byLastMention = namesIn(unit.text, scene.characters).sort(
+    (a, b) => lower.lastIndexOf(b.replace(/^the\s+/i, "").split(" ")[0].toLowerCase()) - lower.lastIndexOf(a.replace(/^the\s+/i, "").split(" ")[0].toLowerCase()),
+  );
+  const mentioned = unit.speaker || /^(she|he)\b/i.test(unit.text) ? [subject, ...byLastMention] : [...byLastMention, subject];
+  state.recent = [...new Set([...mentioned, ...state.recent])];
+  if (unit.speaker) state.lastSpeaker = unit.speaker;
+  if (unit.speaker || byLastMention.length > 0 || /^(she|he)\b/i.test(unit.text) || unit.speakerHint) state.lastSubject = subject;
 }
 
 function shotForUnit(unit: SceneUnit, index: number, scene: ParsedScene, state: CoverageState): ShotDraft {
@@ -1837,7 +2512,7 @@ function shotForUnit(unit: SceneUnit, index: number, scene: ParsedScene, state: 
   const chars = scene.characters;
   const named = namesIn(t, chars);
   const pronounStart = /^(she|he|they)\b/i.test(t);
-  const subject = unit.speaker ?? named[0] ?? (pronounStart ? state.lastSubject : null) ?? state.lastSubject;
+  const subject = unitSubject(unit, scene, state);
   const action = unit.kind === "dialogue" ? `${unit.speaker ? `${unit.speaker}: ` : ""}"${truncateWords(t, 18)}"` : truncateWords(t, 22);
   const objects = hits(t, OBJECT_TERMS).filter((o) => !["hand", "hands", "table", "text"].includes(o));
   const base = { subject, action, sound: unit.kind === "dialogue" ? "" : soundFor(t) };
@@ -1906,19 +2581,19 @@ function shotForUnit(unit: SceneUnit, index: number, scene: ParsedScene, state: 
       purpose: "A cutaway that builds atmosphere and gives the edit somewhere to breathe between faces.",
     };
   }
-  if (hits(t, DISORIENT_TERMS).length > 0) {
+  if (unit.kind === "action" && hits(t, DISORIENT_TERMS).length > 0) {
     return { ...base, size: "medium-close-up", framing: "single", angle: "dutch", movement: "handheld", purpose: `Tilt the world off its axis — we feel ${subject}'s disorientation physically.` };
   }
-  if (hits(t, CHAOS_TERMS).length > 0) {
+  if (unit.kind === "action" && hits(t, CHAOS_TERMS).length > 0) {
     return { ...base, size: "medium-wide", framing: named.length > 1 ? "two-shot" : "single", angle: "eye-level", movement: "handheld", lens: "28mm handheld", purpose: "Break the scene's composure — handheld energy makes the chaos immediate." };
   }
-  if (hits(t, POWER_TERMS).length > 0) {
+  if (unit.kind === "action" && hits(t, POWER_TERMS).length > 0) {
     return { ...base, size: "medium", framing: "single", angle: "low", movement: "static", purpose: `Shoot up at ${subject} so the power shift registers before anyone names it.` };
   }
-  if (hits(t, DEPART_TERMS).length > 0) {
+  if (unit.kind === "action" && hits(t, DEPART_TERMS).length > 0) {
     return { ...base, size: "full", framing: "single", angle: "eye-level", movement: "static", purpose: `Hold the frame and let ${subject} walk out of it — an exit the camera refuses to follow says as much as a line.` };
   }
-  if (hits(t, VULNERABLE_TERMS).length > 0) {
+  if (unit.kind === "action" && hits(t, VULNERABLE_TERMS).length > 0) {
     return { ...base, size: "medium-wide", framing: "single", angle: "high", movement: "static", purpose: `Look down on ${subject} — the frame itself makes them small.` };
   }
   if (unit.kind === "action" && hits(t, MOVE_TERMS).length > 0) {
@@ -1948,6 +2623,25 @@ function shotForUnit(unit: SceneUnit, index: number, scene: ParsedScene, state: 
   return { ...base, size: "medium-wide", framing: "single", angle: "eye-level", movement: "static", purpose: `Hold on ${subject}'s behaviour in the space — let the action play in one piece.` };
 }
 
+/** Physical action: a chase, a fight, a fall. Two or more of these make a scene kinetic. */
+const KINETIC_TERMS = [
+  "runs", "run", "sprints", "sprint", "chase", "chases", "chased", "leaps", "leap", "jumps", "jump", "races", "bursts", "burst",
+  "fight", "fights", "punches", "tackles", "lunges", "flees", "dives", "crashes", "explodes", "explosion", "gunfire", "shots",
+  "scrambles", "vaults", "climbs", "falls", "slams", "smashes", "swerves", "speeds",
+];
+const KINETIC_INTENT_TERMS = ["kinetic", "action", "chase", "adrenaline", "frantic", "breathless", "propulsive", "urgent", "fast"];
+
+/** How the audience should feel, by mood, when the director hasn't said. */
+const DEFAULT_INTENT: Record<string, { lead: string; tail: string }> = {
+  tense: { lead: "Rising dread", tail: "the audience should feel something is wrong before anyone names it" },
+  eerie: { lead: "Unease", tail: "the audience should feel watched — the space itself is the threat" },
+  melancholy: { lead: "Grief held back", tail: "the audience should feel the loss in what goes unsaid" },
+  tender: { lead: "Tenderness", tail: "the audience should lean in and feel the closeness grow" },
+  comic: { lead: "Comic timing", tail: "the audience should see the joke coming a beat before the characters do" },
+  kinetic: { lead: "Momentum", tail: "the audience should feel the pace build, shot by shot, with no room to breathe" },
+  restrained: { lead: "Quiet pressure", tail: "the audience should sense what's unspoken before anyone says it" },
+};
+
 function visualConceptFor(scene: ParsedScene, intent: string, allText: string): { concept: string; mood: string } {
   // The director's stated intent outranks whatever the scene's words suggest.
   const moodTerms = ["tense", "tension", "thriller", "paranoid", "suspense", "claustrophobic", "dread", "menace", "threat", "anxious", "secret", "horror", "creepy", "haunted", "eerie", "unsettling", "grief", "loss", "mourning", "sad", "melancholy", "funeral", "lonely", "alone", "tender", "warm", "nostalgic", "love", "intimate", "gentle", "romantic", "hopeful", "kindness", "comedy", "comic", "funny", "deadpan", "absurd", "farce"];
@@ -1963,6 +2657,10 @@ function visualConceptFor(scene: ParsedScene, intent: string, allText: string): 
     palette = "sickly greens against crushed blacks";
     lighting = "under-lit, with pools of darkness at the frame edges";
     mood = "eerie";
+  } else if (hits(intent, KINETIC_INTENT_TERMS).length > 0 || (hits(intent, moodTerms).length === 0 && hits(allText, KINETIC_TERMS).length >= 2)) {
+    palette = "high-contrast night colour — hard practicals, wet reflections, deep blacks";
+    lighting = "hard and directional, with light sources that move through frame";
+    mood = "kinetic";
   } else if (hits(probe, ["grief", "loss", "mourning", "sad", "melancholy", "funeral", "lonely", "alone"]).length > 0) {
     palette = "desaturated greys and slate blues with a single warm object in frame";
     lighting = "flat, overcast window light — no glamour";
@@ -1980,7 +2678,9 @@ function visualConceptFor(scene: ParsedScene, intent: string, allText: string): 
     lighting = "low-key, motivated by practicals in the frame";
   }
   const camera =
-    mood === "tense"
+    mood === "kinetic"
+      ? "Handheld and close inside the action, cut against locked-off wides that keep the geography clear; let the speed come from the cutting, not shaky framing."
+      : mood === "tense"
       ? "Start composed and wide, then tighten as the pressure builds; save the only unmotivated move for the turn."
       : mood === "comic"
         ? "Mostly locked-off, symmetrical frames; let the cut and the performance land the jokes."
@@ -1998,10 +2698,32 @@ function parseUserShots(raw: string): string[] {
     .slice(0, 8);
 }
 
-function feedbackForUserShot(shot: string, plan: Shot[], scene: ParsedScene): string {
+/** Film-grammar words that say nothing about *what* is in frame, so they can't show two shots cover the same moment. */
+const SHOT_GRAMMAR_WORDS = new Set([
+  "shot", "shots", "close", "closeup", "wide", "medium", "extreme", "over", "shoulder", "insert", "angle", "camera", "tracking",
+  "track", "push", "pull", "dolly", "handheld", "drone", "zoom", "pan", "tilt", "static", "frame", "framing", "lens", "slow",
+  "establishing", "full", "long", "two", "single", "point", "view", "overhead", "high", "low", "eye", "level", "then", "from",
+  "into", "onto", "with", "while", "when", "they", "their", "them", "this", "that", "scene", "moment",
+]);
+
+/** Kinds of moment that different wording can share ("leaves" / "walks out"). */
+const MOMENT_CONCEPTS: readonly (readonly string[])[] = [DEPART_TERMS, LOOK_TERMS, HANDLING_TERMS.filter((t) => t !== "hands"), CHAOS_TERMS, TURN_STRONG];
+
+/** A prompt for a shot with no stated purpose — varied, so a list of ideas doesn't get the same sentence each time. */
+function purposePrompt(index: number): string {
+  const prompts = [
+    "What's its job? Tie it to a beat — for example, \u201cto catch the hesitation before the answer\u201d.",
+    "Say what it should make the audience feel or notice; that decides how long you hold it.",
+    "Name the beat it serves — a reveal, a reaction, a shift in power — so the editor knows when to cut to it.",
+    "Give it a reason in one line (\u201cso we see she's already decided\u201d); a shot without one is the first to go in the edit.",
+  ];
+  return prompts[index % prompts.length];
+}
+
+function feedbackForUserShot(shot: string, index: number, plan: Shot[], scene: ParsedScene): string {
   const lower = shot.toLowerCase();
   const notes: string[] = [];
-  const size = lower.match(/\b(extreme close[- ]?up|ecu|close[- ]?up|cu|medium close[- ]?up|mcu|medium wide|medium|mid shot|ms|wide|ws|establishing|full shot|long shot|two[- ]shot|insert|pov|over[- ]the[- ]shoulder|ots)\b/);
+  const size = lower.match(/\b(extreme close[- ]?up|ecu|close[- ]?up|close on|tight on|cu|medium close[- ]?up|mcu|medium wide|medium|mid shot|ms|wide|ws|establishing|full shot|long shot|two[- ]shot|insert|pov|over[- ]the[- ]shoulder|ots)\b/);
   const hasPurpose = /\b(to show|so we|so that|because|reveal|reveals|emphasi[sz]e|feel|tension|isolat|as|while|when)\b/.test(lower);
   const drone = /\bdrone\b/.test(lower);
   if (drone) {
@@ -2017,32 +2739,45 @@ function feedbackForUserShot(shot: string, plan: Shot[], scene: ParsedScene): st
   }
   if (!size && !drone) {
     notes.push("Name the shot size — as written it could be anything from a wide to a close-up, and the size is where the meaning lives.");
-  } else if (size && /\b(extreme close|ecu|close|cu|insert)\b/.test(size[1])) {
+  } else if (size && /\b(extreme close|ecu|close|tight|cu|insert)\b/.test(size[1])) {
     const object = hits(shot, OBJECT_TERMS)[0];
     notes.push(
       object
         ? `Good instinct to isolate the ${object}. Pair it with a reaction close-up so its meaning lands on a face.`
         : "A close shot is where emotion lives — save it for the moment that earns it rather than using it as default coverage.",
     );
+  } else if (size && /\b(over[- ]the[- ]shoulder|ots)\b/.test(size[1])) {
+    notes.push("An over-the-shoulder keeps both people in the conversation; shoot its mirror from the other side so the eyelines cut together.");
   } else if (size && /\b(wide|ws|establishing|long shot|full shot)\b/.test(size[1])) {
     notes.push("A wide gives geography; decide whether it's here to orient us or to make a character look small — framing and lens differ for each.");
   }
-  if (!hasPurpose && notes.length < 2) notes.push("What's its job? Tie it to a beat — for example, \"to catch the hesitation before the answer\".");
 
-  // Find the plan shot that covers the same moment (shared names, objects and verbs).
-  const terms = new Set(words(shot).filter((w) => w.length > 3));
+  // The plan shot covering the same moment must share a character or an object *and* what happens —
+  // a shared name alone ("Mara") or a shared shot type ("over-the-shoulder") isn't the same moment.
+  const shotNames = namesIn(shot, scene.characters);
+  const shotObjects = hits(shot, OBJECT_TERMS).filter((o) => !["hand", "hands", "text"].includes(o));
+  const nameWords = new Set(scene.characters.flatMap((c) => words(c)));
+  const terms = new Set(words(shot).filter((w) => w.length > 3 && !SHOT_GRAMMAR_WORDS.has(w) && !nameWords.has(w)));
+  const concepts = MOMENT_CONCEPTS.filter((c) => hits(shot, c).length > 0);
   let match: Shot | null = null;
   let matchScore = 0;
   for (const p of plan) {
-    const overlap = new Set(words(`${p.subject} ${p.action}`).filter((w) => terms.has(w))).size;
-    if (overlap > matchScore) {
+    const text = `${p.subject} ${p.action}`;
+    const anchors = namesIn(text, shotNames).length + hits(text, shotObjects).length;
+    const action = new Set(words(text).filter((w) => terms.has(w))).size + concepts.filter((c) => hits(text, c).length > 0).length * 2;
+    if (anchors === 0 || action === 0) continue;
+    const score = anchors * 2 + action;
+    if (score > matchScore) {
       match = p;
-      matchScore = overlap;
+      matchScore = score;
     }
   }
-  if (match && matchScore >= 2) {
+  const locationWords = words(scene.location ?? "").filter((w) => w.length > 3);
+  const anchored = shotNames.length > 0 || shotObjects.length > 0 || locationWords.some((w) => words(shot).includes(w));
+  if (!hasPurpose && notes.length < 2) notes.push(purposePrompt(index));
+  if (match) {
     notes.push(`It covers the same moment as shot ${match.number} in the plan (${SHOT_SIZE_INFO[match.size].label.toLowerCase()}, ${match.movement.replace("-", " ")}) — compare the two and keep whichever tells the story more clearly.`);
-  } else if (namesIn(shot, scene.characters).length === 0 && hits(shot, OBJECT_TERMS).length === 0 && !drone) {
+  } else if (!anchored && !drone) {
     notes.push("Anchor it to someone or something in the scene so the crew knows exactly what's in frame.");
   }
   return notes.slice(0, 3).join(" ");
@@ -2092,7 +2827,7 @@ export function demoShots(req: Pick<ShotsRequest, "scene" | "intent" | "userShot
     chosen = chosen.filter((c) => keep.has(c.index));
   }
 
-  const state: CoverageState = { twoShotDone: false, lastSubject: protagonist, lastSpeaker: null, turnIndex };
+  const state: CoverageState = { twoShotDone: false, lastSubject: protagonist, lastSpeaker: null, turnIndex, recent: [] };
   const drafts: ShotDraft[] = [];
 
   // 1. Establishing.
@@ -2108,23 +2843,21 @@ export function demoShots(req: Pick<ShotsRequest, "scene" | "intent" | "userShot
     sound: ambientFor(scene, opening || allText),
   });
 
-  // 2. Coverage for the chosen units, in story order.
-  for (const { unit, index } of chosen) {
-    const draft = shotForUnit(unit, index, scene, state);
-    const prev = drafts[drafts.length - 1];
-    if (prev && prev.size === draft.size && prev.framing === draft.framing && prev.movement === draft.movement && index !== turnIndex) {
-      // Avoid two identical set-ups back to back: step the size.
-      draft.size = draft.size === "medium-wide" ? "medium" : draft.size === "medium" ? "medium-close-up" : draft.size === "close-up" ? "medium-close-up" : draft.size;
+  // 2. Coverage for the chosen units, in story order. Every unit (shot or not) updates who's who.
+  const chosenIndexes = new Set(chosen.map((c) => c.index));
+  units.forEach((unit, index) => {
+    const subject = unitSubject(unit, scene, state);
+    if (chosenIndexes.has(index)) {
+      const draft = shotForUnit(unit, index, scene, state);
+      const prev = drafts[drafts.length - 1];
+      if (prev && prev.size === draft.size && prev.framing === draft.framing && prev.movement === draft.movement && index !== turnIndex) {
+        // Avoid two identical set-ups back to back: step the size.
+        draft.size = draft.size === "medium-wide" ? "medium" : draft.size === "medium" ? "medium-close-up" : draft.size === "close-up" ? "medium-close-up" : draft.size;
+      }
+      drafts.push(draft);
     }
-    drafts.push(draft);
-    const named = namesIn(unit.text, chars);
-    if (unit.speaker) {
-      state.lastSpeaker = unit.speaker;
-      state.lastSubject = unit.speaker;
-    } else if (named.length > 0) {
-      state.lastSubject = named[0];
-    }
-  }
+    noteMentions(unit, subject, scene, state);
+  });
 
   // Pad thin scenes with reaction and relationship coverage.
   const other = chars[1];
@@ -2247,21 +2980,22 @@ export function demoShots(req: Pick<ShotsRequest, "scene" | "intent" | "userShot
   const emotionHits = hits(allText, LEXICON.emotion);
   const turnUnit = turnIndex >= 0 ? units[turnIndex] : null;
   const turnSubject = inSentence(keyShot.subject.split(",")[0]);
+  const moodIntent = DEFAULT_INTENT[mood] ?? DEFAULT_INTENT.restrained;
   const emotionalIntent = intent
     ? `${capitalize(stripEnd(intent))}. The audience should feel it tighten shot by shot until ${turnSubject} reaches the turn in shot ${keyShot.number}.`
-    : `${emotionHits.length > 0 ? `Built around ${emotionHits.slice(0, 2).join(" and ")}` : "Quiet pressure"}: the audience should sense what's unspoken before anyone says it, peaking at shot ${keyShot.number} on ${turnSubject}.`;
+    : `${emotionHits.length > 0 ? `Built around ${emotionHits.slice(0, 2).join(" and ")}` : moodIntent.lead}: ${moodIntent.tail}, peaking at shot ${keyShot.number} on ${turnSubject}.`;
   const dialogueCount = units.filter((u) => u.kind === "dialogue").length;
   const openingLine = opening || units.find((u) => u.kind === "action")?.text || req.scene;
   const sceneSummary = [
     `${scene.location ?? capitalize(scene.place)}${scene.time ? `, ${scene.time}` : ""}`.replace(/\.?$/, "."),
-    `${chars.length > 0 ? `${capitalize(chars.slice(0, 3).join(" and "))} — ` : ""}${chars.length > 0 ? lowerFirstWord(truncateWords(stripEnd(openingLine), 18)) : truncateWords(stripEnd(openingLine), 18)}`,
+    `${chars.length > 0 ? `${capitalize(chars.slice(0, 3).join(" and "))} — ` : ""}${chars.length > 0 ? lowerFirstWord(truncateWords(stripEnd(openingLine), 18), chars) : truncateWords(stripEnd(openingLine), 18)}`,
     dialogueCount > 0 || turnUnit
       ? `; ${dialogueCount > 0 ? `${plural(dialogueCount, "line", "lines")} of dialogue` : "the action"} building to ${turnUnit ? `"${truncateWords(stripEnd(turnUnit.text), 12)}"` : "the turn"}.`
       : ".",
   ].join(" ").replace(/\s+;/, ";").replace(/\s+\.$/, ".");
 
   const userShotList = req.userShots?.trim() ? parseUserShots(req.userShots) : [];
-  const feedbackOnUserShots = userShotList.map((shot) => ({ shot, note: feedbackForUserShot(shot, shots, scene) }));
+  const feedbackOnUserShots = userShotList.map((shot, i) => ({ shot, note: feedbackForUserShot(shot, i, shots, scene) }));
 
   return {
     sceneSummary,
@@ -2278,11 +3012,11 @@ function inSentence(subject: string): string {
   return /^The [a-z]/.test(subject) ? `t${subject.slice(1)}` : subject;
 }
 
-/** "Rain hammers" → "rain hammers" unless it looks like a name or screenplay caps. */
-function lowerFirstWord(text: string): string {
+/** "Rain hammers" → "rain hammers" for use after a dash; names, "I" and screenplay caps stay as written. */
+function lowerFirstWord(text: string, characters: string[]): string {
   const first = text.split(/\s+/)[0] ?? "";
-  if (/^[A-Z][a-z]*$/.test(first) && (NAME_STOPWORDS.has(first) || ["A", "An", "The"].includes(first) || /^(rain|wind|snow|night|smoke|light|darkness|silence|thunder)$/i.test(first))) {
-    return first.toLowerCase() + text.slice(first.length);
-  }
-  return text;
+  if (!/^[A-Z][a-z]+[,;:]?$/.test(first)) return text;
+  const bare = first.replace(/[,;:]$/, "");
+  if (characters.some((c) => c.replace(/^the\s+/i, "").split(" ")[0] === bare)) return text;
+  return first.toLowerCase() + text.slice(first.length);
 }

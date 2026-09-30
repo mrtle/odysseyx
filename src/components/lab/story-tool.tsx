@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { BookOpen, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,8 +9,8 @@ import { Skeleton } from "@/components/ui/loading";
 import type { StoryAnalysis, StoryRequest } from "@/lib/ai/schemas";
 import { STORY_FORMATS, type StoryFormat } from "@/lib/constants";
 import { toCoachProfile } from "@/lib/api";
-import { FRAMEWORKS, FRAMEWORK_LIST, type FrameworkId } from "@/lib/frameworks";
-import { useAppStore } from "@/lib/store";
+import { FRAMEWORKS, FRAMEWORK_LIST, isFrameworkId, type FrameworkId } from "@/lib/frameworks";
+import { labEntryKey, useAppStore } from "@/lib/store";
 import type { CoachMode } from "@/lib/types";
 import { cn, wordCount } from "@/lib/utils";
 import { AnalysisProgress } from "./analysis-progress";
@@ -17,6 +18,7 @@ import { INPUT_LABELS, composeLabInput, extraValue, parseLabInput } from "./lab-
 import { STORY_FORMAT_OPTIONS, deriveTitle } from "./lab-meta";
 import { FieldMeta, RequestError, SavedNotice } from "./lab-ui";
 import { CRAFT_TIPS, SAMPLE_STORIES } from "./samples";
+import { forgetRevisionProgress } from "./revision-checklist";
 import { StoryResult } from "./story-result";
 import { useEntryPrefill, useLabRequest } from "./use-lab-request";
 import { useRevealOnChange } from "./use-reveal";
@@ -32,6 +34,16 @@ const MAX_CHARS = 30000;
 function formatFromLabel(label: string | undefined): StoryFormat | undefined {
   if (!label) return undefined;
   return STORY_FORMATS.find((f) => STORY_FORMAT_OPTIONS[f].label === label || f === label);
+}
+
+/**
+ * The Story Doctor reading `?from=` ("Run again") and `?framework=` from the
+ * URL on the client, so the page can be prerendered. Render inside <Suspense>.
+ */
+export function StoryToolFromUrl() {
+  const params = useSearchParams();
+  const framework = params.get("framework");
+  return <StoryTool fromEntryId={params.get("from") ?? undefined} initialFramework={isFrameworkId(framework) ? framework : undefined} />;
 }
 
 /** Story Doctor: form, framework picker, loading state and results. */
@@ -66,10 +78,12 @@ function StoryWorkbench({ initial }: { initial: StoryInitial }) {
   const [framework, setFramework] = useState<FrameworkId>(initial.framework);
   const [format, setFormat] = useState<StoryFormat>(initial.format);
   const [showValidation, setShowValidation] = useState(false);
-  const [result, setResult] = useState<(StoryResponse & { entryId: string }) | null>(null);
+  const [result, setResult] = useState<(StoryResponse & { entryId: string; runId: number; xpGained: number; replaced: boolean }) | null>(null);
   const request = useLabRequest<StoryRequest, StoryResponse>("/api/lab/story");
   const addLabEntry = useAppStore((s) => s.addLabEntry);
-  const headingRef = useRevealOnChange<HTMLHeadingElement>(result?.entryId);
+  const headingRef = useRevealOnChange<HTMLHeadingElement>(result?.runId);
+  /** Counts submissions, so a re-run that updates the same saved entry still reveals the fresh result. */
+  const runs = useRef(0);
 
   const trimmed = text.trim();
   const words = wordCount(text);
@@ -92,15 +106,21 @@ function StoryWorkbench({ initial }: { initial: StoryInitial }) {
       profile: toCoachProfile(useAppStore.getState().profile),
     });
     if (!data) return;
-    const saved = addLabEntry({
-      tool: "story",
+    const entry = {
+      tool: "story" as const,
       title: cleanTitle || deriveTitle(trimmed),
       input: composeLabInput(trimmed, [{ label: INPUT_LABELS.format, value: STORY_FORMAT_OPTIONS[format].label }]),
       framework,
       result: data.analysis,
       mode: data.mode,
-    });
-    setResult({ ...data, entryId: saved.id });
+    };
+    const previous = useAppStore.getState().labEntries.find((e) => labEntryKey(e) === labEntryKey(entry));
+    const saved = addLabEntry(entry);
+    // Re-running the same draft updates its saved entry in place; ticks on an older, different plan no longer apply.
+    if (saved.replaced && previous?.tool === "story" && previous.result.revisionPlan.join("\n") !== data.analysis.revisionPlan.join("\n")) {
+      forgetRevisionProgress(saved.id);
+    }
+    setResult({ ...data, entryId: saved.id, runId: ++runs.current, xpGained: saved.xpGained, replaced: saved.replaced });
   }
 
   function onSubmit(e: FormEvent) {
@@ -279,8 +299,8 @@ function StoryWorkbench({ initial }: { initial: StoryInitial }) {
           <RequestError message={request.error} onRetry={() => void submit()} onDismiss={request.clearError} />
         ) : result ? (
           <>
-            <SavedNotice entryId={result.entryId} />
-            <StoryResult analysis={result.analysis} mode={result.mode} entryId={result.entryId} headingRef={headingRef} />
+            <SavedNotice entryId={result.entryId} xpGained={result.xpGained} replaced={result.replaced} />
+            <StoryResult key={result.runId} analysis={result.analysis} mode={result.mode} entryId={result.entryId} headingRef={headingRef} />
           </>
         ) : null}
       </div>

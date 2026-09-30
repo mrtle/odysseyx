@@ -28,10 +28,26 @@ export const SKILL_RUBRIC = SKILL_LIST.map(
   (s) => `- ${s.id} (${s.name}): ${s.description} Look for: ${s.lookFor}`,
 ).join("\n");
 
+/**
+ * The learner's name made safe to place in a system prompt: letters, marks,
+ * spaces, apostrophes, hyphens and periods only, at most 40 characters.
+ * Anything else (tags, quotes, instructions) is dropped, so a profile name
+ * can't carry system-level instructions. Empty when nothing usable remains.
+ */
+export function safeLearnerName(name: string | undefined): string {
+  return (name ?? "")
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{M}\s'’.-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 40)
+    .trim();
+}
+
 /** One paragraph describing the learner, or an empty string when unknown. */
 export function describeLearner(profile?: CoachProfile): string {
   if (!profile) return "";
-  const name = profile.name.trim() || "The learner";
+  const name = safeLearnerName(profile.name) || "The learner";
   return `About the learner: ${name} is ${GOAL_LABELS[profile.goal]} at the ${profile.experience} level. Calibrate vocabulary and depth to that level, and frame advice around their goal.`;
 }
 

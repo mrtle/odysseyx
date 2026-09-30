@@ -102,55 +102,55 @@ export const visualLessons: Lesson[] = [
         prompt:
           "A lone hiker realises she's hopelessly lost in a vast mountain range. Which shot best conveys her isolation?",
         options: [
-          "An extreme close-up of her compass",
+          "An extreme close-up of her eyes as the panic sets in, so we share her fear",
           "An extreme wide shot, with her tiny against the peaks",
           "A medium shot of her checking the map",
-          "An over-the-shoulder shot of her phone screen",
+          "An over-the-shoulder shot of her phone: no signal, no map, no way home",
         ],
         answerIndex: 1,
         explanation:
-          "An extreme wide shot lets the landscape dwarf her; the size relationship between character and world *is* the feeling of isolation. The compass insert or the map medium might come later in the sequence, but they show her problem, not how small and alone she is.",
+          "An extreme wide shot lets the landscape dwarf her; the size relationship between character and world *is* the feeling of isolation. The close-up would show her fear, and the map or phone shots her problem, but none of them shows how small and alone she is.",
       },
       {
         id: "q2",
         prompt:
           "A director covers every line of a tense dinner scene in tight close-ups. What is the most likely problem?",
         options: [
-          "Close-ups should only be used in action scenes",
-          "The audience won't be able to tell who is speaking",
+          "Tension needs wide shots, so close-ups will drain the scene of menace",
+          "The scene will feel rushed, because close-ups have to be cut faster",
           "With nowhere closer to go, the scene's key moment has no visual emphasis",
-          "Close-ups always need a longer shooting schedule",
+          "Constant close-ups make the performances look exaggerated",
         ],
         answerIndex: 2,
         explanation:
-          "Close-ups draw their power from contrast. If everything is a close-up, the moment a character realises something has nothing to escalate to. Varying the size lets you save the tightest framing for the turn.",
+          "Close-ups draw their power from contrast. If everything is a close-up, the moment a character realises something has nothing to escalate to. Close-ups can build tension and needn't be cut fast; the problem is that nothing stands out. Varying the size lets you save the tightest framing for the turn.",
       },
       {
         id: "q3",
         prompt: "Why might the same pratfall play as comedy in a wide shot but as pain in a close-up?",
         options: [
-          "Distance lets us watch from outside, while closeness makes us share what the character feels",
-          "Wide shots are always lit more brightly than close-ups",
-          "Close-ups are normally shot in slow motion",
-          "Audiences can't read body language in a wide shot",
+          "Distance lets us judge the fall, while closeness makes us share the pain",
+          "Comedy relies on timing, and a wide shot lets the editor hold the gag longer",
+          "Close-ups slow the moment down, giving us time to notice the injury",
+          "Wide shots are usually lit brighter, and bright light reads as comic",
         ],
         answerIndex: 0,
         explanation:
-          "Distance controls empathy. From far away we judge the fall as an event; up close we see the embarrassment and hurt on the face and feel it with them. That's the idea behind the line attributed to Chaplin about tragedy in close-up and comedy in long shot.",
+          "Distance controls empathy. From far away we judge the fall as an event; up close we see the embarrassment and hurt on the face and feel it with them. That's the idea behind the line attributed to Chaplin about tragedy in close-up and comedy in long shot. Timing, speed and lighting all matter, but none of them explains the switch from laughter to pain.",
       },
       {
         id: "q4",
         prompt:
           "You want the audience to notice a woman slipping her wedding ring off under the table, unseen by her husband. Which shot does that job most directly?",
         options: [
-          "A wide shot of the whole restaurant",
-          "A two-shot of the couple at eye level",
-          "A crane shot rising above the table",
+          "A wide shot of the whole restaurant, to show how alone the couple are",
+          "A two-shot at eye level, keeping both of their faces in view",
+          "A close-up of the husband, chatting on, oblivious",
           "An insert of her hands beneath the tablecloth",
         ],
         answerIndex: 3,
         explanation:
-          "An insert isolates a crucial object or action and tells the audience *this matters*, while the husband stays oblivious. That gap between what we know and what he knows creates suspense. The wider options would bury the detail.",
+          "An insert isolates a crucial object or action and tells the audience *this matters*, while the husband stays oblivious. That gap between what we know and what he knows creates suspense. The wide shot and the two-shot would bury the detail, and a close-up of the husband shows his obliviousness but not what he's missing.",
       },
     ],
     exercise: {
@@ -250,56 +250,56 @@ export const visualLessons: Lesson[] = [
         prompt:
           "A bullied teenager finally confronts his tormentor. You want the audience to feel the moment he stops being afraid. Which camera plan supports that best?",
         options: [
-          "Start with the camera slightly high on the teen, then bring it down to his eye level, or just below, as he stands his ground",
-          "Use a Dutch tilt throughout to show the tension",
-          "Shoot the whole scene from a bird's-eye view",
-          "Shoot both boys at eye level in identical framing for the whole scene",
+          "Start slightly high on him, then lower the camera as he stands his ground",
+          "Use a Dutch tilt throughout, so the whole confrontation feels tense and off-balance",
+          "Shoot the entire scene from a bird's-eye view, so both boys look small and trapped",
+          "Keep both boys at eye level in identical framing, so neither one is favoured",
         ],
         answerIndex: 0,
         explanation:
-          "The change in angle charts the change in power. Starting high makes him small and vulnerable; lowering the camera as he stands up lets the audience feel the shift. A constant angle, whatever it is, can't express a change.",
+          "The change in angle charts the change in power. Starting high makes him small and vulnerable; lowering the camera to his eye level, or just below, as he stands up lets the audience feel the shift. A constant angle, whatever it is, can't express a change.",
       },
       {
         id: "q2",
         prompt:
           "A director films a character alone in a huge, empty car park from directly overhead. What is this most likely to convey?",
         options: [
-          "That the character is powerful and in control",
-          "Nothing in particular; overhead shots are neutral",
-          "That the scene is a flashback",
-          "Detachment and insignificance, as if the character is being observed by fate",
+          "Confidence, as if the character owns all the space around them",
+          "Neutral geography, since overhead shots simply show where things are",
+          "A dream or flashback, because no human eye could see from there",
+          "Detachment and insignificance, as if fate is looking down on them",
         ],
         answerIndex: 3,
         explanation:
-          "A bird's-eye or overhead view lifts us out of the character's experience and turns them into a small shape in a pattern. It reads as detachment, fate or clinical observation, not as neutral coverage.",
+          "A bird's-eye or overhead view lifts us out of the character's experience and turns them into a small shape in a pattern. It reads as detachment, fate or clinical observation. It isn't neutral coverage, and nothing about the angle alone marks a dream or a flashback.",
       },
       {
         id: "q3",
         prompt:
           "In *Psycho*, the attack on Arbogast is shown from high above the staircase. Beyond drama, what storytelling job does that angle do?",
         options: [
-          "It shows the layout of the whole house",
-          "It keeps the attacker's face out of view, protecting the film's secret",
-          "It makes Arbogast look powerful",
-          "It lets the audience see through the attacker's eyes",
+          "It maps the staircase so the geography of the attack is clear",
+          "It keeps the attacker's face hidden, protecting the film's big secret",
+          "It makes Arbogast look small and vulnerable, marking him as prey",
+          "It puts us in the attacker's point of view, sharing his gaze",
         ],
         answerIndex: 1,
         explanation:
-          "The high angle feels like fate, but it also conceals: from above, the attacker's face stays hidden. Good angles often do two jobs at once, one emotional and one practical.",
+          "The high angle does make Arbogast look small, and it feels like fate closing in, but those are its dramatic jobs. Its practical job is concealment: from above, the attacker's face stays hidden, and we watch from overhead rather than through the attacker's eyes. Good angles often do two jobs at once, one emotional and one practical.",
       },
       {
         id: "q4",
         prompt:
           "A child is being scolded by her father. The camera sits at the child's height, looking up at him. What is the shot mainly communicating?",
         options: [
-          "That the father is objectively heroic",
-          "That the scene is a dream sequence",
-          "How powerful the father seems to her, from her point of view",
-          "That the father is about to fall over",
+          "That the father is a genuinely heroic figure the film wants us to admire",
+          "That the father is the scene's villain, since low angles signal menace",
+          "How big and powerful the father seems to her, seen from her height",
+          "Nothing much; it's simply where the camera fits in a small room",
         ],
         answerIndex: 2,
         explanation:
-          "Angle borrows a point of view. From the child's height, the low angle expresses her experience: the father looms. Out of context the same shot might just say *powerful*; here it says *powerful to her*.",
+          "Angle borrows a point of view. From the child's height, the low angle expresses her experience: the father looms. Out of context the same shot might say *heroic* or *menacing*; here it says *powerful to her*.",
       },
     ],
     exercise: {
@@ -407,55 +407,55 @@ export const visualLessons: Lesson[] = [
         prompt:
           "A character is framed at the far right edge of the screen, looking right, with almost no space in front of her face and a large empty area behind her. What is this most likely to make the audience feel?",
         options: [
-          "That she's confident and in control",
-          "Cramped and uneasy, as if she's blocked or something is behind her",
-          "Nothing in particular; this is standard framing",
-          "Joyful and free",
+          "Free and hopeful, with all that open space around her",
+          "Cramped and uneasy, as if she's boxed in or something is behind her",
+          "Nothing special; it's standard framing for a look off-screen",
+          "Calm and balanced, as the frame follows the rule of thirds",
         ],
         answerIndex: 1,
         explanation:
-          "She has no lead room: her gaze runs straight into the edge of the frame, and the empty space sits behind her, where she can't see. Audiences read this as confinement or unease, even threat. Standard framing would give her space to look into.",
+          "She has no lead room: her gaze runs straight into the edge of the frame, and the empty space sits behind her, where she can't see. Audiences read this as confinement or unease, even threat. That space isn't freedom, and this isn't standard framing, which would give her room to look into.",
       },
       {
         id: "q2",
         prompt:
           "In the final shot of *The Searchers*, Ethan is framed through the homestead doorway before he walks away. What does this frame within a frame express?",
         options: [
-          "That the house is about to be attacked",
-          "That Ethan is about to move in with the family",
-          "That the landscape is dangerous",
-          "That he stands apart from the family he has brought back together, divided from them by the threshold",
+          "That the homestead is about to be attacked again, so he stands guard",
+          "That he's about to move in and settle down with the family he rescued",
+          "That the story will begin again, since the film also opened on a door",
+          "That he has reunited the family but can never belong inside it",
         ],
         answerIndex: 3,
         explanation:
-          "The doorway separates the family's interior from the wilderness where Ethan belongs. Framing him through it, then closing the door, turns architecture into meaning: he can restore the family, but he can't join it.",
+          "The doorway separates the family's interior from the wilderness where Ethan belongs. Framing him through it, then closing the door, turns architecture into meaning: he can restore the family, but he can't join it. The door in the opening shot brackets the story; it doesn't promise to restart it.",
       },
       {
         id: "q3",
         prompt:
           "You want one shot to show that a teenager is secretly listening while her parents argue about divorce. Which composition does this best?",
         options: [
-          "Deep staging: the teenager half-hidden on the stairs in the foreground, the parents arguing in the background",
-          "A close-up of the teenager's face, with the parents off screen and silent",
-          "A bird's-eye view of the whole house",
-          "A centred two-shot of the parents only",
+          "Deep staging: the teenager half-hidden on the stairs in front, her parents arguing behind",
+          "A close-up of the teenager listening, with the argument heard off screen",
+          "Cross-cutting between the parents arguing and the teenager listening",
+          "A two-shot of the parents mid-argument, with the hallway door ajar",
         ],
         answerIndex: 0,
         explanation:
-          "Depth lets one frame hold two stories: the argument and the child absorbing it. The audience sees cause and effect at the same time, which neither a close-up of her alone nor a shot of the parents alone can give.",
+          "Depth lets one frame hold two stories: the argument and the child absorbing it. The audience sees cause and effect at the same time. A close-up of her or a shot of the parents shows only half the story, and cross-cutting needs several shots to do what deep staging does in one.",
       },
       {
         id: "q4",
         prompt: "When is it most justified to put your subject dead centre in the frame?",
         options: [
-          "Always, because audiences look at the centre first",
-          "Never, because the rule of thirds forbids it",
+          "Whenever the subject matters most, because the eye goes to the centre first",
+          "Never in drama; the rule of thirds exists because centred frames look amateur",
           "When you want formality, confrontation, symmetry or an eerie sense of control",
-          "Only in documentaries",
+          "Only in dialogue-free shots, since a centred face leaves no room for an eyeline",
         ],
         answerIndex: 2,
         explanation:
-          "Centring isn't wrong; it's a different feeling. Symmetry reads as formal, deliberate or unnatural, like Kubrick's corridors, and a character staring straight down the lens feels confrontational. The rule of thirds is a default, not a law.",
+          "Centring isn't wrong, and it isn't automatic either; it's a different feeling. Symmetry reads as formal, deliberate or unnatural, like Kubrick's corridors, and a character staring straight down the lens feels confrontational. The rule of thirds is a default, not a law.",
       },
     ],
     exercise: {
@@ -563,49 +563,49 @@ export const visualLessons: Lesson[] = [
         prompt:
           "Two lovers stand on opposite sides of a crowded street, and you want the crowd to feel as if it's pressing in and keeping them apart. Which lens choice helps most?",
         options: [
-          "An extreme wide-angle lens right next to one of them",
-          "A fisheye lens from high above",
+          "A wide-angle lens close to one lover, exaggerating the distance to the other",
+          "A bird's-eye view straight down onto the street",
           "A telephoto lens from a distance, compressing the crowd between them",
-          "Whichever lens is on the camera, since lenses don't affect space",
+          "A handheld wide lens pushing through the crowd, so we're jostled like them",
         ],
         answerIndex: 2,
         explanation:
-          "Long lenses compress depth, stacking foreground and background together. The crowd looks denser and the lovers seem caught in it. A wide lens would do the opposite, stretching the space and emptying it out.",
+          "Long lenses compress depth, stacking foreground and background together. The crowd looks denser and the lovers seem caught in it. A wide lens would do the opposite, stretching the space and emptying it out, and an overhead view shows the gap without making the crowd press in.",
       },
       {
         id: "q2",
         prompt: "A director wants one slow push-in during a conversation. Where does it most likely belong?",
         options: [
-          "On the listener's face at the moment the scene turns, after the camera has been still",
-          "Continuously, from the first line to the last",
-          "On the establishing shot of the building",
-          "On whoever is speaking, every time they speak",
+          "On the listener's face at the turn, after the camera has held still",
+          "Slowly across the whole scene, so the tension builds from the first line",
+          "On the establishing shot, drawing us in from the street to the table",
+          "On the speaker as they deliver the big news, so we lean in to hear it",
         ],
         answerIndex: 0,
         explanation:
-          "Movement reads loudest against stillness. Holding the camera back and then pushing in at the emotional turn tells the audience *this is the moment*, and it often lands hardest on the person absorbing the news rather than the one delivering it.",
+          "Movement reads loudest against stillness. Holding the camera back and then pushing in at the emotional turn tells the audience *this is the moment*, and it often lands hardest on the person absorbing the news rather than the one delivering it. A push that runs through the whole scene has no stillness to play against.",
       },
       {
         id: "q3",
         prompt: "Why does the handheld Omaha Beach sequence in *Saving Private Ryan* feel so overwhelming?",
         options: [
-          "Handheld cameras record at a higher resolution",
-          "It is shot entirely from a bird's-eye view",
-          "The camera glides perfectly smoothly, in contrast with the violence",
-          "The jostling, unplanned-feeling camera puts the audience inside the chaos like another soldier",
+          "Wide, steady shots show the scale of the slaughter on the beach",
+          "Rapid cutting between dozens of angles means we never know where we are",
+          "The camera glides smoothly through the violence, refusing to look away",
+          "The jolting camera moves like another soldier, putting us inside the chaos",
         ],
         answerIndex: 3,
         explanation:
-          "Handheld camerawork breaks the sense of a composed, safe viewpoint. The camera flinches, gets splashed and loses track of people, so we experience the landing rather than simply observing it.",
+          "Handheld camerawork breaks the sense of a composed, safe viewpoint. The camera flinches, gets splashed and loses track of people, so we experience the landing rather than simply observing it. A gliding camera or steady wide shots would keep us safely outside it.",
       },
       {
         id: "q4",
         prompt: "What does a dolly zoom do, and when is it best used?",
         options: [
-          "It circles the subject to show every angle, for grand reveals",
-          "It keeps the subject the same size while the background stretches or shrinks, for a moment of shock or dizzying realisation",
-          "It speeds up the footage, for comic chases",
-          "It switches between colour and black and white, for flashbacks",
+          "It circles the subject in one move, revealing every side of a grand moment",
+          "It holds the subject's size while the background warps, for a moment of shock",
+          "It zooms quickly in on a face, for punchy or comic emphasis",
+          "It zooms slowly out from a detail to a wide, revealing the character's surroundings",
         ],
         answerIndex: 1,
         explanation:
@@ -717,54 +717,54 @@ export const visualLessons: Lesson[] = [
         prompt:
           "You're lighting a scene in which a trusted family doctor is secretly lying to a patient. Which approach best hints at the lie without giving it away?",
         options: [
-          "Flat, bright, high-key light on everyone, exactly like the rest of the film",
-          "Coloured party lights flashing across his face",
-          "Near-total darkness, so we can barely see him",
-          "Gradually reducing the fill on his side, so shadow creeps across his face as the lie deepens",
+          "Flat, bright, high-key light on everyone, so nothing gives the twist away",
+          "Underlighting him from below, the classic horror look, as soon as he lies",
+          "Slowly reducing the fill on his side, so shadow creeps in as the lie deepens",
+          "Low-key light from the first frame, with his eyes in shadow like Don Corleone's",
         ],
-        answerIndex: 3,
+        answerIndex: 2,
         explanation:
-          "Less fill means deeper shadow. Letting shadow grow across his face over the scene makes the audience uneasy before they know why. It's a subtle, motivated change rather than a sign reading *villain*.",
+          "Less fill means deeper shadow. Letting shadow grow across his face over the scene makes the audience uneasy before they know why. It's a subtle change rather than a sign reading *villain*, and it's stronger still if you motivate it: a lamp he switches off, or the afternoon sun sliding behind a building. Flat light hides the lie completely, while underlighting or deep shadow from the first frame gives it away.",
       },
       {
         id: "q2",
         prompt: "What makes lighting *motivated*?",
         options: [
-          "It is brighter than every other light on set",
-          "It appears to come from a believable source in the story's world, such as a window, lamp or fire",
-          "It is added digitally in post-production",
-          "It follows the actor wherever they move",
+          "It's shaped by the character's emotions, darkening as their mood darkens",
+          "It seems to come from a believable source in the scene, such as a lamp",
+          "It comes only from real lamps seen in shot, with no film lights at all",
+          "It's the brightest light on set, the key that all the others follow",
         ],
         answerIndex: 1,
         explanation:
-          "Motivated light seems to come from something in the scene. Even when film lamps do the real work, building the look around a believable source keeps the mood feeling truthful, and *Barry Lyndon*'s candlelit rooms take that to the extreme.",
+          "Motivated light seems to come from something in the scene: a window, a lamp, a fire. It doesn't have to come from lamps in shot; even when film lamps do the real work, building the look around a believable source keeps the mood feeling truthful, and *Barry Lyndon*'s candlelit rooms take that to the extreme. Light can change with a character's mood, but what makes it motivated is a source the audience believes in.",
       },
       {
         id: "q3",
         prompt: "Why is the red coat in *Schindler's List* so powerful?",
         options: [
-          "In a black-and-white film, the single colour singles out one child and gives an individual face to mass atrocity",
-          "Red always signals happiness to audiences",
-          "It tells the audience that the girl is secretly the villain",
-          "It shows that the scene is a flashback",
+          "In a black-and-white film, it turns an anonymous crowd into one child",
+          "Red is the colour of blood, so it foreshadows the violence of the liquidation",
+          "Red is a warning sign, telling the audience that she's about to be hurt",
+          "It signals a flashback, since colour marks the past in a black-and-white film",
         ],
         answerIndex: 0,
         explanation:
-          "Against a black-and-white world, one splash of colour is impossible to ignore. It turns an anonymous crowd into one child we follow, so when the red appears again later, its meaning is devastating.",
+          "Against a black-and-white world, one splash of colour is impossible to ignore. It turns an anonymous crowd into one child we follow, giving an individual face to mass atrocity, so when the red appears again later, its meaning is devastating. It works by singling her out, not as a flashback cue or a simple warning.",
       },
       {
         id: "q4",
         prompt:
           "Your protagonist starts the film numb and isolated and ends it reconnected with her family. Which colour plan tells that story best?",
         options: [
-          "The same saturated palette throughout, for consistency",
-          "Random colours in every scene, to keep things visually interesting",
-          "Cool, desaturated tones early, with warmer colours gradually entering her world as she reconnects",
-          "Black and white for the entire film",
+          "One warm palette throughout, so the film feels unified",
+          "Warm, golden tones early, cooling as she finds peace",
+          "Cool, muted tones at first, warming gradually as she reconnects",
+          "Bold, clashing colours, to mirror her inner chaos",
         ],
         answerIndex: 2,
         explanation:
-          "A colour arc gives the audience a silent second storyline. Moving from cool and desaturated toward warmth lets them feel her reconnection happening, even before the plot confirms it.",
+          "A colour arc gives the audience a silent second storyline. Moving from cool and muted toward warmth lets them feel her reconnection happening, even before the plot confirms it. A fixed palette can't show change, and running from warm to cool would tell the opposite story.",
       },
     ],
     exercise: {

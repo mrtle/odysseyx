@@ -7,13 +7,17 @@ export function EmptyState({
   description,
   action,
   className,
+  headingLevel = 3,
 }: {
   icon?: ReactNode;
   title: string;
   description?: ReactNode;
   action?: ReactNode;
   className?: string;
+  /** Use 1 when the empty state is the whole page (not-found pages), so the page still has an h1. */
+  headingLevel?: 1 | 2 | 3;
 }) {
+  const Heading = `h${headingLevel}` as const;
   return (
     <div
       className={cn(
@@ -22,7 +26,7 @@ export function EmptyState({
       )}
     >
       {icon ? <div className="mb-4 text-bronze-400">{icon}</div> : null}
-      <h3 className="font-display text-lg font-semibold text-sea-100">{title}</h3>
+      <Heading className="font-display text-lg font-semibold text-sea-100">{title}</Heading>
       {description ? <p className="mt-2 max-w-md text-sm text-sea-300">{description}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
     </div>

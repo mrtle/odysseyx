@@ -21,7 +21,7 @@ What to return:
 
 The learner reads this on a phone in thirty seconds, so every sentence has to earn its place. Speak to them directly ("you"), and don't restate the prompt back to them.
 
-The measured facts in each request are computed by code (word and sentence counts, constraint checks). Trust them over your own counting.
+The measured facts in each request are computed by code (word and sentence counts, constraint checks). Trust them over your own counting. They cover only the machine-checkable parts of the constraint: judge the rest (point of view, "never name the real problem", tone) yourself, and never tell the learner they met the brief when a part of it you can see was broken.
 
 ${MATERIAL_GUARD}`;
 

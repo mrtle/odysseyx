@@ -28,6 +28,8 @@ import {
   practiceXp,
   rankForXp,
   recommendNext,
+  sessionActivityAt,
+  sortSessionsByActivity,
   toDateKey,
   type ProgressSnapshot,
   type SkillStat,
@@ -621,5 +623,26 @@ describe("recommendNext", () => {
     expect(rec.focusSkill).toBe("visual");
     expect(rec.reason).toContain("30/100");
     expect(rec.lesson?.id).toBe("shot-sizes");
+  });
+});
+
+describe("session recency", () => {
+  const base = { messages: [] as { id: string; role: "user" | "persona"; content: string; at: string }[] };
+  const scored = { ...base, id: "a", startedAt: "2026-09-30T10:00:00Z", endedAt: "2026-09-30T10:20:00Z" };
+  const unfinished = {
+    id: "b",
+    startedAt: "2026-09-30T10:05:00Z",
+    messages: [{ id: "m", role: "user" as const, content: "hi", at: "2026-09-30T10:06:00Z" }],
+  };
+  const untouched = { ...base, id: "c", startedAt: "2026-09-30T10:10:00Z" };
+
+  it("uses the score time, else the last message, else the start", () => {
+    expect(sessionActivityAt(scored)).toBe("2026-09-30T10:20:00Z");
+    expect(sessionActivityAt(unfinished)).toBe("2026-09-30T10:06:00Z");
+    expect(sessionActivityAt(untouched)).toBe("2026-09-30T10:10:00Z");
+  });
+
+  it("puts the session just scored first", () => {
+    expect(sortSessionsByActivity([untouched, unfinished, scored]).map((s) => s.id)).toEqual(["a", "c", "b"]);
   });
 });

@@ -20,6 +20,7 @@ export async function POST(req: Request) {
             messages: [{ role: "user", content: buildShotsPrompt(parsed.data) }],
             schema: ShotPlanSchema,
             effort: "high",
+            signal: req.signal,
           })
         : demoShots(parsed.data),
     );

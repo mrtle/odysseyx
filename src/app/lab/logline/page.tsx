@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { BackToLab } from "@/components/lab/lab-ui";
-import { LoglineTool } from "@/components/lab/logline-tool";
+import { LoglineTool, LoglineToolFromUrl } from "@/components/lab/logline-tool";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
@@ -8,8 +9,11 @@ export const metadata: Metadata = {
   description: "Score your logline on protagonist, goal, obstacle, stakes, hook and specificity, and get three rewrites that keep your story.",
 };
 
-export default async function LoglineLabPage({ searchParams }: PageProps<"/lab/logline">) {
-  const { from } = await searchParams;
+/**
+ * Prerendered: "Run again" (`?from=`) is read on the client. The fallback —
+ * the empty form — is what the static HTML shows until hydration.
+ */
+export default function LoglineLabPage() {
   return (
     <div className="animate-fade-in">
       <BackToLab />
@@ -18,7 +22,9 @@ export default async function LoglineLabPage({ searchParams }: PageProps<"/lab/l
         title="One sentence to sell the voyage"
         description="A logline is the promise of your story in a single breath. Paste yours and the doctor will check its six vital signs, then show you three ways to make it sharper — without changing your story."
       />
-      <LoglineTool fromEntryId={typeof from === "string" ? from : undefined} />
+      <Suspense fallback={<LoglineTool />}>
+        <LoglineToolFromUrl />
+      </Suspense>
     </div>
   );
 }

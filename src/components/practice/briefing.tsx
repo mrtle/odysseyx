@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Clock, Lightbulb, MessagesSquare, Play, RotateCcw, Target, UserRound, Volume2 } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Card, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { SkillChip } from "@/components/ui/skill-chip";
 import type { PracticeSession } from "@/lib/types";
@@ -11,6 +11,10 @@ import { CATEGORY_META } from "./category";
 import { DifficultyPips } from "./difficulty-pips";
 import { PersonaAvatar } from "./persona-avatar";
 import { firstName, type PublicScenario } from "./public-scenario";
+import { lastActivity } from "./session-time";
+
+/** Section titles sit directly under the page's h1, so they're h2s styled like card titles. */
+const SECTION_TITLE = "font-display text-lg font-semibold text-sea-100";
 
 export interface BriefingProps {
   scenario: PublicScenario;
@@ -117,7 +121,7 @@ export function Briefing({ scenario, ready, onStart, resumable, onResume, voice 
             <Card className="border-bronze-500/30 bg-bronze-500/5">
               <p className="text-sm font-semibold text-bronze-200">Pick up where you left off</p>
               <p className="mt-1 text-sm text-sea-300">
-                You left this scene {formatRelative(resumable.startedAt)} after {resumeTurns} turn{resumeTurns === 1 ? "" : "s"}.{" "}
+                You left this scene {formatRelative(lastActivity(resumable))} after {resumeTurns} turn{resumeTurns === 1 ? "" : "s"}.{" "}
                 {firstName(persona.name)} is still waiting.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -134,15 +138,15 @@ export function Briefing({ scenario, ready, onStart, resumable, onResume, voice 
 
         <div className="space-y-6 lg:order-1">
           <Card>
-            <CardTitle className="flex items-center gap-2">
+            <h2 className={cn(SECTION_TITLE, "flex items-center gap-2")}>
               <UserRound className="size-4 text-bronze-400" aria-hidden />
               Your role
-            </CardTitle>
+            </h2>
             <p className="mt-2 leading-relaxed text-sea-200">{scenario.userRole}</p>
-            <CardTitle className="mt-6 flex items-center gap-2">
+            <h2 className={cn(SECTION_TITLE, "mt-6 flex items-center gap-2")}>
               <Target className="size-4 text-bronze-400" aria-hidden />
               Your objective
-            </CardTitle>
+            </h2>
             <p className="mt-2 leading-relaxed text-sea-200">{scenario.objective}</p>
             <div className="mt-6 rounded-xl border border-sea-700 bg-sea-950/40 p-4">
               <p className="text-xs font-semibold tracking-wider text-sea-400 uppercase">{firstName(persona.name)} opens with</p>
@@ -151,7 +155,7 @@ export function Briefing({ scenario, ready, onStart, resumable, onResume, voice 
           </Card>
 
           <Card>
-            <CardTitle>How you&apos;ll be scored</CardTitle>
+            <h2 className={SECTION_TITLE}>How you&apos;ll be scored</h2>
             <ul className="mt-4 space-y-4">
               {scenario.rubric.map((criterion) => (
                 <li key={criterion.label} className="flex gap-3">
@@ -166,10 +170,10 @@ export function Briefing({ scenario, ready, onStart, resumable, onResume, voice 
           </Card>
 
           <Card>
-            <CardTitle className="flex items-center gap-2">
+            <h2 className={cn(SECTION_TITLE, "flex items-center gap-2")}>
               <Lightbulb className="size-4 text-bronze-400" aria-hidden />
               Coach&apos;s tips
-            </CardTitle>
+            </h2>
             <ul className="mt-4 space-y-3">
               {scenario.tips.map((tip) => (
                 <li key={tip} className="flex gap-3 text-sm leading-relaxed text-sea-200">

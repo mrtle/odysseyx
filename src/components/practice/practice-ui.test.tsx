@@ -130,6 +130,23 @@ describe("practice UI", () => {
     expect(html).toContain("Back to Practice");
   });
 
+  it("keeps a clean heading outline in the briefing and scorecard", () => {
+    const briefing = renderToStaticMarkup(
+      <Briefing scenario={publicScenario} ready onStart={() => {}} onResume={() => {}} voice={{ supported: false, enabled: false, onToggle: () => {} }} />,
+    );
+    const levels = (html: string) => [...html.matchAll(/<h([1-6])/g)].map((m) => Number(m[1]));
+    // h1 (page) then h2 sections — no jump straight to h3.
+    expect(levels(briefing)[0]).toBe(1);
+    expect(levels(briefing)).not.toContain(3);
+
+    const session = makeSession(LINES, true);
+    const props = { scenario: publicScenario, evaluation: session.evaluation!, lessonPicks: {}, transcriptHref: "#t" };
+    // As the whole page (after a drill), the headline is the h1 and sections are h2.
+    expect(levels(renderToStaticMarkup(<Scorecard {...props} headingLevel={1} />))).toEqual([1, 2, 2, 2]);
+    // Under a page header (session review), it steps down a level.
+    expect(levels(renderToStaticMarkup(<Scorecard {...props} />))).toEqual([2, 3, 3, 3]);
+  });
+
   it("renders a transcript", () => {
     const session = makeSession(LINES);
     const html = renderToStaticMarkup(<Transcript messages={session.messages} persona={scenario.persona} category={scenario.category} />);

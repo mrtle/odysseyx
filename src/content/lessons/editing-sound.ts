@@ -94,55 +94,55 @@ export const editingSoundLessons: Lesson[] = [
         prompt:
           "An actor gives a completely neutral look. In the edit, you cut it next to a shot of an empty playground swing moving in the wind. What does the Kuleshov effect predict?",
         options: [
-          "The audience will notice the actor wasn't really acting",
-          "The audience will see no connection between the two shots",
+          "The audience will notice the actor isn't really doing anything",
+          "The audience will read the swing as a new scene, with no link to the face before it",
           "The audience will read a feeling, perhaps loss or longing, into the actor's face",
-          "The audience will assume the playground is the main character",
+          "The audience will look at the swing and forget about the actor entirely",
         ],
         answerIndex: 2,
         explanation:
-          "Audiences read a shot through the shots around it. The neutral face borrows emotion from what it's cut against, so the swing suggests loss or memory, and the actor gets credit for a performance the cut created.",
+          "Audiences read a shot through the shots around it. The neutral face borrows emotion from what it's cut against, so the swing suggests loss or memory, and the actor gets credit for a performance the cut created. Far from seeing two unrelated shots, the audience connects them without being asked.",
       },
       {
         id: "q2",
         prompt: "Why does the Kuleshov effect make editing a storytelling act rather than a purely technical one?",
         options: [
-          "Because the order and pairing of shots create meaning the audience infers, such as cause, emotion and point of view",
-          "Because editors choose the film's aspect ratio",
-          "Because every cut exists to hide a continuity error",
-          "Because editing software can add visual effects",
+          "Because the pairing of shots creates meaning the audience infers",
+          "Because it shows that faces carry all the meaning, so the editor's job is to pick the best takes",
+          "Because every cut has to hide a continuity error, and choosing what to hide is creative",
+          "Because editors decide how long each shot lasts, which sets the film's running time",
         ],
         answerIndex: 0,
         explanation:
-          "Meaning lives between the shots. The editor decides which images meet, and the audience draws conclusions from each meeting. That's authorship, not assembly.",
+          "Meaning lives between the shots: cause, emotion, point of view. The editor decides which images meet, and the audience draws conclusions from each meeting. That's authorship, not assembly, and it's the opposite of the idea that a face carries its meaning on its own.",
       },
       {
         id: "q3",
         prompt:
           "In *Strike*, Eisenstein intercuts the massacre of workers with the slaughter of a bull. What kind of meaning does this create?",
         options: [
-          "A continuity match, showing that the events happen in the same place",
-          "A flashback to a character's childhood",
-          "Comic relief, to lighten the scene",
+          "A match on action, carrying one movement across the cut",
+          "A flashback to a worker's life before the strike",
+          "Cross-cutting, showing two events happening at once",
           "A metaphor: the workers are being slaughtered like cattle",
         ],
         answerIndex: 3,
         explanation:
-          "The bull isn't in the story's physical space; it's there to be compared. The collision of the two images makes an argument the audience feels: these people are being butchered. Juxtaposition can build metaphors, not just links of time and place.",
+          "The bull isn't in the story's physical space, and it isn't a parallel event we need to follow; it's there to be compared. The collision of the two images makes an argument the audience feels: these people are being butchered. Juxtaposition can build metaphors, not just links of time and place.",
       },
       {
         id: "q4",
         prompt:
           "In a rough cut, you've gone from your grieving heroine straight to a shot of a stranger laughing across the room. What's the risk?",
         options: [
-          "None; audiences ignore shots that seem unrelated",
-          "The audience may conclude the stranger is laughing at her, a meaning you never intended",
-          "The scene will have to be reshot in black and white",
-          "The scene will automatically feel faster",
+          "None; audiences treat shots that seem unrelated as separate moments",
+          "The audience may decide the stranger is laughing at her",
+          "The cut will break the 180-degree rule, since the stranger faces the other way",
+          "The change of mood will make the scene feel faster",
         ],
         answerIndex: 1,
         explanation:
-          "Audiences assume every cut means something. Pairing her grief with laughter implies a relationship: mockery, cruelty or irony. Check what every pairing implies before you lock the cut.",
+          "Audiences assume every cut means something. Pairing her grief with laughter implies a relationship (mockery, cruelty or irony) that you never intended. Check what every pairing implies before you lock the cut.",
       },
     ],
     exercise: {
@@ -251,10 +251,10 @@ export const editingSoundLessons: Lesson[] = [
         prompt:
           "In a two-person conversation, Anna looks screen right and Ben looks screen left. After a cut, both seem to be looking screen right. What most likely happened?",
         options: [
-          "The editor used a match on action",
+          "The shot sizes don't match, which confuses their eyelines",
           "The camera crossed the 180-degree line, flipping the screen direction",
-          "The two shot sizes don't match",
-          "The scene switched to handheld",
+          "The editor used an eyeline match, so both look at the same thing",
+          "The scene switched to handheld, letting the frame drift",
         ],
         answerIndex: 1,
         explanation:
@@ -265,37 +265,37 @@ export const editingSoundLessons: Lesson[] = [
         prompt:
           "A character reaches for a door handle in a wide shot, and you want the cut to a close-up of her hand to feel seamless. Where should you cut?",
         options: [
-          "Before she starts moving, while she's still",
-          "After the door has fully opened and she's gone through",
-          "Only on a line of dialogue",
-          "In the middle of the reach, continuing the motion in the close-up",
+          "Before she starts moving, so the close-up begins cleanly on a still frame",
+          "Just after the door opens, once the action is complete and settled",
+          "On the click of the handle, since a sharp sound will cover any cut",
+          "Midway through the reach, continuing the motion in the close-up",
         ],
         answerIndex: 3,
         explanation:
-          "Match on action hides the cut inside movement. The eye follows the motion across the cut and doesn't register the change of angle.",
+          "Match on action hides the cut inside movement. The eye follows the motion across the cut and doesn't register the change of angle. Cutting on stillness or after the action has finished leaves the cut exposed, and a sound can help but can't hide a jump in position.",
       },
       {
         id: "q3",
         prompt:
           "At the climax of *The Godfather*, Michael stands as godfather at his nephew's baptism, renouncing Satan, while the film cross-cuts to the murders of his rivals that he has ordered. What does the cross-cutting create?",
         options: [
-          "Irony: his sacred vows play against his most unholy acts, revealing who he has become",
-          "Continuity: it shows the layout of the church",
-          "A flashback to Michael's childhood",
-          "Comic relief after a tense film",
+          "Irony: his sacred vows play against the killings he has ordered",
+          "Suspense: we wait to see whether the killings can be stopped in time",
+          "Simple timing: it shows everything happens at once",
+          "Comic relief, lightening a dark film with a family celebration",
         ],
         answerIndex: 0,
         explanation:
-          "Cross-cutting lets two lines comment on each other. Michael's promises before God, intercut with the killings, make the audience feel both his hypocrisy and the completeness of his transformation, without a word of explanation.",
+          "Cross-cutting lets two lines comment on each other. Michael's promises before God, intercut with the killings, make the audience feel both his hypocrisy and the completeness of his transformation, without a word of explanation. There's no race against time here: he ordered the killings, and the cutting shows us who he has become.",
       },
       {
         id: "q4",
         prompt: "What does a jump cut usually communicate to the audience?",
         options: [
-          "That the scene is a dream",
-          "That two characters are in different locations",
-          "That time has been skipped, often with a restless or compressed feeling",
-          "That we're seeing through a character's eyes",
+          "That we're drifting into a dream or a memory",
+          "That two characters are in different places at the same moment",
+          "That time has been skipped, often with a restless feeling",
+          "That we've switched to a character's point of view, seeing what they see",
         ],
         answerIndex: 2,
         explanation:
@@ -410,54 +410,54 @@ export const editingSoundLessons: Lesson[] = [
           "You have two takes of a climactic line. Take A has perfect continuity but feels flat. Take B has the actor's hand in a slightly different position but devastating emotion. Following Murch's Rule of Six, which do you use?",
         options: [
           "Take B, because emotion outranks continuity",
-          "Take A, because continuity errors always break immersion",
-          "Neither; reshoot the scene",
-          "Both, back to back",
+          "Take A, because a visible continuity error pulls audiences out of the story",
+          "Neither; reshoot it, since a climax deserves both emotion and continuity",
+          "Take A, and add the missing emotion with music and a slower cut",
         ],
         answerIndex: 0,
         explanation:
-          "Emotion sits at the top of Murch's list at 51%, and physical continuity at the bottom. Audiences rarely notice a small mismatch when they're moved, but they always notice a moment that feels false.",
+          "Emotion sits at the top of Murch's list at 51%, and physical continuity at the bottom. Audiences rarely notice a small mismatch when they're moved, but they always notice a moment that feels false, and music can't supply a feeling the performance doesn't have.",
       },
       {
         id: "q2",
         prompt: "What is the main effect of cutting rapidly between many brief shots, as in *Psycho*'s shower scene?",
         options: [
-          "It makes the scene's geography easier to follow",
+          "It makes the geography of the bathroom easier to follow",
+          "It hides the violence, so the scene feels less disturbing",
+          "It turns the attack into shock and chaos, felt more than seen",
           "It gives the audience time to study each image",
-          "It fragments the action into shock and chaos, so the audience feels the violence more than they see it",
-          "It slows the scene down",
         ],
         answerIndex: 2,
         explanation:
-          "Fast, fragmented cutting overwhelms and disorients. The audience assembles the violence in their heads from glimpses, which is often more disturbing than a single explicit shot.",
+          "Fast, fragmented cutting overwhelms and disorients. The knife is barely seen touching her, but that doesn't make the scene gentler: the audience assembles the violence in their heads from glimpses, which is often more disturbing than a single explicit shot.",
       },
       {
         id: "q3",
         prompt:
           "A character receives devastating news, and the editor cuts away after one second. What's the strongest argument for holding longer?",
         options: [
-          "Long shots are quicker to edit",
-          "Holding a shot always makes a scene funnier",
-          "The audience needs time to take in the set",
-          "Holding keeps the audience inside the emotion instead of rescuing them from it",
+          "Long takes feel more realistic, and realism makes any scene more believable",
+          "It gives the audience time to take in the set",
+          "The actor's performance deserves to be seen in full, out of respect for the work",
+          "Holding keeps us inside the emotion instead of rescuing us from it",
         ],
         answerIndex: 3,
         explanation:
-          "A held shot says *don't look away*. Cutting too soon releases the tension you've built, while staying on the face lets the audience experience the moment alongside the character.",
+          "A held shot says *don't look away*. Cutting too soon releases the tension you've built, while staying on the face lets the audience experience the moment alongside the character. The case for holding isn't realism or respect for the take; it's about not letting the audience off the hook.",
       },
       {
         id: "q4",
         prompt:
           "You're cutting a training montage in the spirit of *Rocky*. Which approach makes it feel like a story rather than a slideshow?",
         options: [
-          "Any order will do, as long as the music is good",
-          "Each shot shows progress, with early struggles giving way to strength and building to a clear high point",
-          "Use only wide shots, so the audience can see the gym",
-          "Make every shot exactly the same length, for consistency",
+          "Cut every shot on the beat of the music, so the energy never drops",
+          "Each shot shows progress, building to a clear high point",
+          "Show a wide variety of exercises, so it feels like months of work have passed",
+          "Keep every shot the same length, so the rhythm feels steady and relentless",
         ],
         answerIndex: 1,
         explanation:
-          "A montage should show change. Rocky's run ends with him bounding up the museum steps that left him gasping earlier in the film. Ordering the shots as a progression with a peak at the end turns compressed time into an arc.",
+          "A montage should show change, not just energy or time passing. Rocky's run ends with him bounding up the museum steps that left him gasping earlier in the film. Ordering the shots as a progression with a peak at the end turns compressed time into an arc; without that, you could shuffle the shots and lose nothing.",
       },
     ],
     exercise: {
@@ -573,14 +573,14 @@ export const editingSoundLessons: Lesson[] = [
         id: "q2",
         prompt: "In a dialogue scene, why might an editor cut to the listener while the speaker is still talking?",
         options: [
-          "To hide the speaker's performance in every case",
-          "Because the emotion of the moment is often on the face receiving the words, so an L-cut shows it",
-          "Because the 180-degree rule requires it",
-          "To make the scene longer",
+          "To give the scene a faster rhythm by cutting more often",
+          "Because the emotion is often on the face receiving the words",
+          "Because the 180-degree rule requires a reverse angle after each line of dialogue",
+          "Because audiences get bored if they watch one face for too long",
         ],
         answerIndex: 1,
         explanation:
-          "The meaning of a line often lives in its effect. An L-cut keeps the speaker's voice while showing the reaction, putting the camera where the emotion is.",
+          "The meaning of a line often lives in its effect. An L-cut keeps the speaker's voice while showing the reaction, putting the camera where the emotion is. The 180-degree rule doesn't demand it, and it isn't about pace: it's a choice to show the reaction.",
       },
       {
         id: "q3",
@@ -589,8 +589,8 @@ export const editingSoundLessons: Lesson[] = [
         options: [
           "That Willard's mind is still at war, even in a quiet room",
           "That a helicopter is about to land on the hotel roof",
-          "That the film is about to become a comedy",
-          "That the hotel is in the middle of the jungle",
+          "That the war is over and he's safely home at last",
+          "That he's dreaming, and the jungle was never real",
         ],
         answerIndex: 0,
         explanation:
@@ -601,14 +601,14 @@ export const editingSoundLessons: Lesson[] = [
         prompt:
           "You're cutting a horror film. A character opens a cupboard and a cat leaps out. Which transition gives the biggest jolt?",
         options: [
-          "A slow L-cut, with the previous scene's music carrying on",
-          "A long crossfade of both sound and picture",
-          "A hard cut, with picture and sound switching at exactly the same instant",
-          "A J-cut, so the cat's hiss is heard well in advance",
+          "An L-cut, letting the previous scene's quiet music carry over the shock",
+          "A slow crossfade of sound and picture, for a dreamlike unease",
+          "A hard cut, with picture and sound switching at the same instant",
+          "A J-cut, so the cat's hiss arrives a beat before we see it",
         ],
         answerIndex: 2,
         explanation:
-          "Split edits smooth transitions; hard cuts jolt. For a shock you want sound and picture to hit together with no warning. Hearing the hiss in advance would spoil the surprise.",
+          "Split edits smooth transitions; hard cuts jolt. For a shock you want sound and picture to hit together with no warning. Hearing the hiss in advance would spoil the surprise, and carrying the old music over would cushion it.",
       },
     ],
     exercise: {
@@ -710,10 +710,10 @@ export const editingSoundLessons: Lesson[] = [
         prompt:
           "A character switches on her car radio, and the song that's playing carries on over a montage of her driving across the country. What is happening to the sound?",
         options: [
-          "It stays non-diegetic throughout",
-          "It's a jump cut",
+          "It stays non-diegetic throughout, since the audience hears it the whole time",
+          "It stays diegetic throughout, because it started on her radio",
           "It begins as diegetic sound in her world and becomes non-diegetic score",
-          "It's a sound effect rather than music",
+          "It starts as score and turns diegetic once she's on the road",
         ],
         answerIndex: 2,
         explanation:
@@ -724,10 +724,10 @@ export const editingSoundLessons: Lesson[] = [
         prompt:
           "In *Reservoir Dogs*, a cheerful pop song plays on the radio while a character tortures a policeman. Why does this make the scene more disturbing rather than less?",
         options: [
-          "The song's breezy indifference clashes with the cruelty, so the violence feels casual and all the more horrifying",
-          "The song tells the audience the scene is a joke",
-          "The song completely drowns out the violence",
-          "Audiences always associate pop music with horror",
+          "Its breezy indifference makes the cruelty feel casual, and so more horrifying",
+          "The song signals that the scene is a joke, so we can relax into it",
+          "The song's fast tempo makes the violence feel frantic and chaotic",
+          "Audiences at the time linked seventies pop music with horror films",
         ],
         answerIndex: 0,
         explanation:
@@ -738,24 +738,24 @@ export const editingSoundLessons: Lesson[] = [
         prompt:
           "Your thriller has constant music and effects from start to finish. You want one moment, a betrayal, to hit hardest. What's the most powerful sound choice?",
         options: [
-          "Make the music even louder at the betrayal",
-          "Add a narrator who explains the betrayal",
-          "Use the same music as every other scene",
-          "Drop the soundtrack to near silence at the moment of betrayal",
+          "Bring the music up even louder at the betrayal, so nobody can miss it",
+          "Hit the moment with a sting, a sudden loud chord, as the truth comes out",
+          "Keep the same music as every other scene, so the betrayal takes us by surprise",
+          "Drop the soundtrack to near silence at the betrayal",
         ],
         answerIndex: 3,
         explanation:
-          "Silence works by contrast. After wall-to-wall sound, sudden emptiness is startling and forces total attention onto the moment. Louder music has little room to escalate when everything is already loud.",
+          "Silence works by contrast. After wall-to-wall sound, sudden emptiness is startling and forces total attention onto the moment. Louder music or a sting has little room to escalate when everything is already loud.",
       },
       {
         id: "q4",
         prompt:
           "A composer gives the hero's lost sister a simple five-note melody early in the film. What's the storytelling advantage?",
         options: [
-          "It means the rest of the film needs no score",
-          "Later variations of the melody can evoke her, her absence or the hero's changing feelings without a word",
-          "It helps the audience tell the hero and his sister apart visually",
-          "It guarantees the film a soundtrack album",
+          "It gives the film a catchy theme for the trailer",
+          "Later variations can evoke her, or her absence, without a word",
+          "It tells the audience that she's the film's real protagonist",
+          "It saves the composer writing new music for later scenes",
         ],
         answerIndex: 1,
         explanation:

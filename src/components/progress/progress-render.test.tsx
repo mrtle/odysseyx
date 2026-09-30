@@ -102,6 +102,10 @@ describe("ProgressLog", () => {
     expect(html).toContain('role="switch"');
     expect(html).toContain("Export progress (JSON)");
     expect(html).toContain("Reset progress…");
+    // The export is a real backup: it can be brought back.
+    expect(html).toContain("Import progress…");
+    expect(html).toMatch(/<input[^>]*type="file"[^>]*accept="application\/json,.json"/);
+    expect(html).toContain("then import it to pick up where you left off");
   });
 
   it("offers setup when there's activity but no profile", () => {

@@ -44,7 +44,7 @@ export function ScenarioCard({ scenario, stats }: { scenario: PublicScenario; st
   return (
     <Link
       href={`/practice/${scenario.id}`}
-      className="group flex h-full flex-col rounded-2xl border border-sea-700/80 bg-sea-900/60 p-5 shadow-xl shadow-black/20 backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:border-bronze-500/50 hover:bg-sea-900/85 focus-visible:border-bronze-400"
+      className="group flex h-full min-w-0 flex-col rounded-2xl border border-sea-700/80 bg-sea-900/60 p-5 shadow-xl shadow-black/20 backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:border-bronze-500/50 hover:bg-sea-900/85 focus-visible:border-bronze-400"
     >
       <div className="flex items-start gap-3">
         <PersonaAvatar persona={scenario.persona} category={scenario.category} />

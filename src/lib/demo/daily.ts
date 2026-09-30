@@ -21,6 +21,7 @@ import {
   averageSentenceLength,
   countTerms,
   firstLine,
+  latinShare,
   lexicalVariety,
   pick,
   questionCount,
@@ -54,6 +55,64 @@ const ON_THE_NOSE = [
   "i miss you",
 ];
 
+/** "I want / I need" only names a feeling when it reaches for a person or an emotion, not an action. */
+const DESIRE_PHRASES = new Set(["i want", "i need"]);
+const RELATIONAL = new Set([
+  "you",
+  "your",
+  "yours",
+  "us",
+  "him",
+  "her",
+  "them",
+  "me",
+  "together",
+  "forgive",
+  "forgiveness",
+  "sorry",
+  "divorce",
+  "marry",
+  "love",
+  "loved",
+  "feel",
+  "back",
+]);
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** A case-insensitive, whole-word regex for a lexicon phrase that tolerates curly apostrophes and extra spacing. */
+function phraseRegExp(phrase: string): RegExp {
+  const body = phrase
+    .split(" ")
+    .map((part) => escapeRegExp(part).replace(/'/g, "['’]"))
+    .join("[\\s,]+");
+  return new RegExp(`(?<![\\p{L}\\p{N}'’])${body}(?![\\p{L}\\p{N}])`, "giu");
+}
+
+/**
+ * On-the-nose lines, quoted from the learner's own text (original case, up
+ * to the end of the clause) — never the lexicon entry itself.
+ */
+export function onTheNoseQuotes(text: string): string[] {
+  const quotes: string[] = [];
+  for (const phrase of ON_THE_NOSE) {
+    for (const match of text.matchAll(phraseRegExp(phrase))) {
+      const clause = text.slice(match.index).split(/[.!?;:\n—–]|\s-\s/)[0].trim();
+      if (DESIRE_PHRASES.has(phrase)) {
+        const rest = words(clause).slice(2);
+        const reachesForSomeone = rest.some((w) => RELATIONAL.has(w)) || countTerms(clause, LEXICON.emotion) > 0;
+        if (!reachesForSomeone) continue; // "I want to see how long it sits there" is an action, not a confession.
+      }
+      const clauseWords = clause.split(/\s+/);
+      quotes.push(clauseWords.length > 8 ? `${clauseWords.slice(0, 8).join(" ")}…` : clause);
+      break;
+    }
+  }
+  return quotes;
+}
+
 const HEDGES = LEXICON.hedges.filter((h) => h !== "like");
 
 /** Irony and contrast — the engine of most hooks. */
@@ -76,6 +135,24 @@ const CONTRAST = [
   "won't",
   "can't",
   "cannot",
+];
+
+/** Hook markers beyond plain contrast: a pinned moment, a secret, something off. */
+const HOOK_MARKERS = [
+  "still",
+  "almost",
+  "forgot",
+  "forgotten",
+  "wrong",
+  "secret",
+  "last",
+  "the day",
+  "the morning",
+  "the night",
+  "the year",
+  "nobody",
+  "no one",
+  "every",
 ];
 
 /** Words that tell the reader nothing specific. */
@@ -139,7 +216,7 @@ function readSignals(text: string): Signals {
     averageLength: averageSentenceLength(text),
     questions: questionCount(text),
     speechLines: dialogueShape(text).speech,
-    onTheNose: findTerms(text, ON_THE_NOSE),
+    onTheNose: onTheNoseQuotes(text),
     secondPerson: lower.filter((w) => w === "you" || w === "your").length,
     vague: countTerms(text, VAGUE) + countTerms(text, HEDGES),
   };
@@ -177,13 +254,9 @@ function skillScore(skill: SkillId, s: Signals): number {
   switch (skill) {
     case "hook": {
       const firstLen = wordsIn(first);
-      const intrigue =
-        specificityMarkers(first) +
-        countTerms(first, CONTRAST) +
-        countTerms(first, LEXICON.conflict) +
-        countTerms(first, LEXICON.stakes) -
-        countTerms(first, VAGUE);
-      const concision = firstLen <= 22 ? 85 : Math.max(35, 85 - (firstLen - 22) * 3);
+      const intrigue = hookIntrigue(first);
+      // A short line only earns concision credit if it has something to be concise about.
+      const concision = intrigue <= 0 ? 50 : firstLen <= 22 ? 85 : Math.max(35, 85 - (firstLen - 22) * 3);
       return average(scale(intrigue, 0, 3), concision, scale(s.conflict + s.stakes, 0, 4));
     }
     case "structure":
@@ -212,6 +285,18 @@ function skillScore(skill: SkillId, s: Signals): number {
       return average(breath, scale(s.secondPerson, 0, 3, 50, 88)) - s.hedgesUsed.length * 6;
     }
   }
+}
+
+/** How much a sentence makes the reader lean in: specifics, contrast, conflict, stakes — minus vagueness. */
+function hookIntrigue(sentence: string): number {
+  return (
+    specificityMarkers(sentence) +
+    countTerms(sentence, CONTRAST) +
+    countTerms(sentence, HOOK_MARKERS) +
+    countTerms(sentence, LEXICON.conflict) +
+    countTerms(sentence, LEXICON.stakes) -
+    countTerms(sentence, VAGUE)
+  );
 }
 
 function craftScore(s: Signals): number {
@@ -306,12 +391,13 @@ function praiseFor(skill: SkillId, s: Signals, checks: ConstraintCheck[]): strin
   const lineWords = wordsIn(line);
   const earned =
     (skill !== "delivery" || lineWords <= 20) &&
-    (skill !== "hook" || lineWords <= 30) &&
+    (skill !== "hook" || (lineWords <= 30 && hookIntrigue(line) > 0)) &&
     (skill !== "dialogue" || s.speechLines > 0) &&
     (skill !== "visual" || countTerms(line, LEXICON.emotion) === 0);
   const reason = earned ? pick(PRAISE[skill], `${skill}:${s.text}`) : RAW_MATERIAL;
   const allMet = checks.length > 0 && checks.every((c) => c.met);
-  const brief = allMet ? ` And you honoured the brief to the letter (${checks[0].detail.toLowerCase()}).` : "";
+  // Only vouch for what was measured: parts of a brief (tone, "first person") aren't machine-checkable.
+  const brief = allMet ? ` And you hit every measurable part of the brief (${checks[0].detail.toLowerCase()}).` : "";
   return `${quote(line)} — ${reason}${brief}`;
 }
 
@@ -333,8 +419,9 @@ function countNudge(label: string, noun: string, n: number, range: CountRange | 
   }
   if (range?.min !== undefined && n < range.min) {
     const short = range.min - n;
+    const gift = short === 1 ? `That missing ${noun} is a gift` : `Those ${short} missing ${noun}s are a gift`;
     return range.max === range.min
-      ? `${brief} and you're at ${n}. Those ${plural(short, "missing " + noun)} are a gift — spend them on the moment that matters most.`
+      ? `${brief} and you're at ${n}. ${gift} — spend ${short === 1 ? "it" : "them"} on the moment that matters most.`
       : `${brief} and you're at ${n}, ${short} short. Give the key moment more room to land.`;
   }
   return `${brief}. Hitting the number exactly is the exercise — reshape it until it fits.`;
@@ -371,6 +458,14 @@ function constraintNudge(check: ConstraintCheck, s: Signals, skill: SkillId, rul
     }
     case "required":
       return `${check.detail}. The brief's key phrases are the scaffolding here — build the piece on them${rule?.requiredInOrder ? ", in order" : ""}.`;
+    case "speaker-words":
+      return check.detail.startsWith("No lines")
+        ? `Label the ${rule?.speakerMaxWords?.label ?? "speaker"}'s lines “${rule?.speakerMaxWords?.label ?? "NAME"}:” so we can hear who's holding back.`
+        : `${check.detail} — the brief allows ${rule?.speakerMaxWords?.maxWords === 1 ? "one word" : `${rule?.speakerMaxWords?.maxWords ?? 1} words`}. Cut it to the single word that carries the whole day; the pressure lives in what's left unsaid.`;
+    case "no-question-marks":
+      return `${check.detail}, and the brief bans them. Leave the question hanging in the situation instead — an unanswered knock, a name nobody recognises.`;
+    case "forbidden-opener":
+      return `${check.detail}. That's throat-clearing — cut it and start on the first word of the moment itself.`;
     default:
       return `${check.label}: ${check.detail}.`;
   }
@@ -383,7 +478,7 @@ function skillNudge(skill: SkillId, s: Signals): string {
       if (wordsIn(first) > 22) {
         return `Your opening sentence takes ${wordsIn(first)} words to arrive. Get to the strange, specific thing faster — the hook should land before the reader can look away.`;
       }
-      return s.specific === 0
+      return hookIntrigue(first) <= 0
         ? "Sharpen the specificity: a name, a number or a place turns a general premise into one we can picture."
         : "Put the tension in the very first clause. Right now the question the reader should be asking arrives a beat late.";
     case "structure":
@@ -403,7 +498,7 @@ function skillNudge(skill: SkillId, s: Signals): string {
         : "The obstacle could push back harder. Let it adapt or escalate, so the pressure builds instead of holding steady.";
     case "dialogue":
       if (s.onTheNose.length > 0) {
-        return `“${s.onTheNose[0]}…” says the feeling out loud. People rarely name what they want — have them argue about something smaller that stands in for it.`;
+        return `“${s.onTheNose[0]}” says the feeling out loud. People rarely name what they want — have them argue about something smaller that stands in for it.`;
       }
       return s.questions === 0
         ? "Nobody asks for anything. Give one character a question they need answered, and the other a reason to dodge it."
@@ -474,6 +569,15 @@ function tryThisFor(skill: SkillId, s: Signals, failed: ConstraintCheck | undefi
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
+
+/** Shown instead of feedback when the offline coach can't read the response. */
+export const DEMO_ENGLISH_ONLY =
+  "The offline demo coach only reads English, so it can't score this fairly. Write it in English, or add an ANTHROPIC_API_KEY on the server for full coaching in any language.";
+
+/** The heuristics are English word lists: text in other scripts would be scored as empty. */
+export function demoCanRead(text: string): boolean {
+  return latinShare(text) >= 0.5;
+}
 
 export function demoDailyFeedback(prompt: DailyChallenge, request: Pick<DailyFeedbackRequest, "response">): MicroFeedback {
   const text = request.response.trim();

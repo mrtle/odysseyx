@@ -11,6 +11,8 @@ import { ShotPlanResult } from "./shot-plan-result";
 import { StoryResult } from "./story-result";
 import { ToolCard } from "./tool-card";
 import { LAB_TOOL_LIST } from "./lab-meta";
+import { SavedNotice } from "./lab-ui";
+import { SHOT_FRAMING_INFO } from "@/lib/film";
 
 describe("Story Lab result components", () => {
   it("renders a logline diagnosis with the demo notice", () => {
@@ -44,6 +46,39 @@ describe("Story Lab result components", () => {
     expect(html).toContain("Notes on your shot ideas");
     expect(html).toContain("Download CSV");
     expect(html).toContain("Film grammar in this plan");
+  });
+
+  it("makes camera terms explain themselves on tap or keyboard, not just on hover", () => {
+    const sample = SAMPLE_SCENES[0];
+    const plan = demoShots({ scene: sample.scene, intent: sample.intent });
+    const html = renderToStaticMarkup(<ShotPlanResult plan={plan} mode="demo" />);
+    // Each term is a toggle button tied to its (initially hidden) explanation.
+    expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*aria-controls="[^"]+"[^>]*>/);
+    const framing = SHOT_FRAMING_INFO[plan.shots[1].framing];
+    expect(html).toContain(framing.effect.replace(/'/g, "&#x27;").replace(/"/g, "&quot;"));
+    expect(html).not.toContain("Hover or tap");
+  });
+
+  it("fits the shot table in a 1280px layout and lets the keyboard scroll it", () => {
+    const plan = demoShots({ scene: SAMPLE_SCENES[0].scene });
+    const html = renderToStaticMarkup(<ShotPlanResult plan={plan} mode="live" />);
+    expect(html).toMatch(/<div role="region" aria-labelledby="shot-list" tabindex="0"/);
+    expect(html).toContain("min-w-[56rem]");
+    expect(html).not.toContain("min-w-[64rem]");
+  });
+
+  it("reports the XP a save actually earned", () => {
+    const earned = renderToStaticMarkup(<SavedNotice entryId="a" xpGained={40} />);
+    expect(earned).toContain("+40 XP");
+    expect(earned).toContain("Saved to your Story Lab logbook");
+
+    const repeat = renderToStaticMarkup(<SavedNotice entryId="a" xpGained={0} replaced />);
+    expect(repeat).not.toContain("XP</span>");
+    expect(repeat).toContain("Updated in your Story Lab logbook");
+    expect(repeat).toContain("no new XP");
+
+    const capped = renderToStaticMarkup(<SavedNotice entryId="a" xpGained={0} />);
+    expect(capped).toContain("today&#x27;s Story Lab XP");
   });
 
   it("renders the hub tool cards", () => {

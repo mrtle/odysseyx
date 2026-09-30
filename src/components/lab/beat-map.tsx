@@ -113,7 +113,8 @@ export function BeatMap({ beats, framework }: { beats: Beat[]; framework: Framew
 
       {/* Timeline (tablet and up) */}
       <div className="hidden md:block">
-        <div className="-mx-1 overflow-x-auto px-1 pb-2">
+        {/* The padding keeps the selected marker's ring and the focus outline inside the scroller, which clips on both axes. */}
+        <div className="-mx-1.5 overflow-x-auto px-1.5 pt-1.5 pb-2">
           <div role="tablist" aria-label="Story beats" className={cn("relative flex min-w-max gap-1", compact && "lg:min-w-0")}>
             <span aria-hidden className="absolute top-4 right-8 left-8 h-0.5 bg-gradient-to-r from-sea-600 via-sea-500 to-sea-600" />
             {beats.map((beat, i) => {

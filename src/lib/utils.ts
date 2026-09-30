@@ -38,7 +38,18 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
   return then.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Scripts written without spaces between words (Chinese, Japanese, Thai…). */
+const UNSPACED_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
+
+/** Word count in any script: whitespace-separated, or segmented for scripts without spaces. */
 export function wordCount(text: string): number {
+  if (UNSPACED_SCRIPT.test(text) && typeof Intl !== "undefined" && typeof Intl.Segmenter === "function") {
+    let n = 0;
+    for (const segment of new Intl.Segmenter(undefined, { granularity: "word" }).segment(text)) {
+      if (segment.isWordLike) n++;
+    }
+    return n;
+  }
   const words = text.trim().match(/\S+/g);
   return words ? words.length : 0;
 }

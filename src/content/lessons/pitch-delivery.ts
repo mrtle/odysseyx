@@ -57,8 +57,8 @@ export const pitchDeliveryLessons: Lesson[] = [
         weak: "A young woman moves to the big city, and her life changes forever when she meets a mysterious stranger.",
         strongLabel: "All five parts",
         strong:
-          "A small-town nurse takes a night-shift job in Manhattan to pay for her father's surgery, then watches the hospital's star surgeon commit a murder.",
-        note: "The first version has no goal, no obstacle and no stakes, and *her life changes forever* could describe almost any film ever made. The second gives us a person, a pressure, an antagonist and a dilemma we feel instantly: tell the truth and lose the job her father's life depends on.",
+          "A small-town nurse working nights in Manhattan to pay for her father's surgery sees the hospital's star surgeon commit a murder, and must expose him before he destroys her career and her father's last chance.",
+        note: "The first version has no goal, no obstacle and no stakes, and *her life changes forever* could describe almost any film ever made. The second gives us all five: a person, the incident that traps her, a goal, an antagonist and stakes we feel instantly, because the man she has to expose holds the job her father's life depends on.",
       },
       { type: "heading", text: "Irony: the twist that makes people lean in" },
       {
@@ -146,53 +146,53 @@ export const pitchDeliveryLessons: Lesson[] = [
         id: "q2",
         prompt: "Which revision adds the most irony to *A doctor must survive a deadly outbreak in a remote village*?",
         options: [
-          "A germophobic dermatologist on a wellness retreat becomes the only doctor in a remote village when a deadly outbreak hits.",
-          "A world-famous doctor must survive a deadly outbreak in a remote village.",
-          "A doctor must survive a deadly and truly terrifying outbreak in a remote mountain village.",
-          "In a world where disease runs rampant, one doctor must survive against all odds.",
+          "A germophobic dermatologist on a wellness retreat becomes a remote village's only doctor when a deadly outbreak hits.",
+          "A world-famous doctor with a Nobel Prize must survive a deadly and truly terrifying outbreak in a remote village.",
+          "A brilliant but reckless doctor, haunted by the patient she lost, must survive a deadly outbreak in a remote mountain village.",
+          "In a world where disease runs rampant, one doctor must survive a deadly outbreak against all odds.",
         ],
         answerIndex: 0,
         explanation:
-          "Irony puts the least suitable person in the situation that tests them hardest. A germ-phobic skin specialist on holiday is almost comically wrong for an epidemic, which instantly suggests conflict, comedy or dread. Extra adjectives (*world-famous*, *truly terrifying*) add volume but no contradiction, and *in a world where* and *against all odds* are clichés.",
+          "Irony puts the least suitable person in the situation that tests them hardest. A germ-phobic skin specialist on holiday is almost comically wrong for an epidemic, which instantly suggests conflict, comedy or dread. Extra adjectives (*world-famous*, *truly terrifying*) add volume but no contradiction, a haunted past adds depth but not irony, and *in a world where* and *against all odds* are clichés.",
       },
       {
         id: "q3",
         prompt: "Why do loglines usually describe the protagonist by role and trait (*a disgraced bomb-disposal expert*) rather than by name?",
         options: [
-          "Character names are reserved for the title page.",
-          "Industry rules forbid character names in loglines.",
-          "It keeps the logline under fifteen words.",
-          "A name tells a stranger nothing, while a role and a telling trait suggest who this person is and what trouble they're heading for.",
+          "Character names are saved for the title page and the synopsis, where there's room to introduce them.",
+          "Industry style guides treat a named character in a logline as the mark of an amateur.",
+          "Names often change in development, so a role keeps the logline accurate through rewrites.",
+          "A name tells a stranger nothing; a role and a trait suggest who this person is.",
         ],
         answerIndex: 3,
         explanation:
-          "There's no rule against names, but a name is empty to someone who hasn't read the script. *A disgraced bomb-disposal expert* carries a history, a skill set and a wound in four words, and it hints at the conflict to come. That's precious information in a sentence with no room to spare.",
+          "There's no rule or style guide against names, and rewrites aren't the reason: a name is empty to someone who hasn't read the script. *A disgraced bomb-disposal expert* carries a history, a skill set and a wound in four words, and it hints at the conflict to come. That's precious information in a sentence with no room to spare.",
       },
       {
         id: "q4",
         prompt: "A writer's logline reads: *A story about loss, memory and the healing power of music.* What's the most useful note?",
         options: [
-          "Add a comparison title so readers know the genre.",
-          "It names themes, not events. Say who wants what, what's in the way and what's at risk, and let the themes emerge from that.",
-          "Make it longer so it can cover the subplots.",
-          "Turn it into a question, such as *Can music heal a broken heart?*",
+          "Add a comp, such as *Whiplash* meets *Manchester by the Sea*, so readers know the genre and tone.",
+          "It names themes, not events. Say who wants what, what's in the way and what's at risk.",
+          "Turn it into a question the audience will want answered: *Can music heal a broken heart?*",
+          "Add the main character's name and age, so readers know whose story it is.",
         ],
         answerIndex: 1,
         explanation:
-          "Themes are what a story means; a logline has to say what happens. *A grieving concert pianist who hasn't touched a piano since his wife's death must play at her memorial concert, or the music school she founded will close* lets the audience discover loss, memory and music for themselves. Rhetorical questions and comps can't fix a logline with no events in it.",
+          "Themes are what a story means; a logline has to say what happens, and the themes will emerge from that. *A grieving concert pianist who hasn't touched a piano since his wife's death must play at her memorial concert, or the music school she founded will close* lets the audience discover loss, memory and music for themselves. Comps, rhetorical questions and names can't fix a logline with no events in it.",
       },
       {
         id: "q5",
         prompt: "Your logline ends *…and in the end, she learns that family was what mattered all along.* Why cut that clause?",
         options: [
-          "Loglines should never mention family.",
-          "It belongs at the start of the logline, not the end.",
-          "Emotional arcs belong in the title instead.",
-          "It gives away the ending and swaps a live question for a stated moral. A logline should leave the listener wanting to know how it turns out.",
+          "Loglines should stop at the inciting incident; everything after it belongs in the synopsis.",
+          "Emotional arcs belong in the pitch meeting, where there's time to make them land.",
+          "It makes the logline too long, since loglines have a strict limit of twenty-five words.",
+          "It gives away the ending and swaps a live question for a stated moral.",
         ],
         answerIndex: 3,
         explanation:
-          "A logline's job is to plant a dramatic question, not answer it. Announcing the lesson she learns closes the question and replaces story with a moral, the least compelling way to end any sentence. Stop at the stakes and let the listener ask *so what happens?*",
+          "A logline's job is to plant a dramatic question, not answer it. Announcing the lesson she learns closes the question and replaces story with a moral, the least compelling way to end any sentence. The problem isn't word count or where emotion belongs: stop at the stakes and let the listener ask *so what happens?*",
       },
     ],
     exercise: {
@@ -229,7 +229,7 @@ export const pitchDeliveryLessons: Lesson[] = [
       },
       {
         type: "beats",
-        title: "Sixty seconds, beat by beat",
+        title: "Sixty seconds: 45 to pitch, 15 for their reply",
         beats: [
           {
             name: "Connect (5 sec)",
@@ -312,7 +312,7 @@ export const pitchDeliveryLessons: Lesson[] = [
       {
         type: "exercise-inline",
         prompt:
-          "Write your sixty-second pitch in five lines: **connect**, **frame**, **hook**, **spark**, **ask**. Read it aloud against a timer. If it runs long, trim the spark before you touch the hook.",
+          "Write your pitch in five lines: **connect**, **frame**, **hook**, **spark**, **ask**. Read it aloud against a timer and aim for about 45 seconds, leaving the rest of the minute for their reply. If it runs long, trim the spark before you touch the hook.",
         placeholder: "Connect: …\nFrame: …\nHook: …\nSpark: …\nAsk: …",
       },
     ],
@@ -328,14 +328,14 @@ export const pitchDeliveryLessons: Lesson[] = [
         id: "q1",
         prompt: "You have about a minute with a producer at a festival party. Which opening gives you the best chance?",
         options: [
-          "“I've been working on this for six years, so bear with me, there's a lot of backstory.”",
-          "“I'm not sure how to describe it, but it's very personal to me.”",
-          "“Have you got a minute? I'd love to tell you about my journey as a filmmaker.”",
+          "“Hi, I loved your last film. I'm a writer-director, and I've spent six years on a project I think you'd really connect with.”",
+          "“I'm not sure how to describe it, but it's very personal to me, and it's the most honest thing I've ever written.”",
+          "“Have you got a minute? I'd love to tell you about my journey as a filmmaker and how this project came about.”",
           "“It's a heist comedy called *The Retirement Plan*: five pensioners try to rob the bank that repossessed their care home.”",
         ],
         answerIndex: 3,
         explanation:
-          "The last option gives the title, genre and a premise with built-in irony (pensioners as bank robbers) in one breath. The others spend the listener's attention on apology, vagueness or biography before saying what the project is, and in sixty seconds that's attention you can't win back.",
+          "The last option gives the title, genre and a premise with built-in irony (pensioners as bank robbers) in one breath. The others spend the listener's attention on a vague compliment, feelings or biography before saying what the project is, and in sixty seconds that's attention you can't win back.",
       },
       {
         id: "q2",
@@ -344,24 +344,24 @@ export const pitchDeliveryLessons: Lesson[] = [
           "*Hereditary* meets *Knives Out*",
           "*Jurassic Park* meets *Avatar*",
           "*The Godfather* meets *Citizen Kane*",
-          "An obscure horror film that went straight to DVD, plus a Broadway musical",
+          "*The Shining* meets *Meet the Parents*",
         ],
         answerIndex: 0,
         explanation:
-          "*Hereditary* signals family horror on a modest budget; *Knives Out* adds a feuding-family ensemble and a wicked sense of humour. Both were hits, and together they triangulate your tone and audience. The blockbusters imply a budget you don't have, the classics sound grandiose, and obscure titles give the listener nothing to picture.",
+          "*Hereditary* signals family horror on a modest budget; *Knives Out* adds a feuding-family ensemble and a wicked sense of humour. Both were recent hits, and together they triangulate your tone and audience. The blockbusters imply a budget you don't have, the classics sound grandiose, and the last pair gets the tone roughly right but says nothing about today's market.",
       },
       {
         id: "q3",
         prompt: "A producer asks what your film is like, and you say, “Honestly, nothing like it has ever been made.” Why does this usually hurt the pitch?",
         options: [
-          "It's considered rude in pitch meetings.",
-          "Producers only want remakes and sequels.",
-          "It gives them nothing to picture (genre, tone, audience or budget) and can suggest you don't know the market your film would enter.",
-          "It takes too long to say.",
+          "It invites them to pick a comp themselves, and they may well choose a flop.",
+          "Producers only greenlight remakes, sequels and adaptations, so originality is a red flag.",
+          "It gives them nothing to picture, and suggests you don't know your market.",
+          "It marks the film as experimental, and experimental films rarely find distribution.",
         ],
         answerIndex: 2,
         explanation:
-          "Originality is welcome, but *nothing like it* leaves the listener unable to place your film or imagine who will buy a ticket. Comps aren't an admission that your idea is derivative. They're a map that helps someone else see where your film would sit, and they show you've studied the market.",
+          "Originality is welcome (producers buy original stories all the time), but *nothing like it* leaves the listener unable to place your film's genre, tone, audience or budget, or to imagine who will buy a ticket. Comps aren't an admission that your idea is derivative. They're a map that helps someone else see where your film would sit, and they show you've studied the market.",
       },
       {
         id: "q4",
@@ -380,14 +380,14 @@ export const pitchDeliveryLessons: Lesson[] = [
         id: "q5",
         prompt: "A friend pitches: “It's *Barbie* meets *Oppenheimer*.” Then they stop, smiling. What's missing?",
         options: [
-          "A third comp to round it out.",
-          "Box-office figures for both films.",
-          "Nothing, because great comps speak for themselves.",
-          "Their own story. A comp frames the film, but they still need the logline: who it's about, what they want and what stands in the way.",
+          "A third comp, so the listener can triangulate the tone between the other two.",
+          "Box-office figures for both films, to prove an audience is out there.",
+          "Nothing. A sharp comp says it all, and stopping there shows confidence.",
+          "Their own story: who it's about, what they want and what's in the way.",
         ],
         answerIndex: 3,
         explanation:
-          "Comps describe films that already exist. The listener still has no idea what happens in this one. Use the comp to orient, then immediately deliver the logline, the part of the pitch that nobody else could say.",
+          "Comps describe films that already exist. The listener still has no idea what happens in this one, and more comps or box-office figures won't tell them. Use the comp to orient, then immediately deliver the logline, the part of the pitch that nobody else could say.",
       },
     ],
     exercise: {
@@ -523,64 +523,64 @@ export const pitchDeliveryLessons: Lesson[] = [
         id: "q1",
         prompt: "Ten minutes into your pitch, you're still in act one and the executive keeps glancing at the clock. What's the most likely problem?",
         options: [
-          "You didn't bring any visual aids.",
-          "You opened with the logline instead of the world.",
-          "You're recounting scenes instead of hitting tentpoles: the act breaks, the midpoint and the climax, and what each one costs the hero.",
-          "Your personal connection was too short.",
+          "You opened with the logline, so there's no mystery left to hold their interest.",
+          "Your personal connection was too short to earn their attention for the long haul.",
+          "You're recounting scenes instead of hitting the tentpoles.",
+          "You haven't brought visuals, and executives expect a lookbook to follow along.",
         ],
         answerIndex: 2,
         explanation:
-          "Act one can have some detail, but ten minutes means you're narrating scene by scene. Buyers need the story's shape and emotional turns, not its connective tissue. Jump to the big moments and say what each one costs the protagonist, and the pitch will feel like it's moving again.",
+          "Act one can have some detail, but ten minutes means you're narrating scene by scene. Buyers need the story's shape and emotional turns, not its connective tissue. Jump to the tentpoles (the act breaks, the midpoint, the climax) and say what each one costs the protagonist, and the pitch will feel like it's moving again. Opening with the logline was right, not a spoiler: it gives them something to hang the rest on.",
       },
       {
         id: "q2",
         prompt: "The executive asks, “So how does it end?” Which answer is best?",
         options: [
-          "“I don't want to spoil it. You'll have to read the script!”",
-          "“I'm still figuring that out. I think it'll come to me in the writing.”",
-          "“There are a few options, and I'd love your take on which is most commercial.”",
-          "“She hands over the evidence, knowing it convicts her too. She loses her career but gets her daughter back, and the last shot mirrors the first.”",
+          "“I'd rather keep it a surprise. I think you'll enjoy the script more if you don't know where it's going.”",
+          "“I'm still finding it. I know the ending will come once I'm deep into the writing.”",
+          "“I've got a dark version and a hopeful one, and I'd love your take on which is more commercial.”",
+          "“She hands over the evidence, knowing it convicts her too. She loses her career but gets her daughter back.”",
         ],
         answerIndex: 3,
         explanation:
-          "A buyer needs to know the story works all the way through, and endings are where so many scripts fail. A confident, specific ending, with its emotional cost and a sense of how it pays off the opening, proves you've solved the story. Withholding it, not knowing it or outsourcing it all undermine the pitch.",
+          "A buyer needs to know the story works all the way through, and endings are where so many scripts fail. A confident, specific ending, with its emotional cost, proves you've solved the story. Withholding it, not knowing it or outsourcing it all undermine the pitch.",
       },
       {
         id: "q3",
         prompt:
           "An executive suggests, “What if the hero were a man in his twenties instead of a woman in her fifties?” You think the note would gut the story. What's the best response?",
         options: [
-          "Agree on the spot so the meeting stays positive.",
-          "Ask what's behind the note (a worry about audience, casting or relatability) and address that concern while explaining what the character's age gives the story.",
-          "Explain that the script is already written this way and can't change.",
-          "Politely decline to discuss it and move on to the next beat.",
+          "Agree warmly in the room to keep things positive, then quietly write it your way.",
+          "Ask what worry sits behind the note, then address it while explaining what the character's age gives the story.",
+          "Explain that the script is already written this way, so the change isn't possible.",
+          "Defend your version with passion, since buyers invest in writers who truly believe in their own story.",
         ],
         answerIndex: 1,
         explanation:
-          "Notes are often a symptom rather than a prescription. Finding the concern underneath lets you solve the real problem while protecting what matters. Caving signals you don't believe in the story, and stonewalling signals you'll be hard to work with.",
+          "Notes are often a symptom rather than a prescription. Finding the concern underneath (audience, casting, relatability) lets you solve the real problem while protecting what matters. Caving, even with a plan to ignore the note later, signals you don't believe in the story, and stonewalling, however passionate, signals you'll be hard to work with.",
       },
       {
         id: "q4",
         prompt: "Why open a pitch with a brief personal connection to the material?",
         options: [
-          "It answers *why you*, earns the room's attention and gives the buyer a story about the storyteller that they can pass on.",
-          "It fills time while the executive settles in.",
-          "It means you can skip the logline.",
-          "Buyers are obliged to ask about your background anyway.",
+          "It answers *why you* and gives the buyer a story about you to pass on.",
+          "It warms up the room while the executive settles in.",
+          "It proves your credentials early, so they trust what follows.",
+          "It means you can skip the logline, since you are the hook.",
         ],
         answerIndex: 0,
         explanation:
-          "Buyers are betting on a person as well as an idea. A short, true story about why this material matters to you builds credibility and emotional investment, and it gives the executive something memorable to say when they take your project to their boss.",
+          "Buyers are betting on a person as well as an idea. A short, true story about why this material matters to you builds credibility and emotional investment in a way a list of credentials can't, and it gives the executive something memorable to say when they take your project to their boss.",
       },
       {
         id: "q5",
         prompt:
           "You have fifteen minutes. Your draft pitch spends six on the world's history and mythology, two on the characters and four on the story. What should change?",
         options: [
-          "Nothing. Rich world-building shows you've done the work.",
-          "Cut the characters to make even more room for the world.",
-          "Cut the world to a minute of vivid, relevant detail and give that time to the characters and the story's tentpoles.",
-          "Add a second personal anecdote to balance things out.",
+          "Nothing. Rich world-building shows you've done the work and justifies the budget.",
+          "Cut the characters to a minute, since the world is what makes the film distinctive.",
+          "Cut the world to a minute and give that time to the characters and tentpoles.",
+          "Keep the balance, but talk faster so everything fits with time left for questions.",
         ],
         answerIndex: 2,
         explanation:
@@ -699,9 +699,9 @@ export const pitchDeliveryLessons: Lesson[] = [
         prompt: "Which opening line is best suited to a story told out loud?",
         options: [
           "“The following events, which I'll try to recount as accurately as I can, took place during what was, in retrospect, a very difficult year.”",
-          "“I want to talk to you tonight about resilience.”",
+          "“I want to talk to you tonight about resilience, and about the year that taught me what that word really means.”",
           "“The night before my sister's wedding, I'm standing in her kitchen holding the only copy of her vows, and I've just spilled red wine all over them.”",
-          "“Let me give you some background on my family first.”",
+          "“Let me give you a bit of background on my family first, because none of this makes sense without it.”",
         ],
         answerIndex: 2,
         explanation:
@@ -711,36 +711,36 @@ export const pitchDeliveryLessons: Lesson[] = [
         id: "q2",
         prompt: "You're telling a story about a missed flight that changed your life. Where will a pause do the most good?",
         options: [
-          "Just before you reveal who was sitting in the seat you were rebooked into, and again just after.",
-          "Between every sentence, so you seem thoughtful.",
-          "At the very beginning, for as long as you can hold it.",
-          "Nowhere, because pauses make you look as if you've forgotten your lines.",
+          "Just before you reveal who was in the seat you were rebooked into, and just after.",
+          "Between every sentence, so the audience can picture each moment.",
+          "At the very start, holding the silence as long as you can to command the room.",
+          "Nowhere. Pauses make you look as if you've forgotten your lines.",
         ],
         answerIndex: 0,
         explanation:
-          "Pauses work when they frame the moments that matter. Silence before the reveal lets suspense build; silence after it gives the audience time to feel it. Pausing everywhere flattens the rhythm so that nothing stands out, and avoiding pauses entirely rushes straight past your best moment.",
+          "Pauses work when they frame the moments that matter. Silence before the reveal lets suspense build; silence after it gives the audience time to feel it. Pausing everywhere flattens the rhythm so that nothing stands out, a long silence before you've said anything just looks like nerves, and avoiding pauses entirely rushes straight past your best moment.",
       },
       {
         id: "q3",
         prompt: "What's the best way to prepare a five-minute true story for a live audience?",
         options: [
-          "Write it out in full and memorise it word for word.",
-          "Improvise the whole thing on the night so it feels fresh.",
-          "Read it from your phone so you don't forget anything.",
-          "Know the beats and your first and last lines cold, then rehearse aloud, telling it slightly differently each time.",
+          "Write it out in full and memorise it word for word, so nerves can't knock you off course.",
+          "Improvise the whole thing on the night, so it sounds fresh and unrehearsed.",
+          "Keep a full script on your phone as a safety net, and read from it if you freeze.",
+          "Know the beats and your first and last lines cold, then rehearse it aloud.",
         ],
         answerIndex: 3,
         explanation:
-          "Knowing the shape rather than the script keeps the story alive and conversational, and it survives nerves: if you lose a sentence, you still know where you're going. Word-for-word memorisation collapses at the first slip, reading kills eye contact, and pure improvisation tends to ramble past the ending.",
+          "Knowing the shape rather than the script keeps the story alive and conversational, and it survives nerves: if you lose a sentence, you still know where you're going. Rehearsing aloud, telling it slightly differently each time, keeps it sounding like speech. Word-for-word memorisation collapses at the first slip, reading kills eye contact, and pure improvisation tends to ramble past the ending.",
       },
       {
         id: "q4",
         prompt: "Your story opens with your grandmother teaching you to swim in a freezing lake. Which ending is a callback?",
         options: [
-          "“And that's how I learned never to give up.”",
-          "“Last summer I took my daughter to the same lake. She shrieked at the cold, and I heard myself say exactly what my grandmother once said to me.”",
-          "“Anyway, that's my story. Thanks for listening.”",
-          "“My grandmother passed away a few years ago, and I think about her often.”",
+          "“And standing in that freezing water, I learned the lesson I've lived by ever since: never give up.”",
+          "“Last summer I took my daughter to the same lake, and heard myself say my grandmother's words.”",
+          "“Anyway, that's my story. Thank you all so much for listening tonight.”",
+          "“My grandmother passed away a few years ago, and I still think of her every time I swim.”",
         ],
         answerIndex: 1,
         explanation:
@@ -790,7 +790,7 @@ export const pitchDeliveryLessons: Lesson[] = [
       { type: "heading", text: "The story of a struggle, not a résumé" },
       {
         type: "text",
-        body: "Founders pitching investors, charities asking for donations, leaders announcing a change, speakers at a conference: all of them are asking an audience to believe in something that doesn't fully exist yet. That's exactly what a filmmaker does in a pitch room, and the same craft works.\n\nThe classic mistake outside film is to present a résumé instead of a story: credentials, features, market size and milestones, all true and all forgettable. Aristotle described three modes of persuasion: *ethos* (the speaker's character), *pathos* (emotion) and *logos* (reason). A résumé is almost pure logos. A story carries all three at once.\n\nAudiences don't bond with success; they bond with struggle. The most persuasive founder stories have the bones of a film: a person with a problem they couldn't ignore, a moment of clarity, attempts that failed, an insight others missed and a mission that grew out of it all. The failures aren't a weakness in the story. They're proof you'll keep going when things get hard, which is precisely what an investor is betting on.",
+        body: "Founders pitching investors, charities asking for donations, leaders announcing a change, speakers at a conference: all of them are asking an audience to believe in something that doesn't fully exist yet. That's exactly what a filmmaker does in a pitch room, and the same craft works.\n\nThe classic mistake outside film is to present a résumé instead of a story: credentials, features, market size and milestones, all true and all forgettable. Aristotle described three modes of persuasion: *ethos* (the speaker's character), *pathos* (emotion) and *logos* (reason). A résumé offers credentials (a thin kind of ethos) and facts (logos), but almost no pathos. A story carries all three at once.\n\nAudiences don't bond with success; they bond with struggle. The most persuasive founder stories have the bones of a film: a person with a problem they couldn't ignore, a moment of clarity, attempts that failed, an insight others missed and a mission that grew out of it all. The failures aren't a weakness in the story. They're proof you'll keep going when things get hard, which is precisely what an investor is betting on.",
       },
       {
         type: "compare",
@@ -880,66 +880,66 @@ export const pitchDeliveryLessons: Lesson[] = [
         id: "q1",
         prompt: "An investor says, “Tell me why you started this company.” Which answer is strongest?",
         options: [
-          "“I've got an MBA and ten years in logistics, so I know this industry inside out.”",
-          "“We're disrupting last-mile delivery with an AI-powered platform.”",
-          "“The market's enormous and nobody is doing it well.”",
-          "“I ran my family's bakery for six years. Every Friday we binned forty loaves while the food bank two streets away ran out by noon. My first fix, a shared spreadsheet, died within a week, and that failure showed me what the real problem was.”",
+          "“I've got an MBA and ten years running logistics at a national grocer, so I know where this industry's waste comes from.”",
+          "“We're using AI to match surplus food with local charities in real time, cutting last-mile waste dramatically.”",
+          "“Food waste costs billions every year, and nobody has built a fix that small businesses can actually use.”",
+          "“Every Friday my family's bakery binned forty loaves while the food bank next door ran out by noon. My first fix died within a week.”",
         ],
         answerIndex: 3,
         explanation:
-          "The last answer has a specific person, a problem you can picture, a personal reason to care and a failure that led to an insight: the bones of a story. The others are a credential, a buzzword and a market claim, each of which an investor has heard hundreds of times and none of which shows who the founder is.",
+          "The last answer has a specific place, a problem you can picture, a personal reason to care and a failure to learn from: the bones of a story. The others are a credential, a product pitch and a market claim, each of which an investor has heard hundreds of times and none of which shows who the founder is.",
       },
       {
         id: "q2",
         prompt: "In a brand story built on the customer-as-hero idea, what role should the company play?",
         options: [
-          "The hero who defeats its competitors.",
-          "The guide who understands the customer's problem and helps them win, like Mentor advising Telemachus.",
-          "The narrator who lists the company's awards and milestones.",
-          "The villain the customer has to overcome.",
+          "The hero, fighting the industry's giants on the customer's behalf.",
+          "The guide who helps the customer win, like Mentor advising Telemachus.",
+          "The narrator who walks the customer through all its awards and milestones.",
+          "The prize the customer finally wins at the end of their journey.",
         ],
         answerIndex: 1,
         explanation:
-          "Customers are the heroes of their own stories and they're looking for help, not a new protagonist to admire. A brand that positions itself as the guide (empathetic, credible, offering a clear plan) invites the customer into the story instead of asking them to watch someone else's.",
+          "Customers are the heroes of their own stories and they're looking for help, not a new protagonist to admire, even one fighting on their behalf. A brand that positions itself as the guide (empathetic, credible, offering a clear plan) invites the customer into the story instead of asking them to watch someone else's.",
       },
       {
         id: "q3",
         prompt: "You have four great ideas and a fifteen-minute speaking slot. What does the throughline principle suggest?",
         options: [
-          "Pick the one idea you most want the audience to carry home, and use the others only where they serve it.",
-          "Cover all four quickly so the audience gets maximum value.",
-          "Save the best idea for the Q&A.",
-          "Put all four on one slide and talk through them.",
+          "Pick the one idea to carry home, and use the others only to serve it.",
+          "Cover all four at a brisk pace, so the audience gets as much value as possible.",
+          "Save your best idea for last, so the talk builds to a climax.",
+          "Give each idea its own short story, so all four have a memorable hook.",
         ],
         answerIndex: 0,
         explanation:
-          "A talk, like a story, needs one spine. Four ideas in fifteen minutes means none of them gets built properly and the audience leaves remembering nothing. Choosing a single throughline lets you set it up, develop it and land it, the way a plot builds to a climax.",
+          "A talk, like a story, needs one spine. Four ideas in fifteen minutes means none of them gets built properly, however well each is told or ordered, and the audience leaves remembering nothing. Choosing a single throughline lets you set it up, develop it and land it, the way a plot builds to a climax.",
       },
       {
         id: "q4",
         prompt: "Why do failures belong in a founder's origin story?",
         options: [
-          "They make the story longer and therefore more impressive.",
-          "Investors are legally required to hear about them.",
-          "They show resilience and learning, which is what an investor is really betting on, and they make the story believable.",
-          "They make the founder seem humble, whatever actually happened.",
+          "They make the founder look humble, which investors like whatever actually happened.",
+          "They add drama, and a dramatic origin story is more likely to be retold in the press.",
+          "They show resilience and learning, and make the story believable.",
+          "They lower expectations, so any future success looks bigger by comparison.",
         ],
         answerIndex: 2,
         explanation:
-          "A story in which nothing goes wrong isn't credible, and it tells an investor nothing about how you'll handle the hard years ahead. Real failures and what they taught you are evidence of persistence and judgement. Staging failures for the sake of seeming humble is its own kind of fakery.",
+          "A story in which nothing goes wrong isn't credible, and it tells an investor nothing about how you'll handle the hard years ahead. Real failures and what they taught you are evidence of persistence and judgement, which is what an investor is really betting on. Staging failures for drama or to seem humble is its own kind of fakery.",
       },
       {
         id: "q5",
         prompt: "Jobs described three devices before revealing they were one iPhone. Which storytelling principle does that illustrate?",
         options: [
-          "Always list a product's features in order of importance.",
-          "Keep the audience confused for as long as possible.",
-          "Repetition and a well-timed reveal let the audience half-guess the answer and enjoy being right.",
-          "Surprise works best when it comes with no setup at all.",
+          "List a product's features in order of importance, saving the best for last.",
+          "Keep the audience confused for as long as you can, so they stay hooked.",
+          "Repetition and a well-timed reveal let the audience half-guess it and enjoy being right.",
+          "Surprise works best with no setup, so the reveal should come out of nowhere.",
         ],
         answerIndex: 2,
         explanation:
-          "Repeating the trio gave the audience a pattern to hold, and the speed-up invited them to solve it. When the reveal came, they felt clever rather than told. It's the same principle as planting and payoff in a screenplay: a surprise lands hardest when it has been set up.",
+          "Repeating the trio gave the audience a pattern to hold, and the speed-up invited them to solve it. They were never lost, just one step from the answer, so when the reveal came they felt clever rather than told. It's the same principle as planting and payoff in a screenplay: a surprise lands hardest when it has been set up.",
       },
     ],
     exercise: {

@@ -30,13 +30,13 @@ export function StoryResult({
 
   return (
     <div className="animate-rise space-y-8">
-      <Card className="relative overflow-hidden">
+      <Card className="relative overflow-clip">
         <div aria-hidden className="pointer-events-none absolute -top-24 -right-20 size-64 rounded-full bg-gradient-to-br from-aegean-400/15 to-transparent blur-2xl" />
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-start">
           <ScoreRing score={analysis.overall} size={116} stroke={10} label="Overall" className="shrink-0 self-center sm:self-auto" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold tracking-[0.2em] text-aegean-300 uppercase">Story notes</p>
-            <h2 ref={headingRef} tabIndex={-1} className="mt-1 scroll-mt-24 font-display text-xl leading-snug font-semibold text-sea-100 focus:outline-none sm:text-2xl">
+            <h2 ref={headingRef} tabIndex={-1} className="mt-1 scroll-mt-12 font-display text-xl leading-snug font-semibold text-sea-100 focus:outline-none sm:text-2xl">
               {analysis.headline}
             </h2>
             <p className="mt-3 leading-relaxed text-sea-300">{analysis.summary}</p>

@@ -7,11 +7,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SCENARIOS } from "@/content/scenarios";
 import { dailyPromptFor } from "@/lib/daily";
 import { computeSkillProfile } from "@/lib/progress";
-import { OnboardingFlow, OnboardingForm } from "@/components/onboarding/onboarding-flow";
+import { OnboardingFlow, OnboardingForm, returnToFor } from "@/components/onboarding/onboarding-flow";
+import HomePage from "@/app/page";
 import { buildCatalog, recommendFromCatalog } from "./catalog";
 import { Dashboard } from "./dashboard";
 import { HomeView } from "./home-view";
-import { buildActivity } from "./recent-activity";
+import { PROFILE_COOKIE, isProfileCookieValue, profileCookieString } from "./profile-cookie";
+import { RecentActivity, buildActivity } from "./recent-activity";
+import { SkillChartCard, skillExtremes } from "./skill-chart-card";
+import { TodaysCourse } from "./todays-course";
 import {
   FIXTURE_TRACKS,
   fixtureCatalog,
@@ -27,10 +31,19 @@ import { Welcome } from "./welcome";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+const requestCookies = new Map<string, string>();
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: (name: string) => (requestCookies.has(name) ? { name, value: requestCookies.get(name) } : undefined),
+  }),
 }));
 
 afterEach(() => {
   resetFixtureState();
+  requestCookies.clear();
 });
 
 const decode = (html: string) => html.replaceAll("&#x27;", "'").replaceAll("&quot;", '"').replaceAll("&amp;", "&");
@@ -84,10 +97,62 @@ describe("catalog", () => {
 });
 
 describe("HomeView", () => {
-  it("shows a skeleton until the store has hydrated", () => {
+  it("server-renders the landing page for newcomers (no profile cookie)", () => {
     const html = renderToStaticMarkup(<HomeView catalog={fixtureCatalog} />);
+    expect(html).toContain("Every story is an");
+    expect(html).toContain('href="/onboarding"');
+    expect(html).not.toContain('aria-busy="true"');
+  });
+
+  it("shows the dashboard skeleton until hydrated when the cookie says a profile exists", () => {
+    const html = renderToStaticMarkup(<HomeView catalog={fixtureCatalog} profileHint />);
     expect(html).toContain('aria-busy="true"');
     expect(html).not.toContain("Every story is an");
+  });
+});
+
+describe("HomePage (server)", () => {
+  it("renders the landing content when the request has no profile cookie", async () => {
+    const html = renderToStaticMarkup(await HomePage());
+    expect(html).toContain("Every story is an");
+    expect(html).not.toContain("Loading your voyage");
+  });
+
+  it("renders the dashboard shell when the request carries the profile cookie", async () => {
+    requestCookies.set(PROFILE_COOKIE, "1");
+    const html = renderToStaticMarkup(await HomePage());
+    expect(html).toContain("Loading your voyage");
+    expect(html).not.toContain("Every story is an");
+  });
+
+  it("ignores unexpected cookie values", async () => {
+    requestCookies.set(PROFILE_COOKIE, "yes");
+    expect(renderToStaticMarkup(await HomePage())).toContain("Every story is an");
+  });
+});
+
+describe("profile cookie", () => {
+  it("is long-lived, site-wide and SameSite=Lax; clearing expires it", () => {
+    expect(profileCookieString(true)).toBe("ox_profile=1; Max-Age=31536000; Path=/; SameSite=Lax");
+    expect(profileCookieString(true, true)).toContain("; Secure");
+    expect(profileCookieString(false)).toBe("ox_profile=; Max-Age=0; Path=/; SameSite=Lax");
+    expect(isProfileCookieValue("1")).toBe(true);
+    expect(isProfileCookieValue("")).toBe(false);
+    expect(isProfileCookieValue(undefined)).toBe(false);
+  });
+});
+
+describe("TodaysCourse", () => {
+  it("lets the lesson and drill cards shrink to the phone's width", () => {
+    const rec = recommendFromCatalog(computeSkillProfile([]), fixtureCatalog, {}, ["visual", "structure", "pacing"]);
+    const html = renderToStaticMarkup(<TodaysCourse recommendation={rec} lessonsCompleted={0} totalLessons={3} />);
+    // An implicit `auto` column sizes to the nowrap persona line and clips the cards' right edge.
+    expect(html).toContain("grid grid-cols-1 gap-3 md:grid-cols-2");
+    const cards = [...html.matchAll(/<a [^>]*class="(group [^"]*)"/g)].map((m) => m[1].split(" "));
+    expect(cards).toHaveLength(2);
+    for (const cls of cards) expect(cls).toContain("min-w-0");
+    expect(html).toContain("Start lesson");
+    expect(html).toContain("Start drill");
   });
 });
 
@@ -168,9 +233,50 @@ describe("Dashboard", () => {
   });
 });
 
+describe("SkillChartCard", () => {
+  const at = new Date().toISOString();
+  const obs = (skill: "dialogue" | "hook" | "visual", score: number) => ({ skill, score, at, source: "daily" as const });
+
+  it("only compares strongest and weakest when two skills have different scores", () => {
+    expect(skillExtremes(computeSkillProfile([])).kind).toBe("none");
+    expect(skillExtremes(computeSkillProfile([obs("dialogue", 65)]))).toMatchObject({ kind: "level", count: 1 });
+    expect(skillExtremes(computeSkillProfile([obs("dialogue", 65), obs("hook", 65)]))).toMatchObject({ kind: "level", count: 2 });
+    const range = skillExtremes(computeSkillProfile([obs("dialogue", 65), obs("hook", 80), obs("visual", 50)]));
+    expect(range.kind === "range" && [range.strongest.skill, range.weakest.skill]).toEqual(["hook", "visual"]);
+  });
+
+  it("doesn't list one skill as both strongest and weakest after the first daily challenge", () => {
+    const html = decode(renderToStaticMarkup(<SkillChartCard profile={computeSkillProfile([obs("dialogue", 65)])} observations={1} />));
+    expect(html).not.toContain("Strongest");
+    expect(html).not.toContain("Weakest");
+    expect(html).toContain("First reading");
+    expect(html).toContain("1 of 8 skills charted");
+  });
+});
+
+describe("RecentActivity", () => {
+  it("wraps long titles instead of truncating them, and gives the header link a 44px hit area", () => {
+    const items = buildActivity([fixtureSession], [fixtureLabEntry], fixtureCatalog);
+    const html = renderToStaticMarkup(<RecentActivity items={items} />);
+    expect(html).toContain("line-clamp-2");
+    expect(html).not.toMatch(/\btruncate\b/);
+    const fullLog = html.match(/<a [^>]*class="([^"]*)"[^>]*>Full log<\/a>/)?.[1] ?? "";
+    expect(fullLog.split(" ")).toEqual(expect.arrayContaining(["py-3", "-my-3"]));
+  });
+});
+
 describe("Onboarding", () => {
   it("shows a skeleton until hydrated", () => {
     expect(renderToStaticMarkup(<OnboardingFlow />)).toContain('aria-busy="true"');
+  });
+
+  it("only returns to known in-app destinations", () => {
+    expect(returnToFor("progress")).toBe("/progress");
+    expect(returnToFor("home")).toBe("/");
+    expect(returnToFor(null)).toBe("/");
+    expect(returnToFor("https://evil.example")).toBe("/");
+    expect(returnToFor("constructor")).toBe("/");
+    expect(returnToFor("__proto__")).toBe("/");
   });
 
   it("starts a new voyager on the name step", () => {

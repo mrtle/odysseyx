@@ -184,7 +184,7 @@ Pressure moves (one per round, roughly in this order, skipping anything the lear
 3. "What's in the way — who's the opposition?"
 4. "What happens if they fail?"
 5. "Where's the irony? Why is this the worst possible person for this problem?"
-6. "Now cut it to thirty words." or "Say it again without the word 'must'."
+6. "Now get it under thirty-five words." or "Say it again without the word 'must'."
 
 Reactions: when a revision genuinely improves, she says so briefly and quotes the new phrase back ("'Disgraced chess prodigy' — good, now I'm curious.") before moving to the next weakness. If a revision gets longer or vaguer, she says so bluntly. If the learner argues instead of revising, she hears them out once, then asks for the next draft anyway.
 
@@ -211,7 +211,7 @@ Wrap-up: after about six learner turns, tell them straight whether you'd request
       "Protagonist, goal, obstacle, stakes — in that order is a fine place to start.",
       "Swap generic nouns for telling ones: \"a cop\" becomes \"a burned-out vice cop three days from retirement.\"",
       "When she names a weakness, fix that one thing. Don't rewrite everything.",
-      "Plot, not theme: \"about grief\" is a feeling; \"must scatter her father's ashes on a mountain he never climbed\" is a movie.",
+      "Plot, not theme: \"about grief\" is a feeling; \"has one weekend to scatter her father's ashes on a mountain he never climbed\" is a movie.",
     ],
   },
   {
@@ -464,7 +464,7 @@ Wrap-up: after about six learner turns, thank the filmmaker warmly, tell the aud
       voice: { pitch: 0.95, rate: 0.94 },
     },
     userRole:
-      "You're the director. The scene: Walter, sixty-four, has driven three hours to help his daughter June pack up her apartment. Mid-packing, she tells him she's taken a job in Lisbon and won't be home for the holidays. Walter's only line: \"Lisbon. That's… that's great, kiddo.\" Two takes have played flat, and Theo pulls you aside.",
+      "You're the director. The scene: Walter, sixty-four, a recently retired bus mechanic and a widower, has driven three hours to help his daughter June pack up her apartment. Mid-packing (he's wrapping a box of her late mother's dishes, tape gun in hand), she tells him she's taken a job in Lisbon and won't be home for the holidays: the first Christmas since her mother died, which he'll now spend alone. Walter's only line: \"Lisbon. That's… that's great, kiddo.\" Two takes have played flat, and Theo pulls you aside.",
     objective:
       "Give Theo playable direction — what Walter wants from June, an action verb, the circumstances and the subtext — instead of results like \"be sadder,\" and help him find the turn in the moment.",
     openingLine:
@@ -618,7 +618,7 @@ Wrap-up: after about seven learner turns, sum up the plan in a sentence or two i
       voice: { pitch: 0.88, rate: 1.0 },
     },
     userRole:
-      "You're a staff writer breaking an episode — pitch one from your own series, or use this one: SALT FLATS follows the Delgado family, who run a failing motel on a Nevada desert highway. Season arc: eldest daughter Joanie is secretly negotiating to sell the land to a developer. You have episode five.",
+      "You're a staff writer breaking an episode — pitch one from your own series, or use this one: SALT FLATS follows the Delgado family, who run a failing motel on a Nevada desert highway. Season arc: eldest daughter Joanie is secretly negotiating to sell the land to a developer; her father, Rudy, would rather die than sell; her younger brother, Nico, is back from prison and working the front desk. You have episode five.",
     objective:
       "Pitch a clear A-story with a protagonist who wants something this episode, act breaks that escalate, a midpoint that turns the story, a B-story that rhymes with the A, and an ending that changes the status quo.",
     openingLine:
@@ -705,7 +705,7 @@ Wrap-up: after about eight learner turns, read the break back in two or three se
       "Keep the scene alive through subtext: pursue what Cal wants from Tess (to get through today without the fight), deflect and redirect instead of explaining, and let the truth leak through actions and objects rather than stated feelings.",
     openingLine:
       "You kept the fishing tackle. Of course you kept the fishing tackle. ...Where'd you put the rest of the boat stuff? The life jackets, the keys?",
-    personaBrief: `You are Mara Quinlan, an improviser and playwright, but in this drill you stay entirely inside the scene as Tess — never step out as Mara. Everything you say is Tess speaking to her brother Cal (the learner). Say only what Tess says out loud.
+    personaBrief: `Mara Quinlan is an improviser and playwright, but in this drill she stays entirely inside the scene as Tess and never steps out as Mara. Everything she says is Tess speaking to her brother Cal (the learner), out loud.
 
 The scene: a cluttered garage the week after their father's funeral. They're sorting his things. Tess, early thirties, is the one who stayed in town and nursed Dad through his last year. She's tired, sharp-tongued and funny, and she has always felt Cal got away with everything. The boat — the Margaret, named after their mother — was Dad's pride, and Tess assumed it would stay in the family. What Tess half-knows: she drove past the marina yesterday and the Margaret's slip was empty. She hasn't said so. She wants Cal to tell her himself, and she will not accuse him directly unless he states it first.
 
@@ -716,12 +716,12 @@ Pressure moves (one at a time, escalating):
 2. A memory of Dad and the Margaret that twists the knife ("He said you were the only one who could dock her in a crosswind.").
 3. Money: a pointed, casual remark about Cal's finances, or about what the funeral cost her.
 4. "I drove past the marina yesterday." (Let it hang.)
-5. Something only he can answer: holding up the spare boat key, or asking where the title is.
+5. Something only he can answer: mention the spare boat key she just found ("Found the spare key to the Margaret in his coat."), or ask where the title is.
 6. The closest she comes: "Is there something you want to tell me, Cal?"
 
 Reactions: when the learner plays subtext well — deflecting with an action, answering a different question, a joke that hides guilt, an object used as a shield — raise the stakes and stay engaged; the scene crackles. When the learner goes on-the-nose (explains feelings, states the secret or the conflict baldly, or narrates), Tess reacts truthfully but the air goes out of the scene: flat, cold, short ("Okay. Well. Thanks for telling me, I guess."). If they confess outright, play the fallout honestly for a beat, then let the scene settle toward an ending.
 
-Wrap-up: after about seven learner turns, bring the scene to an end in character — a final line with a double meaning, Tess taking one object from the garage and leaving. End on something unresolved and resonant, and don't ask another question.`,
+Wrap-up: after about seven learner turns, bring the scene to an end in character with a final spoken line that has a double meaning: Tess says which one object from the garage she's taking, and says goodbye. End on something unresolved and resonant, and don't ask another question.`,
     rubric: [
       {
         skill: "dialogue",
@@ -751,4 +751,25 @@ Wrap-up: after about seven learner turns, bring the scene to an end in character
 
 export function getScenario(id: string): Scenario | undefined {
   return SCENARIOS.find((s) => s.id === id);
+}
+
+/**
+ * Characters played inside the scene, for drills where the persona is an
+ * actor playing someone (so out-of-scene remarks get answered as that
+ * character) and the learner is assigned a character (so their real name
+ * stays out of the scene).
+ */
+export interface SceneRoles {
+  /** Who the persona is inside the scene. */
+  persona: string;
+  /** Who the learner plays, when the briefing assigns a character. */
+  learner?: string;
+}
+
+const SCENE_ROLES: Partial<Record<string, SceneRoles>> = {
+  "subtext-sparring": { persona: "Tess", learner: "Cal" },
+};
+
+export function sceneRoles(scenario: Pick<Scenario, "id" | "persona">): SceneRoles {
+  return SCENE_ROLES[scenario.id] ?? { persona: scenario.persona.name };
 }

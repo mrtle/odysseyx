@@ -15,6 +15,7 @@ import { PersonaAvatar } from "./persona-avatar";
 import { PracticeChat } from "./practice-chat";
 import { firstName, type PublicScenario } from "./public-scenario";
 import { Scorecard } from "./scorecard";
+import { byLastActivity } from "./session-time";
 import { useSessionScoring } from "./use-session-scoring";
 
 type Stage =
@@ -82,8 +83,12 @@ export function PracticeSessionView({ scenario, lessonPicks }: { scenario: Publi
   const scoring = useSessionScoring();
   const [stage, setStage] = useState<Stage>({ name: "briefing" });
 
+  // The unfinished attempt the learner touched most recently.
   const resumable = useMemo(
-    () => sessions.find((s) => s.scenarioId === scenario.id && !s.evaluation && s.messages.some((m) => m.role === "user")),
+    () =>
+      sessions
+        .filter((s) => s.scenarioId === scenario.id && !s.evaluation && s.messages.some((m) => m.role === "user"))
+        .sort(byLastActivity)[0],
     [sessions, scenario.id],
   );
 
@@ -147,6 +152,7 @@ export function PracticeSessionView({ scenario, lessonPicks }: { scenario: Publi
           onTryAgain={start}
           transcriptHref={`/practice/review/${stage.sessionId}`}
           autoFocus
+          headingLevel={1}
         />
       );
     }

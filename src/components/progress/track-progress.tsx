@@ -33,7 +33,7 @@ export function TrackProgress({
         total > 0 ? `${done} of ${total} lessons complete across ${rows.length} tracks.` : "The curriculum is being charted."
       }
       action={
-        <Link href="/learn" className="text-sm font-medium text-bronze-300 hover:text-bronze-200">
+        <Link href="/learn" className="-mx-2 -my-3 inline-flex items-center rounded-md px-2 py-3 text-sm font-medium text-bronze-300 hover:text-bronze-200">
           All tracks
         </Link>
       }

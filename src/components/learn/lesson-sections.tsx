@@ -216,7 +216,9 @@ export function LessonPager({
 }) {
   if (!previous && !next) return null;
   return (
-    <nav aria-label="Lesson navigation" className="grid gap-3 sm:grid-cols-2">
+    // grid-cols-1 (not the implicit auto column) plus min-w-0 on each link lets long titles wrap
+    // instead of widening the page on phones.
+    <nav aria-label="Lesson navigation" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {previous ? (
         <PagerLink lesson={previous} direction="previous" crossTrack={previous.trackId !== currentTrackId} />
       ) : (
@@ -234,7 +236,7 @@ function PagerLink({ lesson, direction, crossTrack }: { lesson: LessonSummary; d
       href={lessonHref(lesson)}
       rel={isNext ? "next" : "prev"}
       className={cn(
-        "group flex items-center gap-3 rounded-2xl border border-sea-700/80 bg-sea-900/60 p-4 transition-all hover:border-sea-500 hover:bg-sea-900/80",
+        "group flex min-w-0 items-center gap-3 rounded-2xl border border-sea-700/80 bg-sea-900/60 p-4 transition-all hover:border-sea-500 hover:bg-sea-900/80",
         isNext ? "flex-row-reverse text-right" : "text-left",
       )}
     >
@@ -247,7 +249,9 @@ function PagerLink({ lesson, direction, crossTrack }: { lesson: LessonSummary; d
         <span className="block text-xs font-medium text-sea-300">
           {isNext ? (crossTrack ? `Next track · ${lesson.trackTitle}` : "Next lesson") : crossTrack ? `Previous track · ${lesson.trackTitle}` : "Previous lesson"}
         </span>
-        <span className="mt-0.5 block truncate font-display font-semibold text-sea-100 group-hover:text-bronze-200">{lesson.title}</span>
+        <span className="mt-0.5 line-clamp-2 font-display font-semibold break-words text-sea-100 group-hover:text-bronze-200">
+          {lesson.title}
+        </span>
       </span>
     </Link>
   );

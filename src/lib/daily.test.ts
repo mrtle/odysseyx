@@ -91,6 +91,12 @@ describe("counting", () => {
     expect(countWords("Café 42 déjà-vu")).toBe(3);
   });
 
+  it("counts words in any script", () => {
+    expect(countWords("Привет, как дела?")).toBe(3);
+    // Unspaced scripts are segmented rather than counted as one "word" per run.
+    expect(countWords("売ります。赤ちゃんの靴、未使用。")).toBeGreaterThanOrEqual(4);
+  });
+
   it("counts paragraphs by blank lines, or by lines when there are none", () => {
     expect(countParagraphs("One.\n\nTwo.\n\nThree.")).toBe(3);
     expect(countParagraphs("One.\nTwo.\nThree.\nFour.")).toBe(4);
@@ -207,15 +213,92 @@ describe("checkConstraints", () => {
     const spine = getDailyPrompt("story-spine")!.rule!;
     const good =
       "Once upon a time there was a baker. Every day she burned the bread. One day a critic came. Because of that, she panicked. Because of that, she baked blind. Until finally the loaf was perfect. Ever since then she bakes with her eyes closed.";
-    expect(byId(checkConstraints(spine, good), "required")).toMatchObject({ met: true, detail: "All 6 present" });
+    expect(byId(checkConstraints(spine, good), "required")).toMatchObject({ met: true, detail: "All 7 present" });
     const missing = good.replace("Until finally", "At last");
     expect(byId(checkConstraints(spine, missing), "required")).toMatchObject({ met: false, detail: "Missing “until finally”" });
-    const shuffled = "One day it began. Once upon a time. Every day. Because of that. Until finally. Ever since.";
+    const shuffled =
+      "One day it began. Once upon a time. Every day. Because of that. Because of that. Until finally. Ever since.";
     expect(byId(checkConstraints(spine, shuffled), "required")).toMatchObject({
       met: false,
       detail: "All present, but out of order",
     });
     expect(byId(checkConstraints({ required: ["cut to"] }, "Laughter. CUT TO: silence."), "required").met).toBe(true);
+  });
+
+  it("finds each spine beat after the previous one, so a phrase used earlier in passing doesn't break the order", () => {
+    const spine = getDailyPrompt("story-spine")!.rule!;
+    // "one day" and "every day" both occur before their beats.
+    const text =
+      "Once upon a time there was a baker who hoped one day to win the county fair. Every day she baked the same plain loaf. One day a stranger asked for rye. Because of that she tried a new recipe. Because of that she burned six batches. Until finally the seventh rose perfectly. Ever since then she has baked something new every week.";
+    expect(checkConstraints(spine, text).every((c) => c.met)).toBe(true);
+  });
+
+  it("needs a repeated beat as many times as the brief lists it", () => {
+    const spine = getDailyPrompt("story-spine")!.rule!;
+    const once =
+      "Once upon a time there was a fox. Every day he hid. One day a hawk came. Because of that he ran. Until finally he found a den. Ever since then he sleeps well.";
+    expect(byId(checkConstraints(spine, once), "required")).toMatchObject({
+      met: false,
+      detail: "Missing “because of that” (1 more)",
+    });
+  });
+
+  it("accepts any listed alternative, and the shot-size abbreviations the Visual track teaches", () => {
+    const shots = getDailyPrompt("three-shots")!.rule!;
+    const abbreviated = "WS: A lighthouse on a black cliff.\nMS: An old keeper climbs the stairs.\nCU: The lamp flickers out.";
+    expect(checkConstraints(shots, abbreviated).every((c) => c.met)).toBe(true);
+    // Close-up first is a legitimate reveal; the brief doesn't fix an order.
+    const reveal = "Close-up: a ring in the sand.\nMedium: a woman kneels to pick it up.\nWide: the empty beach, the tide coming in.";
+    expect(checkConstraints(shots, reveal).every((c) => c.met)).toBe(true);
+    const noMedium = "WS: A lighthouse.\nWS: The sea.\nCU: The lamp.";
+    expect(byId(checkConstraints(shots, noMedium), "required")).toMatchObject({ met: false, detail: "Missing “medium”" });
+  });
+
+  it("matches possessives and banned-word inflections", () => {
+    expect(findTerms("his daughter's surgery", ["daughter"])).toEqual(["daughter"]);
+    const say = getDailyPrompt("say-it-without-saying-it")!.rule!;
+    const found = byId(checkConstraints(say, "A: Are you wanting the car?\nB: I am needing it.\nA: Your feelings show."), "forbidden");
+    expect(found).toMatchObject({ met: false, detail: "Used “wanting”, “needing” and “feelings”" });
+    const weather = getDailyPrompt("weather-report")!.rule!;
+    expect(byId(checkConstraints(weather, "Rain on the glass. She is full of despair and anguish, mourning him."), "forbidden").met).toBe(
+      false,
+    );
+  });
+
+  it("checks the brief's defining rules: TEEN one-word lines, no question marks, no 'So…' opener", () => {
+    const teen = getDailyPrompt("one-word-answers")!.rule!;
+    const good = "MUM: How was school?\nTEEN: Fine.\nMUM: Did you see Jamie?\nTEEN: (shrugs) Maybe.";
+    expect(byId(checkConstraints(teen, good), "speaker-words")).toMatchObject({ met: true });
+    const chatty = "MUM: How was school?\nTEEN: It was honestly the worst day of my life.";
+    expect(byId(checkConstraints(teen, chatty), "speaker-words")).toMatchObject({
+      met: false,
+      detail: "“It was honestly the worst day of my…” is 9 words",
+    });
+    expect(byId(checkConstraints(teen, "MUM: Well?\nKID: Fine."), "speaker-words")).toMatchObject({
+      met: false,
+      detail: "No lines labelled TEEN: yet",
+    });
+
+    const cold = getDailyPrompt("cold-open")!.rule!;
+    expect(byId(checkConstraints(cold, "A baby in a basket. Who left the baby here?"), "no-question-marks").met).toBe(false);
+    expect(byId(checkConstraints(cold, "A baby in a basket. Nobody knows who left it."), "no-question-marks").met).toBe(true);
+
+    const campfire = getDailyPrompt("campfire-opener")!.rule!;
+    expect(byId(checkConstraints(campfire, "So, I am nine years old and the lake is frozen."), "forbidden-opener")).toMatchObject({
+      met: false,
+      detail: "Opens with “So”",
+    });
+    expect(byId(checkConstraints(campfire, "I am nine and the lake is frozen solid."), "forbidden-opener").met).toBe(true);
+    // Only the opening counts: "so" later in the piece is fine.
+    expect(byId(checkConstraints(campfire, "The ice was so thin I could hear it."), "forbidden-opener").met).toBe(true);
+  });
+
+  it("states every checked cap in the brief itself", () => {
+    for (const p of DAILY_PROMPTS) {
+      const max = p.rule?.words?.max;
+      if (max === undefined || p.rule?.words?.min === max) continue;
+      expect(p.constraint, p.id).toContain(`${max} words`);
+    }
   });
 
   it("returns checks in a stable order", () => {

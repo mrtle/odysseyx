@@ -8,6 +8,7 @@ import type { LessonBlock, QuizQuestion, TrackId } from "@/lib/types";
 import { headingIds, LessonBlocks } from "./lesson-blocks";
 import { LessonQuiz } from "./lesson-quiz";
 import { ContinueBanner, type TrackLook } from "./continue-banner";
+import { LessonPager } from "./lesson-sections";
 import { VoyageMap } from "./voyage-map";
 import type { LessonSummary } from "./learn-helpers";
 
@@ -144,5 +145,27 @@ describe("store-backed islands (pre-hydration)", () => {
     const looks = { foundations: { accent: "from-bronze-300 to-bronze-600", icon: "compass" } } as Record<TrackId, TrackLook>;
     const html = renderToStaticMarkup(<ContinueBanner lessons={SUMMARIES} looks={looks} />);
     expect(html).toContain("animate-pulse");
+  });
+});
+
+describe("LessonPager", () => {
+  const long: LessonSummary = {
+    ...SUMMARIES[1],
+    id: "long",
+    trackId: "character",
+    trackTitle: "Character",
+    title: "Antagonists, Opposing Forces & Mirror Characters Who Reflect the Hero Back at Themselves",
+  };
+
+  it("can shrink below its longest title on phones (no horizontal page scroll)", () => {
+    const html = renderToStaticMarkup(<LessonPager previous={long} next={SUMMARIES[0]} currentTrackId="foundations" />);
+    // An implicit `auto` grid column sizes to the nowrap title's min-content width and widens the page.
+    const nav = html.match(/<nav aria-label="Lesson navigation" class="([^"]*)"/)?.[1] ?? "";
+    expect(nav.split(" ")).toContain("grid-cols-1");
+    const links = [...html.matchAll(/<a [^>]*class="([^"]*)"/g)].map((m) => m[1].split(" "));
+    expect(links).toHaveLength(2);
+    for (const cls of links) expect(cls).toContain("min-w-0");
+    expect(html).not.toMatch(/\btruncate\b/);
+    expect(html).toContain("Previous track · Character");
   });
 });

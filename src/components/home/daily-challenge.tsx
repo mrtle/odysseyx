@@ -164,6 +164,9 @@ function DailyChallengeDay({
               <Badge tone="success">
                 <Check className="size-3" aria-hidden /> Logged today
               </Badge>
+            ) : entry ? (
+              // Only the day's first submission earns XP (see saveDaily), so a revision doesn't promise any.
+              <Badge tone="neutral">Revision · no extra XP</Badge>
             ) : (
               <Badge tone="aegean">+{XP_REWARDS.daily} XP</Badge>
             )}

@@ -1,11 +1,18 @@
 /**
  * POST /api/daily, exercised in demo mode (no network).
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { MicroFeedbackSchema } from "@/lib/ai/schemas";
 import { buildDailyPrompt, DAILY_SYSTEM_PROMPT } from "@/lib/ai/prompts/daily";
 import { getDailyPrompt } from "@/content/daily-prompts";
 import { POST } from "./route";
+
+const ai = vi.hoisted(() => ({ generateStructured: vi.fn() }));
+
+vi.mock("@/lib/ai/client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/ai/client")>();
+  return { ...actual, generateStructured: ai.generateStructured };
+});
 
 const previousMode = process.env.ODYSSEUSX_MODE;
 
@@ -61,6 +68,39 @@ describe("POST /api/daily", () => {
   it("400s for a non-JSON body", async () => {
     const res = await POST(post("not json"));
     expect(res.status).toBe(400);
+  });
+
+  it("explains, rather than scores, text the offline coach can't read", async () => {
+    const res = await POST(post({ promptId: "six-word-story", response: "売ります。赤ちゃんの靴、未使用。" }));
+    expect(res.status).toBe(422);
+    expect(((await res.json()) as { error: string }).error).toMatch(/only reads English/);
+  });
+});
+
+describe("POST /api/daily (live)", () => {
+  beforeAll(() => {
+    process.env.ODYSSEUSX_MODE = "live";
+  });
+  afterAll(() => {
+    process.env.ODYSSEUSX_MODE = "demo";
+  });
+  afterEach(() => {
+    ai.generateStructured.mockReset();
+  });
+
+  it("passes the request's abort signal so a cancelled request stops generating", async () => {
+    ai.generateStructured.mockResolvedValue({ score: 70, praise: "Good.", nudge: "Tighter.", tryThis: "Cut one.", skill: "hook" });
+    const req = post({ promptId: "six-word-story", response: "Baby shoes for sale, never worn." });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(ai.generateStructured).toHaveBeenCalledOnce();
+    expect(ai.generateStructured.mock.calls[0][0].signal).toBe(req.signal);
+  });
+
+  it("lets the live coach read any language", async () => {
+    ai.generateStructured.mockResolvedValue({ score: 70, praise: "Good.", nudge: "Tighter.", tryThis: "Cut one.", skill: "hook" });
+    const res = await POST(post({ promptId: "six-word-story", response: "売ります。赤ちゃんの靴、未使用。" }));
+    expect(res.status).toBe(200);
   });
 });
 

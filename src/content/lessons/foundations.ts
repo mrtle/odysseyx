@@ -92,37 +92,37 @@ export const foundationsLessons: Lesson[] = [
         id: "q1",
         prompt: "Which of these is a story rather than a situation?",
         options: [
-          "A retired astronaut lives alone in a farmhouse full of space memorabilia.",
-          "A retired astronaut must persuade her estranged son to drive her to one last rocket launch before her eyesight fails for good.",
-          "A farmhouse in Kansas is rumoured to be haunted by an astronaut's ghost.",
-          "An astronaut's memoir covers forty years of spaceflight history.",
+          "A retired astronaut lives alone in a Kansas farmhouse crammed with four decades of space memorabilia and fan mail.",
+          "A retired astronaut must get her estranged son to drive her to one last launch before her eyesight fails.",
+          "Everyone in a small Kansas town believes an astronaut's ghost haunts the old farmhouse.",
+          "An astronaut's memoir covers four decades of spaceflight, from the Apollo missions to the last shuttle flight.",
         ],
         answerIndex: 1,
         explanation:
-          "Only the second option has a character pursuing something specific (getting to the launch), obstacles (an estranged son, failing eyesight) and built-in stakes (a deadline and a broken relationship). The others are settings, premises or topics: good raw material, but nobody is pursuing anything yet.",
+          "Only the second option has a character pursuing something specific (getting to the launch), obstacles (an estranged son, failing eyesight) and built-in stakes (a deadline and a broken relationship). The others are settings, premises or topics. However richly detailed, they're raw material: nobody is pursuing anything yet.",
       },
       {
         id: "q2",
         prompt:
           "Your outline reads: “Sam loses his job. And then he goes to his sister's wedding. And then he runs into an old friend.” What's the most useful fix?",
         options: [
-          "Add richer description to each scene.",
-          "Add more events so the story feels bigger.",
-          "Link the beats causally: he loses his job, so he can't afford the trip, but the old friend offers him a ride, which means…",
-          "Tell the events in reverse order.",
+          "Add richer sensory description, so the audience can picture each scene.",
+          "Add more events, like a breakdown on the way or a fight at the reception, so it feels bigger.",
+          "Link the beats causally: he loses his job, so he can't afford the trip, but the old friend offers a ride…",
+          "Tell the events in reverse order, opening on the old friend, so the lost job becomes a late reveal.",
         ],
         answerIndex: 2,
         explanation:
-          "The problem isn't a shortage of detail or incident. The beats simply don't affect each other. Connecting them with *but* and *therefore* makes each event cause or complicate the next, and that chain of cause and effect is what an audience experiences as plot.",
+          "The problem isn't a shortage of detail or incident, and reshuffling the order won't fix it. The beats simply don't affect each other. Connecting them with *but* and *therefore* makes each event cause or complicate the next, and that chain of cause and effect is what an audience experiences as plot.",
       },
       {
         id: "q3",
         prompt: "Why does Rick's final choice in *Casablanca* land so powerfully?",
         options: [
           "The obstacles have forced him to decide who he really is, and the choice completes that change.",
-          "It comes out of nowhere, so it catches the audience off guard.",
-          "He finally wins Ilsa back from Laszlo.",
-          "It resolves the plot without asking anything of him.",
+          "It comes out of nowhere, and a twist nobody sees coming is what makes an ending memorable.",
+          "He finally wins Ilsa back from Laszlo, which pays off the film's romance.",
+          "It ties up the plot neatly without asking him to give up anything he really wants.",
         ],
         answerIndex: 0,
         explanation:
@@ -230,23 +230,23 @@ export const foundationsLessons: Lesson[] = [
         id: "q1",
         prompt: "Which want will drive a story best?",
         options: [
-          "Leo wants to feel more fulfilled at work.",
+          "Leo wants to feel more fulfilled at work, and to stop dreading Monday mornings at the office.",
           "Leo wants his estranged brother to be the best man at his wedding on Saturday.",
-          "Leo wants the world to be a kinder place.",
-          "Leo wants to understand himself better.",
+          "Leo wants the world to be a kinder place, starting with the way strangers treat each other online.",
+          "Leo wants to understand himself better before he turns forty next spring.",
         ],
         answerIndex: 1,
         explanation:
-          "Only the brother-and-wedding want is specific (you could film the moment it happens), active (Leo has to go and get his brother) and urgent (Saturday). The others are real human longings, but they're too abstract to generate scenes. Leave them underneath as the *need*.",
+          "Only the brother-and-wedding want is specific (you could film the moment it happens), active (Leo has to go and get his brother) and urgent (Saturday). The others are real human longings, and one even comes with a deadline, but they're too abstract to generate scenes. Leave them underneath as the *need*.",
       },
       {
         id: "q2",
         prompt: "In *Rocky*, why does losing the fight still feel like a victory?",
         options: [
-          "Because the judges' decision is later revealed to be rigged.",
-          "Because the audience never really cared about the fight.",
-          "Because Apollo Creed retires, so Rocky wins by default.",
-          "Because the film shifted the dramatic question to “can he go the distance?”, and the answer is yes.",
+          "Because the judges' split decision is later revealed to have been rigged in Apollo's favour.",
+          "Because the audience never really cared about the boxing, only about his romance with Adrian.",
+          "Because Apollo Creed retires, so Rocky takes the title by default.",
+          "Because the film reset the question to “can he go the distance?”, and he does.",
         ],
         answerIndex: 3,
         explanation:
@@ -256,10 +256,10 @@ export const foundationsLessons: Lesson[] = [
         id: "q3",
         prompt: "What's the difference between a character's want and their need?",
         options: [
-          "The want is what they consciously pursue; the need is what they actually require, often without realising it.",
-          "The want is a minor subplot; the need is the main plot.",
-          "They're the same thing described from different points of view.",
-          "The need only matters in comedies.",
+          "The want is what they consciously chase; the need is what they must learn, often without knowing it.",
+          "The want drives the main plot; the need belongs to a subplot, usually the romance.",
+          "They're the same desire, seen once from the outside and once from the inside.",
+          "The want is selfish and has to be abandoned; the need is the selfless goal that replaces it.",
         ],
         answerIndex: 0,
         explanation:
@@ -270,10 +270,10 @@ export const foundationsLessons: Lesson[] = [
         prompt:
           "Your screenplay opens by asking “Will Mara win custody of her daughter?” but ends with Mara forgiving her own mother. The custody hearing is never resolved. How is the audience likely to react?",
         options: [
-          "With delight, because the twist is unexpected.",
-          "With satisfaction, because forgiveness matters more than custody.",
+          "With delight, because an ending the audience didn't see coming is always more memorable than one they did.",
+          "With satisfaction, because forgiving her mother is a deeper resolution than any court case could be.",
           "With frustration, because the question the story promised to answer was abandoned.",
-          "They won't react at all, because audiences don't track dramatic questions.",
+          "Barely at all, because audiences follow characters and emotions, not the questions a plot raises.",
         ],
         answerIndex: 2,
         explanation:
@@ -379,9 +379,9 @@ export const foundationsLessons: Lesson[] = [
         prompt: "Which stakes are most likely to make an audience care?",
         options: [
           "A retired jockey will lose the horse he raised from a foal if he can't pay the stable fees by Sunday.",
-          "An asteroid will destroy an unnamed city.",
-          "A multinational company will miss its quarterly target.",
-          "Civilisation as we know it will end.",
+          "An asteroid will wipe out an unnamed coastal city of four million people by the end of the week.",
+          "A multinational company will miss its quarterly target and lose billions in value.",
+          "Civilisation as we know it will end unless a team of scientists finds a cure in time.",
         ],
         answerIndex: 0,
         explanation:
@@ -391,10 +391,10 @@ export const foundationsLessons: Lesson[] = [
         id: "q2",
         prompt: "How does *Jaws* keep the stakes rising even though the shark itself never changes?",
         options: [
-          "It introduces a second, bigger shark in the final act.",
+          "It introduces a second, bigger shark in the final act, so the threat literally grows.",
           "It moves each attack closer to Brody personally, until he has to face the water himself.",
-          "It reveals that the mayor has been secretly protecting the shark.",
-          "It simply increases the number of victims in every scene.",
+          "It shifts focus to the town's panic, so the stakes become Amity's economy rather than Brody's family.",
+          "It simply raises the body count in every scene, so the danger grows through sheer numbers.",
         ],
         answerIndex: 1,
         explanation:
@@ -405,9 +405,9 @@ export const foundationsLessons: Lesson[] = [
         prompt:
           "Your hero escapes a locked cellar because a stranger happens to wander past with exactly the key she needs. What's the problem?",
         options: [
-          "Strangers should never appear in the third act.",
-          "Keys are a cliché.",
-          "The scene is too short.",
+          "Strangers shouldn't be introduced this late; every new character belongs in the first act.",
+          "Keys are a cliché, and escaping a locked cellar has been done in hundreds of thrillers before.",
+          "The escape is over too fast; it needs a longer struggle with the lock to build suspense.",
           "Coincidence got her out of trouble, which deflates the tension and robs her of a choice.",
         ],
         answerIndex: 3,
@@ -418,19 +418,19 @@ export const foundationsLessons: Lesson[] = [
         id: "q4",
         prompt: "Which obstacle creates the strongest dramatic pressure?",
         options: [
-          "A locked door between her and the courthouse.",
-          "A rainstorm that delays her trip.",
+          "A locked courthouse door, and the only guard with a key has gone home for the night.",
+          "A violent rainstorm that floods the roads and delays her until the hearing has almost ended.",
           "A choice between testifying against her brother and letting an innocent man go to prison.",
-          "A long walk to the courthouse.",
+          "A three-mile walk to the courthouse on a sprained ankle, with no phone and no money for a cab.",
         ],
         answerIndex: 2,
         explanation:
-          "The other obstacles are external inconveniences. The testimony forces a dilemma between two things she values, family loyalty and justice, so whatever she chooses will cost her, and her choice reveals who she is.",
+          "The other obstacles are external inconveniences, however vivid: they slow her down but ask nothing of her. The testimony forces a dilemma between two things she values, family loyalty and justice, so whatever she chooses will cost her, and her choice reveals who she is.",
       },
     ],
     exercise: {
       prompt:
-        "Take a story you're developing (a film, a talk, the origin of a company or project) and write one paragraph where the stakes are personal: a named person losing a specific thing. Then test it under pressure in the Founder Story drill, where a sceptical investor keeps asking “so what?”",
+        "Take a story you're developing (a film, a talk, the origin of a company or project) and write one paragraph where the stakes are personal: a named person losing a specific thing. Then test it under pressure in the Founder Story drill, where an investor pushes past the deck for the real moment, the hardest setback and what it cost you.",
       tips: [
         "Anchor any big-picture stakes to one person we can picture.",
         "Show escalation: what got worse after the first failure?",
@@ -527,10 +527,10 @@ export const foundationsLessons: Lesson[] = [
         id: "q1",
         prompt: "What makes “the clocks were striking thirteen” such an effective opening?",
         options: [
-          "It gives a precise time, and precise times are always interesting.",
-          "An ordinary scene is knocked out of true by one wrong detail, which raises a question about the world.",
-          "It introduces the protagonist by name.",
-          "It opens on a burst of action.",
+          "It gives a precise time and season, and precise details always make an opening more believable.",
+          "One wrong detail knocks an ordinary scene out of true, and that raises a question about the world.",
+          "Its cold, bright weather sets a bleak mood before the story has introduced a single character.",
+          "It opens on a sudden burst of noise and action, which grabs the reader before anything is explained.",
         ],
         answerIndex: 1,
         explanation:
@@ -541,10 +541,10 @@ export const foundationsLessons: Lesson[] = [
         prompt:
           "*Raiders of the Lost Ark* opens with a temple sequence that has nothing to do with the Ark. Why does it work?",
         options: [
-          "It establishes the hero's character and makes a clear promise about the kind of adventure to come.",
-          "Audiences need ten minutes to settle before the real story begins.",
-          "It explains the history of the Ark.",
-          "It introduces the romantic subplot.",
+          "It shows us who Indy is and promises the kind of adventure the rest of the film will deliver.",
+          "Audiences need a warm-up before the real story starts, and an action scene keeps them busy meanwhile.",
+          "It quietly explains the history of the Ark, so the later plot about Nazis hunting it makes sense.",
+          "It introduces Marion and the romantic subplot that the rest of the film goes on to develop.",
         ],
         answerIndex: 0,
         explanation:
@@ -554,9 +554,9 @@ export const foundationsLessons: Lesson[] = [
         id: "q3",
         prompt: "Which opening line for a spoken story makes the best use of in medias res?",
         options: [
-          "I've always been interested in how families handle grief.",
-          "Let me give you a bit of background on my grandmother first.",
-          "This is a story about my grandmother, who was a remarkable woman.",
+          "I've always been fascinated by how families handle grief, so tonight I want to talk about mine.",
+          "Let me give you a bit of background on my grandmother first, because it matters for the ending.",
+          "This is a story about my grandmother, who was the most remarkable woman I've ever known.",
           "The hearse had already pulled away when I realised we'd buried Grandma with my car keys.",
         ],
         answerIndex: 3,
@@ -568,10 +568,10 @@ export const foundationsLessons: Lesson[] = [
         prompt:
           "You're writing a quiet family drama, and your draft opens with a car chase to grab attention. What's the risk?",
         options: [
-          "There's no risk, because louder openings always work better.",
-          "Car chases are too expensive to shoot.",
+          "There's no real risk: a loud opening buys attention, and the audience will adjust once the drama starts.",
+          "A car chase is expensive, and on a drama's budget it will look cheap next to real action films.",
           "The opening promises a different genre, so the audience settles in for the wrong story and feels misled.",
-          "The audience will learn the dramatic question too early.",
+          "The chase gives away the dramatic question too early, so the rest of the film has nothing left to reveal.",
         ],
         answerIndex: 2,
         explanation:
@@ -580,7 +580,7 @@ export const foundationsLessons: Lesson[] = [
     ],
     exercise: {
       prompt:
-        "Draft the opening sentence of a pitch for a story or project, one that raises a question in the listener's mind. Sharpen the premise in the Logline Doctor, then practise delivering it against the clock in the Elevator Pitch drill.",
+        "Draft the opening sentence of a pitch for a story or project, one that raises a question in the listener's mind. Sharpen the premise in the Logline Doctor, then practise delivering it against the clock in The Elevator drill.",
       tips: [
         "Start with a moment (a place, a time, a problem), not with background.",
         "Test your first line: does it make the listener ask a question?",
@@ -681,9 +681,9 @@ export const foundationsLessons: Lesson[] = [
         id: "q1",
         prompt: "Which line *shows* that a character is grieving?",
         options: [
-          "Tom felt a deep, crushing sadness.",
-          "Tom was grieving, and it was hard on everyone.",
-          "Everyone could tell Tom was very sad.",
+          "Tom felt a deep, crushing sadness that followed him from room to room of the empty house.",
+          "Tom was grieving, and everyone at work could see how hard the months since the funeral had been.",
+          "Everyone could tell Tom was still heartbroken about his wife, even though he never said so.",
           "Tom still hasn't changed the voicemail greeting on his late wife's phone. Some nights he calls it twice.",
         ],
         answerIndex: 3,
@@ -694,10 +694,10 @@ export const foundationsLessons: Lesson[] = [
         id: "q2",
         prompt: "What does the doctor's office scene in *Up* demonstrate?",
         options: [
-          "A key emotional fact can land harder through image and performance than through explanation.",
-          "Animation can't handle scenes that rely on dialogue.",
-          "Montages should always be set to music.",
-          "Exposition should be delivered by authority figures.",
+          "A key emotional fact can land harder through image and performance than through any explanation.",
+          "Animated films struggle with dialogue-heavy scenes, so they have to tell stories through images.",
+          "Montages should always be scored, because music tells the audience what to feel.",
+          "Exposition works best from an authority figure, like a doctor, whom the audience trusts.",
         ],
         answerIndex: 0,
         explanation:
@@ -708,10 +708,10 @@ export const foundationsLessons: Lesson[] = [
         prompt:
           "Your character drives from her office to her mother's house, where they have the confrontation the whole story has been building to. How should you handle it?",
         options: [
-          "Show every moment of the drive to build realism.",
-          "Summarise the confrontation so the drive has more room.",
+          "Show every moment of the drive, so the audience feels her dread building mile by mile.",
+          "Summarise the confrontation in a few lines, so the anticipation of the drive has room to build.",
           "Tell the drive in a line and dramatise the confrontation moment by moment.",
-          "Cut the confrontation and let the audience imagine it.",
+          "Cut the confrontation entirely and let the audience imagine it, since what's unseen hits harder.",
         ],
         answerIndex: 2,
         explanation:
@@ -721,24 +721,24 @@ export const foundationsLessons: Lesson[] = [
         id: "q4",
         prompt: "Which detail does the most work?",
         options: [
-          "She lived in a nice apartment.",
+          "She lived in a large, tastefully decorated apartment on the top floor of an old building.",
           "Her bookshelves were empty except for a framed rejection letter from a drama school.",
-          "Her apartment had a lot of furniture.",
-          "Her apartment was modern and clean.",
+          "Her apartment had expensive furniture and several large paintings.",
+          "Her apartment was modern and spotlessly clean, decorated throughout in shades of white and grey.",
         ],
         answerIndex: 1,
         explanation:
-          "The framed rejection letter paints a picture and implies a history (a dream, a failure) and a psychology (she keeps it on display). The other details are generic and could belong to anyone.",
+          "The framed rejection letter paints a picture and implies a history (a dream, a failure) and a psychology (she keeps it on display). The other details sound specific, but they're generic: expensive, tasteful or tidy could describe anyone's home and tell us nothing about her.",
       },
       {
         id: "q5",
         prompt:
           "After an argument, a father silently mends his daughter's broken bike. Then he says, “I just want you to know I love you.” What's the best note?",
         options: [
-          "Cut the line. The action already says it, and explaining it weakens it.",
-          "Add more lines so the feeling is crystal clear.",
-          "Move the line to the start so the audience knows what the scene means.",
-          "Keep it, because audiences miss visual cues.",
+          "Cut the line. Mending the bike already says it, and explaining it only weakens the moment.",
+          "Keep the line and add a reply from the daughter, so the feeling is crystal clear for everyone.",
+          "Move the line to the start of the scene, so the audience knows what the mending means.",
+          "Keep it as it is, because audiences often miss visual cues and need the emotion confirmed.",
         ],
         answerIndex: 0,
         explanation:

@@ -1,11 +1,13 @@
 /**
  * Pure helpers behind the Progress page: the activity heatmap grid, human
- * labels for XP events, skill trends and the JSON export.
+ * labels for XP events, skill trends, and the JSON export and import.
  */
 import { findLesson, findScenario, type Catalog } from "@/components/home/catalog";
 import { LAB_TOOL_LINKS } from "@/components/home/lab-tools";
+import { REVISION_PROGRESS_PREFIX } from "@/components/lab/revision-checklist";
+import { sanitizePersisted } from "@/lib/persisted-state";
 import { toDateKey, type SkillStat } from "@/lib/progress";
-import type { AppData } from "@/lib/store";
+import { STORAGE_KEY, initialData, type AppData } from "@/lib/store";
 import type { LabToolId, XpEvent } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -180,4 +182,112 @@ export function buildExport(state: AppData, now: Date = new Date()): ProgressExp
 
 export function exportFileName(now: Date = new Date()): string {
   return `odysseusx-progress-${toDateKey(now)}.json`;
+}
+
+// ---------------------------------------------------------------------------
+// Import
+// ---------------------------------------------------------------------------
+
+/** Bigger than any real export (the store caps its lists), small enough to parse safely. */
+export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
+
+export interface ProgressSummary {
+  name: string | null;
+  xp: number;
+  lessons: number;
+  drills: number;
+  labEntries: number;
+  dailies: number;
+}
+
+export type ProgressImport =
+  | {
+      ok: true;
+      /** Complete, validated data, ready to replace the store's. */
+      data: AppData;
+      exportedAt: string | null;
+      summary: ProgressSummary;
+      /** Records in the file that failed validation and were left out. */
+      skipped: number;
+    }
+  | { ok: false; error: string };
+
+export function summarizeProgress(data: AppData): ProgressSummary {
+  return {
+    name: data.profile?.name ?? null,
+    xp: data.xp,
+    lessons: Object.keys(data.lessonProgress).length,
+    drills: data.sessions.filter((s) => s.evaluation).length,
+    labEntries: data.labEntries.length,
+    dailies: Object.values(data.daily).filter((d) => d.feedback).length,
+  };
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const countOf = (v: unknown): number => (Array.isArray(v) ? v.length : isRecord(v) ? Object.keys(v).length : 0);
+
+/**
+ * Parse and validate a file made by `buildExport`. Every record goes through
+ * the same validation as saved progress, so nothing malformed reaches the store.
+ */
+export function parseProgressImport(text: string): ProgressImport {
+  const notOurs = "That file isn't an OdysseusX progress export. Choose a file saved with “Export progress”.";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, error: "That file isn't valid JSON, so it can't be an OdysseusX export." };
+  }
+  if (!isRecord(parsed) || parsed.app !== "OdysseusX" || !isRecord(parsed.data)) return { ok: false, error: notOurs };
+  if (parsed.format !== 1) {
+    return typeof parsed.format === "number" && parsed.format > 1
+      ? { ok: false, error: "This export comes from a newer version of OdysseusX. Update the app, then try again." }
+      : { ok: false, error: notOurs };
+  }
+
+  const raw = parsed.data;
+  const clean = sanitizePersisted(raw);
+  if (Object.keys(clean).length === 0) return { ok: false, error: "That export doesn't contain any progress this app can read." };
+
+  const data: AppData = { ...initialData, ...clean };
+  const skipped =
+    Math.max(0, countOf(raw.lessonProgress) - Object.keys(data.lessonProgress).length) +
+    Math.max(0, countOf(raw.sessions) - data.sessions.length) +
+    Math.max(0, countOf(raw.labEntries) - data.labEntries.length) +
+    Math.max(0, countOf(raw.daily) - Object.keys(data.daily).length) +
+    Math.max(0, countOf(raw.xpLog) - data.xpLog.length);
+  const exportedAt = typeof parsed.exportedAt === "string" && !Number.isNaN(Date.parse(parsed.exportedAt)) ? parsed.exportedAt : null;
+  return { ok: true, data, exportedAt, summary: summarizeProgress(data), skipped };
+}
+
+// ---------------------------------------------------------------------------
+// Browser storage beyond the store
+// ---------------------------------------------------------------------------
+
+/** Every OdysseusX key in localStorage uses this prefix (the store, drafts, per-entry checklists…). */
+export const APP_STORAGE_PREFIX = "odysseusx-";
+const LAB_PLAN_PREFIX = REVISION_PROGRESS_PREFIX;
+
+/**
+ * The app's localStorage keys to remove alongside the store. Everything with
+ * the app prefix except the store itself — which the store re-initialises —
+ * or, with `keepLabEntryIds`, only per-entry keys whose entry no longer exists.
+ */
+export function orphanedStorageKeys(keys: readonly string[], keepLabEntryIds?: ReadonlySet<string>): string[] {
+  return keys.filter((key) => {
+    if (!key.startsWith(APP_STORAGE_PREFIX) || key === STORAGE_KEY) return false;
+    if (!keepLabEntryIds) return true;
+    return key.startsWith(LAB_PLAN_PREFIX) && !keepLabEntryIds.has(key.slice(LAB_PLAN_PREFIX.length));
+  });
+}
+
+/** Remove `orphanedStorageKeys` from this browser's localStorage. Never throws. */
+export function removeOrphanedStorage(keepLabEntryIds?: ReadonlySet<string>): void {
+  try {
+    const storage = window.localStorage;
+    const keys = Array.from({ length: storage.length }, (_, i) => storage.key(i)).filter((k): k is string => k !== null);
+    for (const key of orphanedStorageKeys(keys, keepLabEntryIds)) storage.removeItem(key);
+  } catch {
+    // Storage blocked: there is nothing stored to clean up.
+  }
 }

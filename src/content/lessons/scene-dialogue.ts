@@ -114,8 +114,8 @@ export const sceneDialogueLessons: Lesson[] = [
         id: "q1",
         prompt: "Which of these is a *scene goal* rather than a long-term goal?",
         options: [
-          "To become the youngest head of surgery the hospital has ever had",
-          "To win back her father's respect after years of silence",
+          "To become the youngest head of surgery in the hospital's hundred-year history",
+          "To win back the respect of her father, a surgeon who has barely spoken to her in years",
           "To get the night-shift supervisor to let her scrub in on tonight's transplant",
           "To rebuild her confidence in the year after her divorce",
         ],
@@ -129,21 +129,21 @@ export const sceneDialogueLessons: Lesson[] = [
           "Two detectives review a case file and agree on everything the audience saw in the previous scene. What's the core problem?",
         options: [
           "Nothing turns: no one wants anything, nothing blocks them and no value shifts.",
-          "The scene needs more technical police detail.",
-          "The detectives need more distinctive costumes.",
-          "The scene should be shot as a single long take.",
+          "It lacks technical detail; more forensic jargon would make the scene feel authentic.",
+          "It's too static: the detectives should walk and talk through the station to add energy.",
+          "It should be shot as a single long take, so the audience feels the weight of the case.",
         ],
         answerIndex: 0,
         explanation:
-          "A recap scene is a classic non-event: no goal, no resistance, no change. Give one detective something to hide, or let the file reveal something that turns their confidence into doubt, and the same information starts to move the story.",
+          "A recap scene is a classic non-event: no goal, no resistance, no change. Jargon, movement or a showy camera can decorate it, but they can't make it turn. Give one detective something to hide, or let the file reveal something that turns their confidence into doubt, and the same information starts to move the story.",
       },
       {
         id: "q3",
         prompt: "In the opening scene of *The Social Network*, what makes the breakup such an effective turn?",
         options: [
-          "It reveals Erica's secret backstory.",
-          "It's a comic moment that relaxes the audience.",
-          "It comes out of nowhere, with no connection to what came before.",
+          "It reveals Erica's secret backstory, which explains everything she does later in the film.",
+          "It's a comic beat that releases the tension built up by the fast, overlapping dialogue.",
+          "It comes out of nowhere, and a turn with no warning is always the most powerful kind.",
           "It flips Mark from confident to humiliated, and his response to it drives the next scene.",
         ],
         answerIndex: 3,
@@ -155,14 +155,14 @@ export const sceneDialogueLessons: Lesson[] = [
         prompt:
           "Your scene ends with the heroine getting the loan she asked for, but only by putting up her grandmother's house as collateral. What kind of turn is this?",
         options: [
-          "No turn, because she got what she wanted.",
+          "No turn at all, because she got exactly what she came in asking for.",
           "A mixed or ironic turn: she wins her goal, at a cost that raises the stakes.",
-          "A purely negative turn.",
-          "A flashback.",
+          "A purely negative turn, because putting up the house is a disaster for the family.",
+          "A purely positive turn, because the scene ends with her goal achieved.",
         ],
         answerIndex: 1,
         explanation:
-          "She leaves in a different position from the one she entered, which is what makes it a turn. Winning the goal at a price is one of the most useful turns there is: it answers the scene's question while opening a bigger one. *What happens if she can't pay?*",
+          "She leaves in a different position from the one she entered, which is what makes it a turn, and it's neither purely good nor purely bad. Winning the goal at a price is one of the most useful turns there is: it answers the scene's question while opening a bigger one. *What happens if she can't pay?*",
       },
     ],
     exercise: {
@@ -230,7 +230,7 @@ export const sceneDialogueLessons: Lesson[] = [
         type: "example",
         title: "A marriage told in breakfasts",
         source: "Citizen Kane (1941), dir. Orson Welles",
-        body: "Welles tells the collapse of Charles Foster Kane's first marriage in a string of short breakfast scenes, linked by whip pans, each set later in the marriage than the last. The newlyweds begin close together at a small table, flirting. In each scene that follows, the exchanges get shorter and sharper, drifting toward arguments about his newspaper, and the two of them sit further apart.\n\nIn the final vignette they sit at opposite ends of a long table, reading in silence, and she's reading a rival paper. Every vignette enters on a single charged exchange and leaves the moment it has turned, and together they cover years of a marriage in a couple of minutes of screen time. Nobody ever announces that the love has gone. The cuts do it.",
+        body: "Welles tells the collapse of Charles Foster Kane's first marriage in a string of short breakfast scenes, linked by whip pans, each set later in the marriage than the last. The newlyweds begin close together at a small table, flirting. In each scene that follows, the exchanges get shorter and sharper, drifting toward arguments about his newspaper, and the two of them sit further apart.\n\nIn the final vignette they sit at opposite ends of a long table, reading in silence, and she's reading a rival paper. Every vignette enters on a single charged exchange and leaves the moment it has turned, and together they cover years of a marriage in a few minutes of screen time. Nobody ever announces that the love has gone. The cuts do it.",
       },
       { type: "heading", text: "Leave on the turn, or on a question" },
       {
@@ -268,10 +268,10 @@ export const sceneDialogueLessons: Lesson[] = [
         prompt:
           "A scene opens with a character parking, walking into a café, ordering and chatting about the weather before her ex arrives and the argument begins. What's the most effective edit?",
         options: [
-          "Keep it all, because it builds realism.",
+          "Keep it all: the parking and ordering ground the scene in reality before the conflict.",
           "Start with the ex already at the table, mid-argument or one beat before it.",
-          "Add more small talk to build suspense.",
-          "Move the weather chat to the end of the scene.",
+          "Add more small talk, so the audience wonders when the ex will arrive.",
+          "Move the weather chat to the end, so the scene closes on a quiet, awkward note.",
         ],
         answerIndex: 1,
         explanation:
@@ -282,10 +282,10 @@ export const sceneDialogueLessons: Lesson[] = [
         prompt:
           "Your scene turns when a son admits he crashed his father's car. Afterwards, the two of them talk through how they feel and agree to discuss it tomorrow. What should you consider?",
         options: [
-          "Adding a flashback to the crash.",
-          "Extending the discussion so the feelings are clear.",
-          "Moving the admission to the start of the scene.",
-          "Cutting soon after the admission, perhaps on the father's silent reaction, and letting the next scene show the fallout.",
+          "Adding a flashback to the crash, so the audience sees exactly what happened.",
+          "Extending the discussion, so the audience understands exactly how each of them feels.",
+          "Moving the admission to the very start, so the scene has more time to explore it.",
+          "Cutting soon after the admission, perhaps on the father's silent reaction.",
         ],
         answerIndex: 3,
         explanation:
@@ -295,10 +295,10 @@ export const sceneDialogueLessons: Lesson[] = [
         id: "q3",
         prompt: "What does the breakfast montage in *Citizen Kane* demonstrate?",
         options: [
-          "Entering each short scene on a single charged exchange, and leaving once it turns, can compress years of a relationship into minutes.",
-          "Long, uninterrupted takes are the best way to portray a marriage.",
-          "Characters should say outright how their feelings have changed.",
-          "Montages only work with voiceover narration.",
+          "Short scenes that enter on a charged exchange and leave once it turns can compress years into minutes.",
+          "A marriage is best shown in long, unbroken takes that let the actors' performances breathe.",
+          "Characters should say outright how their feelings have changed, so the audience can follow the time jumps.",
+          "Montages only work with voiceover narration to explain what the audience is seeing.",
         ],
         answerIndex: 0,
         explanation:
@@ -308,10 +308,10 @@ export const sceneDialogueLessons: Lesson[] = [
         id: "q4",
         prompt: "*Reservoir Dogs* never shows its central robbery. Why can skipping an expected scene strengthen a story?",
         options: [
-          "Because audiences dislike action scenes.",
-          "Because it saves money, which is the only real reason to do it.",
-          "Because the story may lie in the event's consequences, and the missing scene becomes a question the audience wants answered.",
-          "Because every film should skip its most important event.",
+          "Because audiences have seen so many robberies that showing another one would bore them.",
+          "Because it saves money, and budget is the only real reason a film would skip its biggest scene.",
+          "Because the story may lie in the aftermath, and the missing scene becomes a question we want answered.",
+          "Because every film should skip its most important event, to keep the audience guessing.",
         ],
         answerIndex: 2,
         explanation:
@@ -430,9 +430,9 @@ export const sceneDialogueLessons: Lesson[] = [
         prompt:
           "After their mother's funeral, a woman's brother, who never visited during the last year of their mother's illness, offers to help sort the house. Which reply carries the most subtext?",
         options: [
-          "“I'm angry that you weren't here when Mum was dying.”",
-          "“I don't need your help. You abandoned us.”",
-          "“I feel like you only care now that it's too late.”",
+          "“I'm angry that you weren't here when Mum was dying, and I don't know how to forgive it.”",
+          "“I don't need your help. You abandoned us, and now you want to play the good son.”",
+          "“I feel like you only care now that it's too late, and that's hard for me to accept.”",
           "“The spare room's still made up for you. She kept it that way all year.”",
         ],
         answerIndex: 3,
@@ -443,10 +443,10 @@ export const sceneDialogueLessons: Lesson[] = [
         id: "q2",
         prompt: "What's the central idea behind treating *dialogue as action*?",
         options: [
-          "Dialogue should always be accompanied by physical movement.",
-          "Every line is an attempt to get something from another person, so the character's want shapes what they say.",
-          "Characters should state their goals out loud so the audience can follow them.",
-          "Action films need less dialogue.",
+          "Every line of dialogue should be paired with a physical action, so scenes never sit still.",
+          "Every line is a tactic to get something from the other person, so the want shapes what's said.",
+          "Characters should state their goals out loud, so the audience always knows what they want.",
+          "Action films need less dialogue, because audiences come for the set pieces, not the talk.",
         ],
         answerIndex: 1,
         explanation:
@@ -456,24 +456,24 @@ export const sceneDialogueLessons: Lesson[] = [
         id: "q3",
         prompt: "In “Hills Like White Elephants”, why does it matter that the word *abortion* never appears?",
         options: [
-          "It was a printing error that became famous.",
-          "It makes the story impossible to interpret.",
-          "The omission makes readers feel the pressure beneath the couple's small talk, which lands harder than naming it would.",
-          "Hemingway wanted the story to be about travel in Spain.",
+          "It keeps the story deliberately ambiguous, so readers can't tell what the couple is discussing.",
+          "It shows the couple don't yet know each other well enough to talk about anything serious.",
+          "Leaving it out makes readers feel the pressure under the small talk more than naming it would.",
+          "Hemingway wanted the story to be about travel in Spain, and the pregnancy is only a side detail.",
         ],
         answerIndex: 2,
         explanation:
-          "Hemingway gives readers enough clues to understand what's being decided, then leaves the word out. Because we have to work it out ourselves, the tension between the man's persuasion and the woman's reluctance lands harder. That's the iceberg: the omitted part is felt, not lost.",
+          "The omission isn't there to hide anything: Hemingway gives readers enough clues to understand what's being decided, then leaves the word out. Because we have to work it out ourselves, the tension between the man's persuasion and the woman's reluctance lands harder. That's the iceberg: the omitted part is felt, not lost.",
       },
       {
         id: "q4",
         prompt:
           "A character who has deflected with jokes for the entire film finally says, simply, *I'm scared.* Why can this on-the-nose line work?",
         options: [
-          "Because it breaks a pattern of subtext the audience has learned, so the directness itself becomes the turn.",
-          "Because on-the-nose dialogue is always stronger in the final act.",
-          "Because audiences need feelings explained before the ending.",
-          "It can't. On-the-nose lines never work.",
+          "Because it breaks a pattern the audience has learned, so the directness itself becomes the turn.",
+          "Because on-the-nose dialogue is always stronger in the final act, once the stakes are highest.",
+          "Because audiences need the main character's feelings spelled out before the ending.",
+          "It can't: on-the-nose lines always weaken a scene, so the writer should cut it.",
         ],
         answerIndex: 0,
         explanation:
@@ -547,7 +547,7 @@ export const sceneDialogueLessons: Lesson[] = [
         type: "example",
         title: "Talk that sounds like filler, and isn't",
         source: "Pulp Fiction (1994), dir. Quentin Tarantino",
-        body: "Two hitmen, Jules and Vincent, drive to a job making what sounds like idle chatter. Vincent, just back from a long stay in Europe, describes the little differences he noticed there, such as what the French call a Quarter Pounder with Cheese. Then they debate whether a foot massage means anything, prompted by a rumour that their boss had a man thrown off a balcony for giving his wife one.\n\nIt looks like exactly the kind of talk a first draft should cut, but every beat is working. Their voices are distinct: Vincent easygoing and curious, Jules forceful and opinionated. The foot-massage debate matters because Vincent has been asked to take the boss's wife out while the boss is away, which sets up one of the film's most tense sequences. And the chatter plays against what we sense is coming: they're on their way to recover the boss's briefcase from the young men who crossed him, and the visit will end in bloodshed. Banter earns its place when it characterises, plants something or builds tension, ideally all three.",
+        body: "Two hitmen, Jules and Vincent, head to a job making what sounds like idle chatter. Vincent, just back from a long stay in Europe, describes the little differences he noticed there, such as what the French call a Quarter Pounder with Cheese. Then, walking into the apartment building, they debate whether a foot massage means anything, prompted by a rumour that their boss had a man thrown off a balcony for giving his wife one.\n\nIt looks like exactly the kind of talk a first draft should cut, but every beat is working. Their voices are distinct: Vincent easygoing and curious, Jules forceful and opinionated. The foot-massage debate matters because Vincent has been asked to take the boss's wife out while the boss is away, which sets up one of the film's most tense sequences. And the chatter plays against what we sense is coming: they're on their way to recover the boss's briefcase from the young men who crossed him, and the visit will end in bloodshed. Banter earns its place when it characterises, plants something or builds tension, ideally all three.",
       },
       { type: "heading", text: "As you know, Bob" },
       {
@@ -589,9 +589,9 @@ export const sceneDialogueLessons: Lesson[] = [
           "You cover the character names on a page of your script and can't tell who's speaking. What's the most useful fix?",
         options: [
           "Differentiate their voices: vocabulary, rhythm, what each one avoids and how each one deflects.",
-          "Work each character's name into more of the other characters' lines.",
-          "Give every character more jokes.",
-          "Make every line longer and more articulate.",
+          "Work the characters' names into more of each other's lines, so readers always know who's talking.",
+          "Give every character more jokes, so each one has a funny line on every page.",
+          "Make every line longer and more articulate, so the dialogue sounds more polished.",
         ],
         answerIndex: 0,
         explanation:
@@ -601,36 +601,36 @@ export const sceneDialogueLessons: Lesson[] = [
         id: "q2",
         prompt: "Which line is the clearest example of *as you know, Bob* dialogue?",
         options: [
-          "“You said you'd be here at six.”",
-          "“Don't look at me like that. You'd have done the same.”",
-          "“As your older brother, who has run Dad's hardware shop since he died five years ago, I think I know what's best.”",
-          "“Is that my jacket?”",
+          "“You said you'd be here at six. It's nearly nine, and the food's been cold for hours.”",
+          "“Don't look at me like that. You'd have done exactly the same thing in my position.”",
+          "“As your older brother, who's run Dad's shop since he died, I know what's best.”",
+          "“Is that my jacket? The one I lent you in March and you swore you'd lost?”",
         ],
         answerIndex: 2,
         explanation:
-          "The third line exists to brief the audience: the listener already knows who his brother is, what he does and when their father died. Real people don't narrate shared history to each other. The other lines carry information too, but it emerges from a live conflict.",
+          "The third line exists to brief the audience: the listener already knows who his brother is, what he does and that their father has died. Real people don't narrate shared history to each other. The other lines carry information too, but it emerges from a live conflict.",
       },
       {
         id: "q3",
-        prompt: "Why doesn't the car conversation in *Pulp Fiction* count as filler, even though it seems to be about nothing?",
+        prompt: "Why doesn't the hitmen's banter on the way to the job in *Pulp Fiction* count as filler, even though it seems to be about nothing?",
         options: [
-          "Because well-known directors are exempt from the usual rules.",
-          "Because it builds two distinct characters, plants the foot-massage worry that pays off later and plays against the violence to come.",
-          "Because it's packed with plot exposition.",
-          "Because longer scenes are always better for character.",
+          "Because Tarantino's dialogue is so entertaining in itself that it doesn't need to do any other job.",
+          "Because it builds two distinct voices, plants a worry that pays off later and plays against what's coming.",
+          "Because it's packed with plot exposition about the briefcase and the young men who have it.",
+          "Because long, rambling scenes are the best way to make characters feel like real people.",
         ],
         answerIndex: 1,
         explanation:
-          "Filler is talk that does no work. This banter does several jobs at once: it defines two very different voices, sets up the stakes of Vincent's evening with the boss's wife and generates tension from the gap between casual chat and a deadly errand.",
+          "Filler is talk that does no work, however entertaining it is. This banter does several jobs at once: it defines two very different voices, sets up the stakes of Vincent's evening with the boss's wife and generates tension from the gap between casual chat and a deadly errand.",
       },
       {
         id: "q4",
         prompt:
           "The audience needs to learn that the heroine was once a champion swimmer who quit after an accident. Which approach turns exposition into ammunition?",
         options: [
-          "The heroine explains her history to her best friend, who already knows it.",
-          "A narrator describes her swimming career over a montage.",
-          "A newspaper clipping fills the screen for ten seconds.",
+          "The heroine tells her best friend the story of her career, though the friend was there for it.",
+          "A narrator describes her swimming career and the accident over a montage of old race footage.",
+          "A newspaper clipping about the accident fills the screen for ten seconds in the opening scene.",
           "During an argument, her rival mocks her for being too scared to get back in the pool since the accident.",
         ],
         answerIndex: 3,
@@ -643,7 +643,7 @@ export const sceneDialogueLessons: Lesson[] = [
         "Write the scene behind the What's My Motivation drill. Walter, sixty-four, has driven three hours to help his daughter June pack up her apartment. Mid-packing, she tells him she's taken a job in Lisbon and won't be home for the holidays, the first Christmas since her mother died. Get that backstory across without either of them telling the other what they both already know, and give father and daughter clearly different voices. Then direct the scene in the drill.",
       tips: [
         "Let the mother's absence surface through an object, such as a box of her dishes, rather than a speech.",
-        "Decide what Walter did for a living and let it colour his vocabulary. Give June the rhythm of someone who has rehearsed bad news.",
+        "Walter is a recently retired bus mechanic: let his trade colour his vocabulary. Give June the rhythm of someone who has rehearsed bad news.",
         "Cut every line in which one of them tells the other something they both know.",
         "In the drill, direct the actor with what Walter wants from June, not with how he should feel.",
       ],
@@ -671,7 +671,7 @@ export const sceneDialogueLessons: Lesson[] = [
       },
       {
         type: "text",
-        body: "Hitchcock's conclusion was that, wherever possible, the audience should be **informed**. Suspense doesn't come from what the audience doesn't know. It comes from what they *do* know, and dread, while they wait to see how it will play out. Three ingredients make it work: the audience knows about a danger, they care about the people in its path, and they don't know how or when it will resolve.",
+        body: "Hitchcock's conclusion was that, wherever possible, the audience should be **informed**, unless the surprise is itself the point, as with a twist ending. Suspense doesn't come from what the audience doesn't know. It comes from what they *do* know, and dread, while they wait to see how it will play out. Three ingredients make it work: the audience knows about a danger, they care about the people in its path, and they don't know how or when it will resolve.",
       },
       {
         type: "compare",
@@ -686,7 +686,7 @@ export const sceneDialogueLessons: Lesson[] = [
         type: "example",
         title: "Dinner served from the chest",
         source: "Rope (1948), dir. Alfred Hitchcock",
-        body: "In the opening minutes of *Rope*, two young men strangle a former classmate in their Manhattan apartment and hide his body in a large wooden chest. Then they host a dinner party, with the victim's father and fiancée among the guests, and serve the buffet from the top of the chest. There's no mystery about what happened, because we watched it. Everything that follows is the bomb under the table.\n\nHitchcock staged the film in long takes designed to look almost continuous, trapping us in the room, in something close to real time, with the secret. Late in the evening, the housekeeper starts clearing the chest so she can put some books back inside it, and the camera simply holds on her unhurried trips back and forth while the party chatter carries on, until one of the killers stops her just before she lifts the lid. Nothing happens in the shot except a woman tidying up, and it's one of the tensest moments in the film.",
+        body: "In the opening minutes of *Rope*, two young men strangle a former classmate in their Manhattan apartment and hide his body in a large wooden chest. Then they host a dinner party, with the victim's father and fiancée among the guests, and serve the buffet from the top of the chest. There's no mystery about what happened, because we watched it. Everything that follows is the bomb under the table.\n\nHitchcock staged the film in long takes designed to look almost continuous, trapping us in the room, in something close to real time, with the secret. Late in the evening, the housekeeper starts clearing the chest so she can put some books back inside it, and the camera simply holds on her unhurried trips back and forth while, offscreen, the guests wonder aloud where the victim can be. She has already begun to raise the lid when one of the killers stops her and tells her it can wait until tomorrow. Nothing happens in the shot except a woman tidying up, and it's one of the tensest moments in the film.",
       },
       { type: "heading", text: "The suspense toolkit" },
       {
@@ -762,10 +762,10 @@ export const sceneDialogueLessons: Lesson[] = [
         id: "q1",
         prompt: "In Hitchcock's bomb example, what turns a surprise into suspense?",
         options: [
-          "Making the explosion bigger.",
-          "Hiding the bomb until the very last second.",
+          "Making the explosion bigger and louder, so the shock lasts long after the blast.",
+          "Hiding the bomb until the very last second, so the explosion is completely unexpected.",
           "Showing the audience the bomb, and when it will go off, while the characters remain unaware.",
-          "Having the characters talk about bombs.",
+          "Having the characters chat nervously about bombs, so the audience senses danger is coming.",
         ],
         answerIndex: 2,
         explanation:
@@ -775,14 +775,14 @@ export const sceneDialogueLessons: Lesson[] = [
         id: "q2",
         prompt: "Which scenario uses dramatic irony?",
         options: [
-          "A detective discovers a hidden clue at the same moment the audience does.",
-          "A character narrates events that happened long ago.",
-          "A villain's identity is kept secret until the last scene.",
+          "A detective finds a hidden clue at the very moment the audience does, and gasps right along with them.",
+          "An old woman narrates events from her childhood, long after they happened.",
+          "The killer's identity is kept secret from the audience until the last scene of the film.",
           "The audience knows the groom has been cheating; the bride, toasting him at the wedding, doesn't.",
         ],
         answerIndex: 3,
         explanation:
-          "Dramatic irony means the audience knows something a character doesn't, so every word of the bride's toast carries a second meaning. The first and third options share or withhold information equally with the audience, which creates mystery, not irony.",
+          "Dramatic irony means the audience knows something a character doesn't, so every word of the bride's toast carries a second meaning. In the first option the audience learns the clue when the detective does, and in the third the audience is the one kept in the dark, which creates mystery, not irony. Narration on its own, as in the second, isn't irony either.",
       },
       {
         id: "q3",
@@ -790,23 +790,23 @@ export const sceneDialogueLessons: Lesson[] = [
           "In the opening of *Inglourious Basterds*, why does the scene grow more tense even though Landa stays calm and polite?",
         options: [
           "We've been shown the family hidden under the floor, so every pleasant exchange becomes a threat.",
-          "The score tells us something terrible is about to happen.",
-          "Landa openly threatens to kill LaPadite from the start.",
-          "The scene is cut with rapid, jarring edits.",
+          "The dialogue is full of veiled threats, which we'd notice even without seeing what's under the floor.",
+          "Landa openly threatens to have LaPadite shot from the moment he walks through the door.",
+          "The scene is cut with rapid, jarring edits that keep the audience constantly off balance.",
         ],
         answerIndex: 0,
         explanation:
-          "Once the camera reveals the family below, the audience holds the secret alongside the farmer. Landa's courtesy becomes frightening precisely because we can't tell what he knows. It's the bomb under the table, with a glass of milk on top.",
+          "The threat isn't in the words, which stay courteous; it's in what we know. Once the camera reveals the family below, the audience holds the secret alongside the farmer. Landa's courtesy becomes frightening precisely because we can't tell what he knows. It's the bomb under the table, with a glass of milk on top.",
       },
       {
         id: "q4",
         prompt:
           "A thriller has a bomb, a countdown and a hero racing to defuse it, but test audiences find the sequence flat. What's the most likely missing ingredient?",
         options: [
-          "A bigger bomb.",
-          "An audience that cares about the people in danger.",
-          "A longer countdown.",
-          "More technical detail about how the bomb works.",
+          "A bigger bomb, with a blast radius that could level a city block.",
+          "An audience that actually cares about the people in danger.",
+          "A longer countdown, so the tension has more time to build.",
+          "More technical detail about the wiring and how the bomb is defused.",
         ],
         answerIndex: 1,
         explanation:
@@ -816,10 +816,10 @@ export const sceneDialogueLessons: Lesson[] = [
         id: "q5",
         prompt: "What lesson did Hitchcock draw from the bus bomb in *Sabotage*?",
         options: [
-          "That audiences prefer surprise to suspense.",
-          "That bombs should never appear on screen.",
-          "That suspense only works when there's a visible clock.",
-          "That after making the audience care so much about the boy in danger, killing him left them resentful rather than thrilled.",
+          "That audiences prefer a sudden surprise to a long stretch of suspense.",
+          "That the audience should never have been shown the bomb, so the blast could come as a total shock.",
+          "That the sequence failed because it never showed a clock counting down.",
+          "That killing the boy after making the audience care so much left them resentful, not thrilled.",
         ],
         answerIndex: 3,
         explanation:

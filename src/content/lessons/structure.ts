@@ -22,7 +22,7 @@ export const structureLessons: Lesson[] = [
       { type: "heading", text: "Beginning, middle, end, and the hinges between" },
       {
         type: "text",
-        body: "More than two thousand years ago, Aristotle observed in the *Poetics* that a complete story has a beginning, a middle and an end. It sounds obvious until you try to build one. In 1979 the screenwriting teacher Syd Field gave the idea its modern shape for film (setup, confrontation, resolution) and argued that what separates the acts isn't page count but **turning points**.",
+        body: "More than two thousand years ago, Aristotle observed in the *Poetics* that a complete story has a beginning, a middle and an end. It sounds obvious until you try to build one. In 1979 the screenwriting teacher Syd Field gave the idea its modern shape for film: setup, confrontation, resolution. He attached rough page counts to each act, but the hinges between them are what he called **plot points**: incidents that hook into the action and swing it in a new direction. The page counts are only a guide; it's these **turning points** that actually end an act.",
       },
       {
         type: "text",
@@ -125,10 +125,10 @@ export const structureLessons: Lesson[] = [
         id: "q1",
         prompt: "What makes an event a genuine turning point?",
         options: [
-          "It happens exactly 25% of the way through.",
-          "It's the most visually spectacular moment in the act.",
+          "It lands exactly a quarter of the way through, where the first act break always falls.",
+          "It's the most visually spectacular moment in the act, so the audience can't miss it.",
           "It's irreversible and changes what the protagonist wants or how they must pursue it.",
-          "It introduces a new character.",
+          "It introduces a major new character who pulls the protagonist into a different world.",
         ],
         answerIndex: 2,
         explanation:
@@ -140,9 +140,9 @@ export const structureLessons: Lesson[] = [
           "In *Star Wars*, why is Luke's decision after finding the farm destroyed as important as the destruction itself?",
         options: [
           "It shows Luke choosing to enter the conflict, which makes him an active protagonist we can root for.",
-          "It proves that Obi-Wan had been lying to him.",
-          "It sets up a romance with Leia.",
-          "It isn't important; the event does all the work.",
+          "It proves Obi-Wan was right about the Empire, so Luke finally trusts his new mentor completely.",
+          "It sets up the romance with Leia, which becomes Luke's real reason for leaving Tatooine.",
+          "It isn't important: the destruction forces him to leave, so his decision is a formality.",
         ],
         answerIndex: 0,
         explanation:
@@ -153,9 +153,9 @@ export const structureLessons: Lesson[] = [
         prompt:
           "Your Act Two feels saggy: the hero just faces one obstacle after another. What's the most targeted fix?",
         options: [
-          "Add more obstacles.",
-          "Cut Act Two down to a few minutes.",
-          "Add a long flashback.",
+          "Add more obstacles, so the hero is under constant pressure and the audience never gets bored.",
+          "Cut Act Two down hard, so the story rushes from the setup straight to the climax.",
+          "Add a long flashback to the hero's childhood, so we understand why the goal matters so much.",
           "Add a midpoint reversal that raises the stakes and changes how the hero pursues the goal.",
         ],
         answerIndex: 3,
@@ -166,19 +166,19 @@ export const structureLessons: Lesson[] = [
         id: "q4",
         prompt: "Which is the strongest Plot Point One for a heist story?",
         options: [
-          "The crew meets for drinks to discuss the idea.",
-          "The crew steals the vault's blueprints and is caught on camera, so now they must pull the job before the police connect the dots.",
-          "The safecracker agrees to think about it.",
-          "The leader buys new equipment.",
+          "The crew meets for drinks to argue over whether the job is worth the risk, and agrees to meet again.",
+          "The crew steals the vault's blueprints and is caught on camera, so they must pull the job fast.",
+          "The safecracker, who swore she'd gone straight, agrees to think about joining them.",
+          "The leader spends his savings on specialist gear and rents a warehouse to plan in.",
         ],
         answerIndex: 1,
         explanation:
-          "Stealing the blueprints on camera can't be undone. It commits the crew, adds a clock and raises the stakes in one move. The other options are preparations or maybes, and the story could still turn back after any of them.",
+          "Stealing the blueprints on camera can't be undone. It commits the crew, adds a clock and raises the stakes in one move. The other options are preparations or maybes, even the expensive ones, and the story could still turn back after any of them.",
       },
     ],
     exercise: {
       prompt:
-        "Outline a story you're working on, or a film you love, in three acts, naming each turning point. Map it in the Story Lab with the Three-Act framework, then try breaking an episode under pressure in the Writers' Room drill.",
+        "Outline a story you're working on, or a film you love, in three acts, naming each turning point. Map it in the Story Lab with the Three-Act framework, then pitch an episode break under pressure in the Break the Episode drill.",
       tips: [
         "For each act break, ask: what can't be undone after this?",
         "Make Plot Point One a choice, not just something that happens to the hero.",
@@ -219,7 +219,7 @@ export const structureLessons: Lesson[] = [
           {
             name: "Ordinary World",
             description:
-              "Ithaca. Odysseus is king, husband to Penelope and father to the infant Telemachus. It's the home he'll spend twenty years trying to get back to.",
+              "Ithaca. Odysseus is king, husband to Penelope and father to the infant Telemachus. It's the home he'll be gone from for twenty years: ten at war, and ten more trying to get back.",
           },
           {
             name: "Call to Adventure",
@@ -329,10 +329,10 @@ export const structureLessons: Lesson[] = [
         prompt:
           "Why is the moment Odysseus shouts his name at the Cyclops so important to the *Odyssey*'s structure?",
         options: [
-          "It's his only mistake in the entire poem.",
+          "It's the only real mistake he makes in the whole poem, which is what makes him a tragic hero.",
           "It brings down Poseidon's wrath and reveals the pride he must overcome on his way home.",
-          "It introduces the mentor figure.",
-          "It's the story's resolution.",
+          "It's the moment Athena first appears to him, launching the mentor relationship.",
+          "It resolves his conflict with the Cyclops, so the voyage can move on to new trials.",
         ],
         answerIndex: 1,
         explanation:
@@ -343,24 +343,24 @@ export const structureLessons: Lesson[] = [
         prompt:
           "Your fantasy script includes a refusal, a mentor and all twelve stages, yet readers call it generic. What's the likely cause?",
         options: [
-          "It needs a thirteenth stage.",
-          "The mentor should appear earlier.",
-          "The stages are being filled in because the chart demands them, rather than growing out of this particular hero's desire and flaw.",
-          "Hero's Journey stories only work in mythology.",
+          "It follows Vogler's twelve stages when it should follow Campbell's original seventeen.",
+          "The mentor arrives too late; if he appeared in the first scene, the story would move faster.",
+          "The stages tick boxes instead of growing out of this particular hero's desire and flaw.",
+          "Readers have seen the Hero's Journey so often that any story built on it now feels generic.",
         ],
         answerIndex: 2,
         explanation:
-          "The journey is a description of a deep pattern, not a checklist. When each stage exists to tick a box, the story loses the specificity that makes it feel alive. Build from your hero's want, need and flaw, then use the stages to diagnose what's missing.",
+          "The journey is a description of a deep pattern, not a checklist, and swapping in a longer checklist won't help. When each stage exists to tick a box, the story loses the specificity that makes it feel alive. Build from your hero's want, need and flaw, then use the stages to diagnose what's missing.",
       },
       {
         id: "q3",
         prompt:
           "Homer tells much of Odysseus's voyage in flashback. What does that teach us about the Hero's Journey?",
         options: [
-          "The journey describes the chronological shape of events; you're free to reveal them in a different order.",
-          "Homer didn't understand the structure.",
-          "Flashbacks break the Hero's Journey.",
-          "The Resurrection must always come first.",
+          "It maps the order of events, not the order of telling, so you can reveal them in any order.",
+          "Homer composed the poem long before anyone described the pattern, so it only loosely fits.",
+          "Flashbacks break the Hero's Journey, so the stages told in flashback don't really count.",
+          "A Hero's Journey should open with the Ordeal, then flash back to the Ordinary World.",
         ],
         answerIndex: 0,
         explanation:
@@ -371,14 +371,14 @@ export const structureLessons: Lesson[] = [
         prompt:
           "A burnt-out surgeon spends a year volunteering at a remote clinic. Which is the strongest Return with the Elixir?",
         options: [
-          "She comes home and resumes her old life unchanged.",
-          "She comes home with a suitcase full of souvenirs.",
-          "She never comes home; the story ends midway through her year away.",
-          "She returns to her hospital and changes how her team treats patients, bringing back what the clinic taught her.",
+          "She comes home rested and picks up her old life exactly where she left it.",
+          "She comes home with a suitcase of gifts and photographs for everyone who stayed behind.",
+          "She never comes home: the story ends midway through her year away, on a moment of peace.",
+          "She returns to her hospital and changes how her whole team treats patients.",
         ],
         answerIndex: 3,
         explanation:
-          "The elixir is whatever the hero brings back that transforms the ordinary world. Here it's a new way of practising medicine. Returning unchanged, or never returning, leaves the journey without a point.",
+          "The elixir is whatever the hero brings back that transforms the ordinary world. Here it's a new way of practising medicine, brought back from the clinic. Souvenirs are treasure without transformation, and returning unchanged, or never returning, leaves the journey without a point.",
       },
     ],
     exercise: {
@@ -488,9 +488,9 @@ export const structureLessons: Lesson[] = [
         prompt: "What is the Fun and Games section for?",
         options: [
           "Delivering the promise of the premise: the set pieces the audience came to see.",
-          "Comic relief that has nothing to do with the plot.",
-          "Introducing the villain's backstory.",
-          "Resolving the B Story.",
+          "Comic relief: a stretch of lighter scenes that give the audience a break from the plot.",
+          "Filling in the villain's backstory, so the midpoint confrontation carries more weight.",
+          "Wrapping up the B Story early, so the finale can focus on the main plot.",
         ],
         answerIndex: 0,
         explanation:
@@ -500,9 +500,9 @@ export const structureLessons: Lesson[] = [
         id: "q2",
         prompt: "In your 110-page thriller, the life-changing event happens on page 34. What does the beat sheet suggest?",
         options: [
-          "Nothing, because page targets are irrelevant.",
-          "Move the midpoint earlier to compensate.",
-          "Add a second catalyst later on.",
+          "Nothing: page targets are only rough guides, and thrillers often need a longer setup.",
+          "Move the midpoint earlier to compensate, so the second half of the script keeps its length.",
+          "Keep the setup, and add a second catalyst later on to lift the energy of Act Two.",
           "The catalyst is arriving late, so tighten the setup and let the story start closer to page 12.",
         ],
         answerIndex: 3,
@@ -513,23 +513,23 @@ export const structureLessons: Lesson[] = [
         id: "q3",
         prompt: "What makes a B Story more than just a subplot?",
         options: [
-          "It must be a romance.",
+          "It's always a romance, which gives the audience a break from the main plot's action.",
           "It carries the theme, the lesson the hero needs in order to win the main plot.",
-          "It only happens in Act Three.",
-          "It always features the villain.",
+          "It only begins in Act Three, when the hero needs a fresh relationship to lean on.",
+          "It follows the villain's side of the story, so we see the conflict from both directions.",
         ],
         answerIndex: 1,
         explanation:
-          "Snyder's B Story is thematic. It's the relationship where the hero confronts what they need to learn. At the Break into Three, the lesson from the B Story becomes the key that solves the A Story.",
+          "Snyder's B Story is thematic, and it can be a love interest, a mentor or a rival. It's the relationship where the hero confronts what they need to learn. At the Break into Three, the lesson from the B Story becomes the key that solves the A Story.",
       },
       {
         id: "q4",
         prompt: "Why does the old man's death in *Groundhog Day* matter to Phil's arc?",
         options: [
-          "It's the moment he discovers the time loop.",
-          "It proves the loop can be broken by force.",
+          "It's the moment Phil discovers the time loop and begins to exploit it.",
+          "It proves the loop can be broken by force, which gives Phil a plan for escape.",
           "It confronts him with something he can't control, pushing him from control toward compassion.",
-          "It resolves his romance with Rita.",
+          "It finally wins Rita over, because she sees how hard he tries to save the old man's life.",
         ],
         answerIndex: 2,
         explanation:
@@ -538,7 +538,7 @@ export const structureLessons: Lesson[] = [
     ],
     exercise: {
       prompt:
-        "Map your story against the fifteen beats in the Story Lab. Then pitch it in the Studio Pitch drill to a sceptical development executive who thinks in exactly these terms.",
+        "Map your story against the fifteen beats in the Story Lab. Then pitch it in the Studio Pitch drill to a sceptical development executive who will want to know what changes at your midpoint.",
       tips: [
         "Nail the Catalyst and Break into Two first, because they make or break your first act.",
         "Make sure your Midpoint and All Is Lost are genuine opposites.",
@@ -632,7 +632,7 @@ export const structureLessons: Lesson[] = [
       {
         type: "compare",
         weakLabel: "Event list",
-        weak: "I started a bakery. Then I got a food truck. Then we opened a second shop. Then we won an award.",
+        weak: "I baked bread for a café. Then they stopped paying me. Then I sold loaves out of my car. Then I was in the local paper. Then a landlord offered me a shop.",
         strongLabel: "Story Spine",
         strong:
           "Every day I baked bread for a café that paid me late. Until one day, they didn't pay at all. Because of that, I sold loaves out of my car to cover the rent. Because of that, the queue by my car made the local paper, and a landlord called me about an empty shop.",
@@ -663,10 +663,10 @@ export const structureLessons: Lesson[] = [
         id: "q1",
         prompt: "In the Story Circle, what does step 6, *Take*, ask of your character?",
         options: [
-          "To pay a heavy price for getting what they wanted.",
-          "To steal something from the antagonist.",
-          "To return to their familiar world.",
-          "To meet their mentor.",
+          "To pay a heavy price for getting what they wanted, a cost that pushes them to change.",
+          "To take something from the antagonist, usually the prize the plot revolves around.",
+          "To take stock of the journey so far and decide whether to go home.",
+          "To take control of their fate for the first time, instead of reacting to events.",
         ],
         answerIndex: 0,
         explanation:
@@ -676,9 +676,9 @@ export const structureLessons: Lesson[] = [
         id: "q2",
         prompt: "Why is “because of that” the engine of the Story Spine?",
         options: [
-          "It makes the story longer.",
-          "It lets the storyteller skip the climax.",
-          "It's a rule of improv etiquette.",
+          "It stretches a short story into a longer one, giving the storyteller more material.",
+          "It lets the storyteller skip the setup and jump straight to the most dramatic events.",
+          "It's an improv convention that stops performers from interrupting each other's lines.",
           "It forces each event to be caused by the one before, which turns a list into a plot.",
         ],
         answerIndex: 3,
@@ -689,10 +689,10 @@ export const structureLessons: Lesson[] = [
         id: "q3",
         prompt: "You have 90 seconds to tell your company's origin story at a pitch event. Which approach fits best?",
         options: [
-          "The twelve-stage Hero's Journey, covering every stage.",
+          "The Hero's Journey, touching on all twelve stages briefly so they see the full arc.",
           "A Story Spine: routine, disruption, consequences, climax and what has changed since.",
-          "A chronological list of milestones and metrics.",
-          "Kishōtenketsu, saving the twist for the Q&A.",
+          "A chronological list of milestones and metrics, since investors care most about traction.",
+          "Kishōtenketsu, holding the twist back for the Q&A so they have something to ask about.",
         ],
         answerIndex: 1,
         explanation:
@@ -703,10 +703,10 @@ export const structureLessons: Lesson[] = [
         prompt:
           "In your circle, the *Take* step feels weightless: your character gets what she wanted at no real cost. Using the mirror principle, which step should you also strengthen?",
         options: [
-          "Go, by sending her further from home.",
-          "Return, by making the homecoming longer.",
+          "Go, by sending her further from home so the unfamiliar world feels more dangerous.",
+          "Return, by making the homecoming longer, so the audience sees what she paid.",
           "Need, by making the desire more urgent, so that its cost hurts more.",
-          "Change, by adding a closing speech about what she learned.",
+          "Change, by adding a closing speech in which she reflects on what it cost her.",
         ],
         answerIndex: 2,
         explanation:
@@ -838,10 +838,10 @@ export const structureLessons: Lesson[] = [
         id: "q1",
         prompt: "What drives a kishōtenketsu story in place of conflict?",
         options: [
-          "A villain revealed in the final act.",
+          "A hidden villain, revealed in the last movement, who turns out to be behind everything.",
           "Contrast and juxtaposition: a twist that reframes everything we've seen.",
-          "Constant escalation of danger.",
-          "A ticking clock.",
+          "A steady escalation of danger across all four movements, peaking at the end.",
+          "A ticking clock, set in the development, that the characters race to beat.",
         ],
         answerIndex: 1,
         explanation:
@@ -851,10 +851,10 @@ export const structureLessons: Lesson[] = [
         id: "q2",
         prompt: "Why does *Memento* run its colour scenes in reverse order?",
         options: [
-          "Because nonlinear films win more festival prizes.",
-          "Because surprising the audience is the only goal of nonlinear structure.",
-          "To put the audience inside the hero's condition: like him, we never know what led to the moment we're in.",
-          "Because it removes the need for setups and payoffs.",
+          "To make the film deliberately hard to follow, so audiences come back for a second viewing.",
+          "Because a surprise ending is the only real reason to tell a story out of order.",
+          "To put us inside the hero's condition: like him, we never know what led to this moment.",
+          "Because telling a story backwards removes the need for setups and payoffs.",
         ],
         answerIndex: 2,
         explanation:
@@ -865,9 +865,9 @@ export const structureLessons: Lesson[] = [
         prompt:
           "In your mystery's climax, the detective solves the case with a clue the audience never saw. What's wrong?",
         options: [
-          "Nothing. Detectives are allowed secret knowledge.",
-          "Clues should always be revealed in dialogue.",
-          "The climax comes too early.",
+          "Nothing: detectives are experts, and audiences accept that they notice things we don't.",
+          "The clue should have been revealed in dialogue, so we hear the detective's reasoning.",
+          "The climax comes too early; the solution should be saved for the very final scene.",
           "The payoff was never set up, so it feels like cheating rather than inevitable.",
         ],
         answerIndex: 3,
@@ -879,9 +879,9 @@ export const structureLessons: Lesson[] = [
         prompt: "What makes the clock-tower flyer in *Back to the Future* such an effective setup?",
         options: [
           "It's disguised as a throwaway gag, so the payoff feels both surprising and inevitable.",
-          "It's flagged as important so the audience is sure to remember it.",
-          "Doc explains its significance in a long speech early on.",
-          "It only appears in the final act.",
+          "It's flagged as important with a close-up and music, so the audience is sure to remember it.",
+          "Doc explains its significance early on, so the audience knows exactly how it will be used.",
+          "It only appears in the final act, right when Marty needs it, so nothing gives it away.",
         ],
         answerIndex: 0,
         explanation:
@@ -892,10 +892,10 @@ export const structureLessons: Lesson[] = [
         prompt:
           "You want to open your film with the protagonist's funeral, then tell her life in flashback. What must that choice do to earn its place?",
         options: [
-          "Nothing. Nonlinear openings are always stronger.",
+          "Nothing more: opening on a funeral is striking enough to hook an audience by itself.",
           "Raise a question the audience needs answered, such as how she died or who she really was.",
-          "Replace the need for a climax.",
-          "Reveal every twist in the first scene.",
+          "Replace the climax, since the audience already knows how the story ends.",
+          "Reveal every twist in the first scene, so the flashbacks can focus on emotion.",
         ],
         answerIndex: 1,
         explanation:

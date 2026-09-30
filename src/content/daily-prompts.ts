@@ -13,20 +13,67 @@ export interface DailyChallenge extends DailyPrompt {
   rule?: DailyRule;
 }
 
+/** Named emotions for "don't name the emotion" briefs. List the inflections: matching is whole-word. */
 const EMOTION_WORDS = [
+  // Grief and sadness
   "sad",
+  "sadly",
   "sadness",
   "grief",
+  "grieve",
+  "grieves",
   "grieving",
   "grieved",
+  "mourn",
+  "mourns",
+  "mourning",
+  "mourned",
   "sorrow",
+  "sorrows",
+  "sorrowful",
+  "heartbreak",
   "heartbroken",
+  "heartache",
+  "despair",
+  "despairing",
+  "anguish",
+  "anguished",
+  "melancholy",
+  "unhappy",
+  "unhappiness",
+  "bereft",
+  "bereaved",
   "lonely",
   "loneliness",
   "depressed",
+  "depression",
   "upset",
   "miserable",
+  "misery",
   "devastated",
+  "hopeless",
+  "desolate",
+  // Other named emotions
+  "happy",
+  "happiness",
+  "joy",
+  "joyful",
+  "angry",
+  "anger",
+  "furious",
+  "afraid",
+  "scared",
+  "frightened",
+  "terrified",
+  "anxious",
+  "anxiety",
+  "guilt",
+  "guilty",
+  "ashamed",
+  "shame",
+  "regret",
+  "jealous",
+  "jealousy",
 ];
 
 export const DAILY_PROMPTS: DailyChallenge[] = [
@@ -63,7 +110,7 @@ export const DAILY_PROMPTS: DailyChallenge[] = [
     prompt: "Write the first thirty seconds of a TV cold open that ends before the audience gets an answer.",
     constraint: "120 words max. End on an unanswered question — without using a question mark.",
     skill: "hook",
-    rule: { words: { max: 120 } },
+    rule: { words: { max: 120 }, noQuestionMarks: true },
   },
   {
     id: "back-cover",
@@ -90,12 +137,13 @@ export const DAILY_PROMPTS: DailyChallenge[] = [
     id: "story-spine",
     title: "Once Upon a Time",
     prompt:
-      "Tell a whole story on the Story Spine: Once upon a time… Every day… One day… Because of that… Because of that… Until finally… Ever since then…",
-    constraint: "Use every Story Spine opening, in order. 150 words max.",
+      "Tell a whole story on the Story Spine: Once upon a time… Every day… Until one day… Because of that… Because of that… Until finally… And ever since then…",
+    constraint: "Use every Story Spine opening, in order — “Because of that” twice. 150 words max.",
     skill: "structure",
     rule: {
       words: { max: 150 },
-      required: ["once upon a time", "every day", "one day", "because of that", "until finally", "ever since"],
+      // "One day", not "Until one day": the beat is what matters, and "until" often lands a clause earlier.
+      required: ["once upon a time", "every day", "one day", "because of that", "because of that", "until finally", "ever since"],
       requiredInOrder: true,
     },
   },
@@ -127,7 +175,7 @@ export const DAILY_PROMPTS: DailyChallenge[] = [
     id: "kishotenketsu",
     title: "A Twist Without a Fight",
     prompt: "Tell a four-part kishōtenketsu story — introduction, development, twist, reconciliation — about a vending machine.",
-    constraint: "Four short paragraphs. No villain, no fight: the twist does the work.",
+    constraint: "Four short paragraphs, 160 words max. No villain, no fight: the twist does the work.",
     skill: "structure",
     rule: { paragraphs: { min: 4, max: 4 }, words: { max: 160 } },
   },
@@ -140,7 +188,8 @@ export const DAILY_PROMPTS: DailyChallenge[] = [
     title: "Who Lives Here",
     prompt: "Describe a room so we know exactly who lives there — without describing them.",
     constraint: "100 words max. No people appear, and no adjectives about personality.",
-    skill: "character",
+    // Scored as visual storytelling: with no people on the page, character-in-action heuristics don't apply.
+    skill: "visual",
     rule: { words: { max: 100 } },
   },
   {
@@ -232,7 +281,22 @@ export const DAILY_PROMPTS: DailyChallenge[] = [
     rule: {
       dialogueOnly: true,
       lines: { min: 6, max: 10 },
-      forbidden: ["want", "wants", "wanted", "need", "needs", "needed", "feel", "feels", "feeling", "felt"],
+      forbidden: [
+        "want",
+        "wants",
+        "wanted",
+        "wanting",
+        "wanna",
+        "need",
+        "needs",
+        "needed",
+        "needing",
+        "feel",
+        "feels",
+        "feeling",
+        "feelings",
+        "felt",
+      ],
       forbiddenLabel: "No “want”, “need” or “feel”",
     },
   },
@@ -249,16 +313,21 @@ export const DAILY_PROMPTS: DailyChallenge[] = [
     title: "One-Word Answers",
     prompt:
       "A parent tries to find out how a teenager's day went. The teenager answers in single words — and still tells us everything.",
-    constraint: "Dialogue only, up to 12 lines. The teenager never says more than one word per line.",
+    constraint: "Dialogue only, up to 12 lines. Label the teenager's lines TEEN: — and the teenager never says more than one word per line.",
     skill: "dialogue",
-    rule: { dialogueOnly: true, lines: { max: 12 } },
+    rule: {
+      dialogueOnly: true,
+      lines: { max: 12 },
+      speakerMaxWords: { speakers: ["teen", "teenager"], maxWords: 1, label: "TEEN" },
+    },
   },
   {
     id: "the-voicemail",
     title: "The Voicemail",
     prompt: "Write a voicemail someone leaves — and regrets before they hang up.",
     constraint: "One speaker, 90 words max. Let us hear the exact moment they realise.",
-    skill: "dialogue",
+    // A spoken monologue to "you": delivery heuristics fit; two-character dialogue ones don't.
+    skill: "delivery",
     rule: { words: { max: 90 } },
   },
   {
@@ -301,9 +370,17 @@ export const DAILY_PROMPTS: DailyChallenge[] = [
     id: "three-shots",
     title: "Three Shots",
     prompt: "Tell a complete story in three shots: a wide, a medium and a close-up.",
-    constraint: "Three lines, one per shot, each naming its shot size.",
+    constraint: "Three lines, one per shot, each naming its shot size (wide or WS, medium or MS, close-up or CU) — in whatever order tells the story.",
     skill: "visual",
-    rule: { lines: { min: 3, max: 3 }, required: ["wide", "medium", "close"], requiredInOrder: true },
+    rule: {
+      lines: { min: 3, max: 3 },
+      // The abbreviations the Shot Sizes lesson teaches count too; order is the storyteller's choice.
+      required: [
+        ["wide", "ws", "ews", "long shot", "ls", "els", "establishing"],
+        ["medium", "ms", "mcu", "mid shot"],
+        ["close", "closeup", "cu", "ecu", "bcu"],
+      ],
+    },
   },
   {
     id: "the-object",
@@ -391,7 +468,13 @@ export const DAILY_PROMPTS: DailyChallenge[] = [
     prompt: "Open a true story at a storytelling night so the whole room goes quiet.",
     constraint: "First person, 60 words max. Drop us into a moment — no “So…”, no throat-clearing.",
     skill: "delivery",
-    rule: { words: { max: 60 }, forbidden: ["basically", "um", "kind of", "sort of"], forbiddenLabel: "No throat-clearing" },
+    rule: {
+      words: { max: 60 },
+      forbiddenOpeners: ["so", "well", "okay", "ok", "um", "uh"],
+      forbiddenOpenersLabel: "Don't open with “So…”",
+      forbidden: ["basically", "um", "uh", "kind of", "sort of"],
+      forbiddenLabel: "No throat-clearing",
+    },
   },
 ];
 

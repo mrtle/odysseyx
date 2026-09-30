@@ -4,7 +4,7 @@
  * countdown to the next challenge. Pure — safe for server and client.
  */
 import { DAILY_PROMPTS, type DailyChallenge } from "@/content/daily-prompts";
-import { paragraphs, sentences } from "@/lib/demo/text";
+import { normalizeForMatch, paragraphs, sentences, words } from "@/lib/demo/text";
 import type { CoachMode, DailyEntry } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -39,10 +39,25 @@ export interface DailyRule {
   forbidden?: string[];
   /** Label for the banned-words check; defaults to listing the first few words. */
   forbiddenLabel?: string;
-  /** Words or phrases that must appear. */
-  required?: string[];
+  /**
+   * Words or phrases that must appear. An array entry is a set of
+   * alternatives (e.g. `["close", "cu"]`); list a phrase twice to require it
+   * twice.
+   */
+  required?: (string | readonly string[])[];
   /** Whether `required` phrases must appear in the listed order. */
   requiredInOrder?: boolean;
+  /** No question marks anywhere. */
+  noQuestionMarks?: boolean;
+  /** The piece must not open with any of these words or phrases (e.g. "so"). */
+  forbiddenOpeners?: string[];
+  /** Label for the openers check; defaults to naming the first one. */
+  forbiddenOpenersLabel?: string;
+  /**
+   * Lines labelled with one of `speakers` (`NAME: line`, case-insensitive)
+   * may hold at most `maxWords` words each; at least one such line must exist.
+   */
+  speakerMaxWords?: { speakers: string[]; maxWords: number; label: string };
 }
 
 export interface ConstraintCheck {
@@ -58,11 +73,22 @@ export interface ConstraintCheck {
 // Counting
 // ---------------------------------------------------------------------------
 
-const WORDISH = /[A-Za-z0-9À-ɏ]/;
+const WORDISH = /[\p{L}\p{N}]/u;
+/** Scripts written without spaces between words (Chinese, Japanese, Thai…). */
+const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
 
-/** Words as a writer counts them: whitespace-separated tokens with at least one letter or digit. */
+/**
+ * Words as a writer counts them: whitespace-separated tokens with at least
+ * one letter or digit, in any script. Runs of unspaced scripts are split
+ * with a word segmenter, so "赤ちゃんの靴" isn't one word.
+ */
 export function countWords(text: string): number {
-  return (text.match(/\S+/g) ?? []).filter((token) => WORDISH.test(token)).length;
+  let n = 0;
+  for (const token of text.match(/\S+/g) ?? []) {
+    if (!WORDISH.test(token)) continue;
+    n += UNSPACED.test(token) ? Math.max(1, words(token).length) : 1;
+  }
+  return n;
 }
 
 export function nonEmptyLines(text: string): string[] {
@@ -77,18 +103,21 @@ export function countParagraphs(text: string): number {
   return blocks.length > 1 ? blocks.length : nonEmptyLines(text).length;
 }
 
-/** Lowercased, punctuation-stripped text padded with spaces, for whole-word matching. */
-function normalizeForMatch(text: string): string {
-  return ` ${text
-    .toLowerCase()
-    .replace(/[‘’]/g, "'")
-    .replace(/[^a-z0-9' ]+/g, " ")
-    .replace(/\s+/g, " ")} `;
+// Matching uses the demo coach's shared normaliser (lower-case, possessives reduced — "daughter's" → "daughter" —
+// punctuation and hyphens to spaces, space-padded), so the live indicators and the coach agree.
+
+function phraseIndex(normalized: string, phrase: string, from = 0): number {
+  const needle = normalizeForMatch(phrase);
+  return needle.trim() ? normalized.indexOf(needle, from) : -1;
 }
 
-function phraseIndex(normalized: string, phrase: string): number {
+/** Start positions of every whole-word occurrence of `phrase`. */
+function phrasePositions(normalized: string, phrase: string): number[] {
   const needle = normalizeForMatch(phrase);
-  return needle.trim() ? normalized.indexOf(needle) : -1;
+  if (!needle.trim()) return [];
+  const positions: number[] = [];
+  for (let i = normalized.indexOf(needle); i >= 0; i = normalized.indexOf(needle, i + 1)) positions.push(i);
+  return positions;
 }
 
 /** Phrases from `terms` that appear as whole words in `text`, in list order. */
@@ -155,14 +184,125 @@ function rangeCheck(id: string, noun: string, value: number, range: CountRange):
   return { id, label: rangeLabel(range, noun), met: inRange(value, range), detail };
 }
 
+function joinList(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
 function quoteList(items: string[]): string {
-  const quoted = items.map((item) => `“${item}”`);
-  if (quoted.length <= 1) return quoted.join("");
-  return `${quoted.slice(0, -1).join(", ")} and ${quoted[quoted.length - 1]}`;
+  return joinList(items.map((item) => `“${item}”`));
 }
 
 function wordsIn(sentence: string): number {
   return countWords(sentence);
+}
+
+/** The first `maxWords` words of `text`, with an ellipsis when cut. */
+function clip(text: string, maxWords: number): string {
+  const parts = text.split(/\s+/);
+  return parts.length > maxWords ? `${parts.slice(0, maxWords).join(" ")}…` : text;
+}
+
+function capitalize(text: string): string {
+  return text ? text[0].toUpperCase() + text.slice(1) : text;
+}
+
+/** Display name of a required entry: the phrase, or the first of its alternatives. */
+function requiredName(entry: string | readonly string[]): string {
+  return typeof entry === "string" ? entry : (entry[0] ?? "");
+}
+
+function alternatives(entry: string | readonly string[]): readonly string[] {
+  return typeof entry === "string" ? [entry] : entry;
+}
+
+/**
+ * Required phrases. Every entry must be present (as many times as it's
+ * listed); in order means each one is found *after* the previous match, so
+ * a phrase that also turns up earlier in passing ("hoped one day to…")
+ * doesn't break an otherwise ordered piece.
+ */
+function requiredCheck(required: readonly (string | readonly string[])[], inOrder: boolean, text: string): ConstraintCheck {
+  const normalized = normalizeForMatch(text);
+
+  // Presence: count distinct match positions per entry, against how many times the entry is listed.
+  const wanted = new Map<string, { entry: string | readonly string[]; times: number }>();
+  for (const entry of required) {
+    const key = alternatives(entry).join("|");
+    const slot = wanted.get(key);
+    if (slot) slot.times++;
+    else wanted.set(key, { entry, times: 1 });
+  }
+  const missing: string[] = [];
+  for (const { entry, times } of wanted.values()) {
+    const found = new Set(alternatives(entry).flatMap((alt) => phrasePositions(normalized, alt))).size;
+    if (found >= times) continue;
+    const name = `“${requiredName(entry)}”`;
+    missing.push(times === 1 ? name : `${name} (${found === 0 ? `${times} times` : `${times - found} more`})`);
+  }
+
+  let ordered = true;
+  if (inOrder && missing.length === 0) {
+    let from = 0;
+    for (const entry of required) {
+      const hits = alternatives(entry)
+        .map((alt) => ({ at: phraseIndex(normalized, alt, from), length: normalizeForMatch(alt).length }))
+        .filter((hit) => hit.at >= 0);
+      if (hits.length === 0) {
+        ordered = false;
+        break;
+      }
+      const next = hits.reduce((a, b) => (b.at < a.at ? b : a));
+      // Resume on the match's trailing space, which the next phrase's leading space can reuse.
+      from = next.at + next.length - 1;
+    }
+  }
+
+  const met = missing.length === 0 && ordered;
+  return {
+    id: "required",
+    label: inOrder ? "Key phrases, in order" : "Key phrases",
+    met,
+    detail:
+      missing.length > 0
+        ? `Missing ${joinList(missing)}`
+        : met
+          ? `All ${required.length} present`
+          : "All present, but out of order",
+  };
+}
+
+/** The forbidden opener the piece starts with, or null. */
+function openingPhrase(text: string, openers: readonly string[]): string | null {
+  const start = normalizeForMatch(text).slice(0, 60);
+  return openers.find((opener) => start.startsWith(normalizeForMatch(opener))) ?? null;
+}
+
+const SPEAKER_LINE = /^([A-Za-z][A-Za-z.'’ -]{0,32}?)\s*(?:\([^)]*\))?\s*:\s*(.*)$/;
+
+function speakerCheck(rule: NonNullable<DailyRule["speakerMaxWords"]>, text: string): ConstraintCheck {
+  const names = new Set(rule.speakers.map((name) => name.toLowerCase()));
+  const spoken: { line: string; words: number }[] = [];
+  for (const line of nonEmptyLines(text)) {
+    const match = SPEAKER_LINE.exec(line);
+    if (!match || !names.has(match[1].trim().toLowerCase())) continue;
+    const speech = match[2].replace(/\([^)]*\)/g, " ").trim();
+    spoken.push({ line: speech, words: countWords(speech) });
+  }
+  const label = `${rule.label}: ${rule.maxWords === 1 ? "one word" : `${rule.maxWords} words max`} per line`;
+  if (spoken.length === 0) {
+    return { id: "speaker-words", label, met: false, detail: `No lines labelled ${rule.label}: yet` };
+  }
+  const over = spoken.filter((s) => s.words > rule.maxWords);
+  return {
+    id: "speaker-words",
+    label,
+    met: over.length === 0,
+    detail:
+      over.length === 0
+        ? `${plural(spoken.length, `${rule.label} line`)}, all within the limit`
+        : `“${clip(over[0].line, 8)}” is ${plural(over[0].words, "word")}`,
+  };
 }
 
 /**
@@ -225,6 +365,28 @@ export function checkConstraints(rule: DailyRule | undefined, text: string): Con
     });
   }
 
+  if (rule.speakerMaxWords) checks.push(speakerCheck(rule.speakerMaxWords, text));
+
+  if (rule.noQuestionMarks) {
+    const marks = text.match(/[?？¿]/g)?.length ?? 0;
+    checks.push({
+      id: "no-question-marks",
+      label: "No question marks",
+      met: marks === 0,
+      detail: marks === 0 ? "None used" : `${plural(marks, "question mark")} used`,
+    });
+  }
+
+  if (rule.forbiddenOpeners?.length) {
+    const opener = openingPhrase(text, rule.forbiddenOpeners);
+    checks.push({
+      id: "forbidden-opener",
+      label: rule.forbiddenOpenersLabel ?? `Don't open with “${capitalize(rule.forbiddenOpeners[0])}…”`,
+      met: opener === null,
+      detail: opener === null ? "Straight into the moment" : `Opens with “${capitalize(opener)}”`,
+    });
+  }
+
   if (rule.forbidden?.length) {
     const found = findTerms(text, rule.forbidden);
     const shown = rule.forbidden.filter((w) => !/\s/.test(w)).slice(0, 3);
@@ -236,24 +398,7 @@ export function checkConstraints(rule: DailyRule | undefined, text: string): Con
     });
   }
 
-  if (rule.required?.length) {
-    const normalized = normalizeForMatch(text);
-    const positions = rule.required.map((phrase) => phraseIndex(normalized, phrase));
-    const missing = rule.required.filter((_, i) => positions[i] < 0);
-    const ordered = positions.every((pos, i) => i === 0 || pos > positions[i - 1]);
-    const met = missing.length === 0 && (!rule.requiredInOrder || ordered);
-    checks.push({
-      id: "required",
-      label: rule.requiredInOrder ? "Key phrases, in order" : "Key phrases",
-      met,
-      detail:
-        missing.length > 0
-          ? `Missing ${quoteList(missing)}`
-          : met
-            ? `All ${rule.required.length} present`
-            : "All present, but out of order",
-    });
-  }
+  if (rule.required?.length) checks.push(requiredCheck(rule.required, Boolean(rule.requiredInOrder), text));
 
   return checks;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { Clapperboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,6 +30,12 @@ const MAX_SCENE = 12000;
 const MAX_INTENT = 1000;
 const MAX_SHOTS = 4000;
 
+/** The Shot Planner reading "Run again" (`?from=`) from the URL on the client. Render inside <Suspense>. */
+export function ShotsToolFromUrl() {
+  const from = useSearchParams().get("from");
+  return <ShotsTool fromEntryId={from ?? undefined} />;
+}
+
 /** Shot Planner: scene, intent and shot ideas in; a shot plan out. */
 export function ShotsTool({ fromEntryId }: { fromEntryId?: string }) {
   const { ready, entry } = useEntryPrefill("shots", fromEntryId);
@@ -52,10 +59,12 @@ function ShotsWorkbench({ initial }: { initial: { scene: string; intent: string;
   const [intent, setIntent] = useState(initial.intent);
   const [userShots, setUserShots] = useState(initial.userShots);
   const [showValidation, setShowValidation] = useState(false);
-  const [result, setResult] = useState<(ShotsResponse & { entryId: string; title: string }) | null>(null);
+  const [result, setResult] = useState<(ShotsResponse & { entryId: string; runId: number; xpGained: number; replaced: boolean; title: string }) | null>(null);
   const request = useLabRequest<ShotsRequest, ShotsResponse>("/api/lab/shots");
   const addLabEntry = useAppStore((s) => s.addLabEntry);
-  const headingRef = useRevealOnChange<HTMLHeadingElement>(result?.entryId);
+  const headingRef = useRevealOnChange<HTMLHeadingElement>(result?.runId);
+  /** Counts submissions, so a re-run that updates the same saved entry still reveals the fresh result. */
+  const runs = useRef(0);
 
   const trimmed = scene.trim();
   const words = wordCount(scene);
@@ -89,7 +98,7 @@ function ShotsWorkbench({ initial }: { initial: { scene: string; intent: string;
       result: data.plan,
       mode: data.mode,
     });
-    setResult({ ...data, entryId: saved.id, title });
+    setResult({ ...data, entryId: saved.id, runId: ++runs.current, xpGained: saved.xpGained, replaced: saved.replaced, title });
   }
 
   function onSubmit(e: FormEvent) {
@@ -137,7 +146,7 @@ function ShotsWorkbench({ initial }: { initial: { scene: string; intent: string;
               placeholder={"INT. KITCHEN - NIGHT\n\nRain on the windows. MARA stands at the stove...\n\nScreenplay format or plain prose both work."}
               aria-describedby={`${id}-scene-hint${invalid ? ` ${id}-scene-error` : ""}`}
               aria-invalid={invalid || undefined}
-              className={cn("field screenplay mt-2 min-h-72 resize-y text-[0.95rem] leading-6", invalid && "border-wine-500/70")}
+              className={cn("field screenplay mt-2 min-h-72 resize-y text-base leading-6 sm:text-[0.95rem]", invalid && "border-wine-500/70")}
             />
             <FieldMeta
               id={`${id}-scene-hint`}
@@ -225,7 +234,7 @@ function ShotsWorkbench({ initial }: { initial: { scene: string; intent: string;
           <RequestError message={request.error} onRetry={() => void submit()} onDismiss={request.clearError} />
         ) : result ? (
           <>
-            <SavedNotice entryId={result.entryId} />
+            <SavedNotice entryId={result.entryId} xpGained={result.xpGained} replaced={result.replaced} />
             <ShotPlanResult plan={result.plan} mode={result.mode} title={result.title} headingRef={headingRef} />
           </>
         ) : null}

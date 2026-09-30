@@ -5,7 +5,18 @@ import { Check } from "lucide-react";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { cn } from "@/lib/utils";
 
-const STORAGE_PREFIX = "odysseusx-lab-plan:";
+/** localStorage key prefix for revision-plan ticks, one key per saved entry id. */
+export const REVISION_PROGRESS_PREFIX = "odysseusx-lab-plan:";
+const STORAGE_PREFIX = REVISION_PROGRESS_PREFIX;
+
+/** Drop the remembered ticks for a saved entry (call when the entry is deleted). */
+export function forgetRevisionProgress(entryId: string): void {
+  try {
+    window.localStorage.removeItem(STORAGE_PREFIX + entryId);
+  } catch {
+    // storage unavailable — nothing was remembered
+  }
+}
 
 function readChecked(storageKey: string | undefined, length: number): boolean[] {
   const empty = Array.from({ length }, () => false);

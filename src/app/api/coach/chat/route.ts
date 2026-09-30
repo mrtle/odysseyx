@@ -3,8 +3,8 @@
  * streamed as plain text. The `x-odysseusx-mode` header says whether Claude
  * ("live") or the offline demo persona ("demo") is speaking.
  */
-import { coachErrorResponse, coachMode, streamText } from "@/lib/ai/client";
-import { buildDirectorNote, buildPersonaSystemPrompt, toAnthropicMessages } from "@/lib/ai/prompts/practice";
+import { MODEL, coachErrorResponse, coachMode, streamText } from "@/lib/ai/client";
+import { buildDirectorNote, buildPersonaSystemPrompt, supportsSystemMessages, toAnthropicMessages } from "@/lib/ai/prompts/practice";
 import { CoachChatRequestSchema } from "@/lib/ai/schemas";
 import { demoPersonaReply } from "@/lib/demo/practice";
 import { parseBody } from "@/lib/request";
@@ -73,8 +73,12 @@ export async function POST(req: Request) {
   try {
     const stream = await streamText({
       system: buildPersonaSystemPrompt(scenario, profile),
-      messages: toAnthropicMessages(messages, { directorNote: buildDirectorNote(scenario, messages) }),
+      messages: toAnthropicMessages(messages, {
+        directorNote: buildDirectorNote(scenario, messages),
+        noteAsSystem: supportsSystemMessages(MODEL),
+      }),
       effort: "low",
+      signal: req.signal,
     });
     return new Response(stream, { headers: streamHeaders(mode) });
   } catch (err) {

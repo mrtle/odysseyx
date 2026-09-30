@@ -1,6 +1,6 @@
 "use client";
 
-import type { Ref } from "react";
+import { useId, useState, type ReactNode, type Ref } from "react";
 import { BookOpen, Camera, ClipboardList, Download, MessageSquareQuote, Volume2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,25 +9,135 @@ import { DemoNotice } from "@/components/ui/demo-notice";
 import type { Shot, ShotPlan } from "@/lib/ai/schemas";
 import { CAMERA_ANGLE_INFO, CAMERA_MOVEMENT_INFO, SHOT_FRAMING_INFO, SHOT_SIZE_INFO, type FilmTerm } from "@/lib/film";
 import type { CoachMode } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { CopyButton } from "./copy-button";
 import { SectionHeading } from "./lab-ui";
 import { fileSlug, shotPlanToCsv, shotPlanToText } from "./shot-export";
 
-function Term({ term, className }: { term: FilmTerm; className?: string }) {
+/**
+ * A camera term that explains itself on demand: a button that toggles the
+ * term's meaning inline (tap, click or Enter/Space), so the explanation
+ * works on touch screens and for keyboard and screen-reader users — not
+ * just as a hover tooltip. The `title` stays as a mouse-hover shortcut.
+ */
+function TermToggle({ term, children, className }: { term: FilmTerm; children?: ReactNode; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
   return (
-    <span title={term.effect} className={className ?? "cursor-help underline decoration-sea-500 decoration-dotted underline-offset-4"}>
-      {term.label}
+    <>
+      <button
+        type="button"
+        title={term.effect}
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && open) {
+            e.stopPropagation();
+            setOpen(false);
+          }
+        }}
+        className={cn("cursor-help rounded text-left", className ?? TERM_TEXT)}
+      >
+        {children ?? term.label}
+      </button>
+      <span id={id} hidden={!open} className="mt-1 block max-w-[14rem] text-xs leading-snug font-normal text-sea-300">
+        {term.effect}
+      </span>
+    </>
+  );
+}
+
+const TERM_TEXT = "underline decoration-sea-500 decoration-dotted underline-offset-4 hover:decoration-bronze-300";
+
+function SizeLabel({ shot }: { shot: Shot }) {
+  const info = SHOT_SIZE_INFO[shot.size];
+  return (
+    <span className="inline-flex flex-col leading-tight">
+      <span className="font-display text-base font-bold text-bronze-300">{info.abbr ?? info.label}</span>
+      <span className="text-[11px] text-sea-300">{info.label}</span>
     </span>
   );
 }
 
-function SizeTag({ shot }: { shot: Shot }) {
-  const info = SHOT_SIZE_INFO[shot.size];
+/** A shot as a card (narrow screens): the camera terms share one explanation line below them. */
+function ShotCard({ shot }: { shot: Shot }) {
+  const id = useId();
+  const [openTerm, setOpenTerm] = useState<string | null>(null);
+  const size = SHOT_SIZE_INFO[shot.size];
+  const terms: { key: string; term: FilmTerm }[] = [
+    { key: "framing", term: SHOT_FRAMING_INFO[shot.framing] },
+    { key: "angle", term: CAMERA_ANGLE_INFO[shot.angle] },
+    { key: "movement", term: CAMERA_MOVEMENT_INFO[shot.movement] },
+  ];
+  const active = openTerm === "size" ? size : terms.find((t) => t.key === openTerm)?.term ?? null;
+  const explanationId = `${id}-term`;
+  const toggle = (key: string) => setOpenTerm((current) => (current === key ? null : key));
+  const toggleProps = (key: string, term: FilmTerm) => ({
+    type: "button" as const,
+    title: term.effect,
+    "aria-expanded": openTerm === key,
+    "aria-controls": explanationId,
+    onClick: () => toggle(key),
+  });
+
   return (
-    <span title={info.effect} className="inline-flex cursor-help flex-col leading-tight">
-      <span className="font-display text-base font-bold text-bronze-300">{info.abbr ?? info.label}</span>
-      <span className="text-[11px] text-sea-300">{info.label}</span>
-    </span>
+    <li
+      className="rounded-xl border border-sea-700/80 bg-sea-900/60 p-4"
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && openTerm) setOpenTerm(null);
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sea-800 font-display text-lg font-bold text-sea-200">
+          <span className="sr-only">Shot </span>
+          {shot.number}
+        </span>
+        <div className="min-w-0 flex-1">
+          <button {...toggleProps("size", size)} className="cursor-help rounded text-left">
+            <SizeLabel shot={shot} />
+          </button>
+          <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+            {terms.map(({ key, term }) => (
+              <button
+                key={key}
+                {...toggleProps(key, term)}
+                className={cn(
+                  "cursor-help rounded-md border px-2 py-0.5 transition-colors",
+                  openTerm === key ? "border-bronze-400/60 bg-bronze-500/15 text-bronze-200" : "border-sea-600/80 bg-sea-800/60 text-sea-200 hover:border-sea-500",
+                )}
+              >
+                {term.label}
+              </button>
+            ))}
+            <span className="rounded-md border border-sea-700 px-2 py-0.5 text-sea-300">{shot.lens}</span>
+          </div>
+          <p id={explanationId} hidden={!active} className="mt-2 text-xs leading-relaxed text-sea-300">
+            {active ? (
+              <>
+                <span className="font-semibold text-sea-100">{active.label}: </span>
+                {active.effect}
+              </>
+            ) : null}
+          </p>
+        </div>
+      </div>
+      <p className="mt-3 text-sm font-medium text-sea-100">{shot.subject}</p>
+      <p className="mt-0.5 text-sm text-sea-300">{shot.action}</p>
+      <p className="mt-3 text-sm leading-relaxed text-sea-200">
+        <span className="font-semibold text-bronze-200">Why: </span>
+        {shot.purpose}
+      </p>
+      {shot.sound ? (
+        <p className="mt-2 flex gap-2 text-sm text-sea-300">
+          <Volume2 className="mt-0.5 size-4 shrink-0 text-aegean-300" aria-hidden />
+          <span>
+            <span className="sr-only">Sound: </span>
+            {shot.sound}
+          </span>
+        </p>
+      ) : null}
+    </li>
   );
 }
 
@@ -107,7 +217,7 @@ export function ShotPlanResult({
 
   return (
     <div className="animate-rise space-y-8">
-      <Card className="relative overflow-hidden">
+      <Card className="relative overflow-clip">
         <div aria-hidden className="pointer-events-none absolute -top-24 -right-20 size-64 rounded-full bg-gradient-to-br from-wine-500/20 to-transparent blur-2xl" />
         <div className="relative">
           <div className="flex flex-wrap items-center gap-2">
@@ -116,7 +226,7 @@ export function ShotPlanResult({
               {plan.shots.length} {plan.shots.length === 1 ? "shot" : "shots"}
             </Badge>
           </div>
-          <h2 ref={headingRef} tabIndex={-1} className="mt-2 scroll-mt-24 font-display text-xl leading-snug font-semibold text-sea-100 focus:outline-none sm:text-2xl">
+          <h2 ref={headingRef} tabIndex={-1} className="mt-2 scroll-mt-12 font-display text-xl leading-snug font-semibold text-sea-100 focus:outline-none sm:text-2xl">
             {plan.sceneSummary}
           </h2>
           <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -150,7 +260,7 @@ export function ShotPlanResult({
           id="shot-list"
           icon={<Camera className="size-4" />}
           title="Shot list"
-          description="Hover or tap a camera term for what it communicates."
+          description="Tap or click a camera term to see what it communicates."
           actions={
             <>
               <CopyButton text={shotPlanToText(plan, exportTitle)} label="Copy as text" variant="secondary" />
@@ -167,8 +277,14 @@ export function ShotPlanResult({
         />
 
         {/* Wide screens: a table */}
-        <div className="hidden overflow-x-auto rounded-2xl border border-sea-700/80 bg-sea-900/60 xl:block">
-          <table className="w-full min-w-[64rem] border-collapse text-left text-sm">
+        {/* Sized to fit the xl content width (974px at a 1280px window); it only scrolls on unusually narrow xl layouts, and the scroller is focusable so it can be scrolled from the keyboard. */}
+        <div
+          role="region"
+          aria-labelledby="shot-list"
+          tabIndex={0}
+          className="hidden overflow-x-auto rounded-2xl border border-sea-700/80 bg-sea-900/60 focus-visible:border-bronze-400/60 xl:block"
+        >
+          <table className="w-full min-w-[56rem] border-collapse text-left text-sm">
             <caption className="sr-only">Shot list with {plan.shots.length} shots</caption>
             <thead>
               <tr className="border-b border-sea-700 text-[11px] tracking-[0.14em] text-sea-400 uppercase">
@@ -190,16 +306,18 @@ export function ShotPlanResult({
                     {s.number}
                   </th>
                   <td className="px-3 py-3">
-                    <SizeTag shot={s} />
+                    <TermToggle term={SHOT_SIZE_INFO[s.size]} className="">
+                      <SizeLabel shot={s} />
+                    </TermToggle>
                   </td>
                   <td className="px-3 py-3 text-sea-200">
-                    <Term term={SHOT_FRAMING_INFO[s.framing]} />
+                    <TermToggle term={SHOT_FRAMING_INFO[s.framing]} />
                   </td>
                   <td className="px-3 py-3 text-sea-200">
-                    <Term term={CAMERA_ANGLE_INFO[s.angle]} />
+                    <TermToggle term={CAMERA_ANGLE_INFO[s.angle]} />
                   </td>
                   <td className="px-3 py-3 text-sea-200">
-                    <Term term={CAMERA_MOVEMENT_INFO[s.movement]} />
+                    <TermToggle term={CAMERA_MOVEMENT_INFO[s.movement]} />
                   </td>
                   <td className="px-3 py-3 text-sea-300">{s.lens}</td>
                   <td className="px-3 py-3">
@@ -217,38 +335,7 @@ export function ShotPlanResult({
         {/* Narrow screens: cards */}
         <ol className="grid gap-3 md:grid-cols-2 xl:hidden" aria-label="Shots">
           {plan.shots.map((s) => (
-            <li key={s.number} className="rounded-xl border border-sea-700/80 bg-sea-900/60 p-4">
-              <div className="flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sea-800 font-display text-lg font-bold text-sea-200">
-                  <span className="sr-only">Shot </span>
-                  {s.number}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <SizeTag shot={s} />
-                  <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                    {[SHOT_FRAMING_INFO[s.framing], CAMERA_ANGLE_INFO[s.angle], CAMERA_MOVEMENT_INFO[s.movement]].map((t) => (
-                      <Term key={t.label} term={t} className="cursor-help rounded-md border border-sea-600/80 bg-sea-800/60 px-2 py-0.5 text-sea-200" />
-                    ))}
-                    <span className="rounded-md border border-sea-700 px-2 py-0.5 text-sea-300">{s.lens}</span>
-                  </div>
-                </div>
-              </div>
-              <p className="mt-3 text-sm font-medium text-sea-100">{s.subject}</p>
-              <p className="mt-0.5 text-sm text-sea-300">{s.action}</p>
-              <p className="mt-3 text-sm leading-relaxed text-sea-200">
-                <span className="font-semibold text-bronze-200">Why: </span>
-                {s.purpose}
-              </p>
-              {s.sound ? (
-                <p className="mt-2 flex gap-2 text-sm text-sea-300">
-                  <Volume2 className="mt-0.5 size-4 shrink-0 text-aegean-300" aria-hidden />
-                  <span>
-                    <span className="sr-only">Sound: </span>
-                    {s.sound}
-                  </span>
-                </p>
-              ) : null}
-            </li>
+            <ShotCard key={s.number} shot={s} />
           ))}
         </ol>
 

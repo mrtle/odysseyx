@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { ArrowLeft, BookOpen, CircleCheck, Compass, FileText, Quote, RotateCcw, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Card, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { DemoNotice } from "@/components/ui/demo-notice";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { SkillBars } from "@/components/ui/skill-bars";
@@ -32,9 +32,25 @@ export interface ScorecardProps {
   transcriptHref: string;
   /** Move focus to the headline when the scorecard appears. */
   autoFocus?: boolean;
+  /** 1 when the scorecard is the whole page (the headline is the page's h1); 2 under a page header. */
+  headingLevel?: 1 | 2;
 }
 
-export function Scorecard({ scenario, evaluation, mode, xpGained, lessonPicks, onTryAgain, transcriptHref, autoFocus = false }: ScorecardProps) {
+const SECTION_TITLE = "font-display text-lg font-semibold text-sea-100";
+
+export function Scorecard({
+  scenario,
+  evaluation,
+  mode,
+  xpGained,
+  lessonPicks,
+  onTryAgain,
+  transcriptHref,
+  autoFocus = false,
+  headingLevel = 2,
+}: ScorecardProps) {
+  const Headline = headingLevel === 1 ? "h1" : "h2";
+  const SectionTitle = headingLevel === 1 ? "h2" : "h3";
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (autoFocus) headingRef.current?.focus({ preventScroll: true });
@@ -60,14 +76,14 @@ export function Scorecard({ scenario, evaluation, mode, xpGained, lessonPicks, o
           <ScoreRing score={evaluation.overall} size={128} stroke={10} label="Overall" className="self-center sm:self-auto" />
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold tracking-[0.2em] text-bronze-400 uppercase">Scorecard · {scenario.title}</p>
-            <h2
+            <Headline
               id="scorecard-heading"
               ref={headingRef}
               tabIndex={-1}
               className="mt-2 font-display text-2xl leading-tight font-semibold text-sea-100 outline-none sm:text-3xl"
             >
               {evaluation.headline}
-            </h2>
+            </Headline>
             <p className="mt-3 leading-relaxed text-sea-300">{evaluation.summary}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Badge tone={verdict.tone}>{verdict.label}</Badge>
@@ -85,7 +101,7 @@ export function Scorecard({ scenario, evaluation, mode, xpGained, lessonPicks, o
       {/* Skills, best moment, next step */}
       <div className="grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <CardTitle>Skill breakdown</CardTitle>
+          <SectionTitle className={SECTION_TITLE}>Skill breakdown</SectionTitle>
           <SkillBars scores={evaluation.skillScores} className="mt-5" />
         </Card>
         <div className="space-y-6 lg:col-span-2">
@@ -112,7 +128,7 @@ export function Scorecard({ scenario, evaluation, mode, xpGained, lessonPicks, o
       {/* Strengths and improvements */}
       <div className="grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-2">
-          <CardTitle>What worked</CardTitle>
+          <SectionTitle className={SECTION_TITLE}>What worked</SectionTitle>
           <ul className="mt-4 space-y-3">
             {evaluation.strengths.map((strength) => (
               <li key={strength} className="flex gap-3 text-sm leading-relaxed text-sea-200">
@@ -123,7 +139,7 @@ export function Scorecard({ scenario, evaluation, mode, xpGained, lessonPicks, o
           </ul>
         </Card>
         <Card className="lg:col-span-3">
-          <CardTitle>What to sharpen</CardTitle>
+          <SectionTitle className={SECTION_TITLE}>What to sharpen</SectionTitle>
           <ol className="mt-4 space-y-5">
             {evaluation.improvements.map((item, i) => (
               <li key={`${item.title}-${i}`} className="flex gap-3">

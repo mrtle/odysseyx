@@ -74,17 +74,20 @@ export function TodaysCourse({
           </div>
         </div>
 
-        <div className="relative mt-5 grid gap-3 md:grid-cols-2">
+        {/* grid-cols-1 + min-w-0 links: an implicit `auto` column would size to the nowrap persona and track lines
+            and push the cards (and their calls to action) past the clipped card edge on phones. */}
+        <div className="relative mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
           {lesson ? (
             <Link
               href={`/learn/${lesson.trackId}/${lesson.id}`}
-              className="group flex flex-col rounded-xl border border-sea-700 bg-sea-950/40 p-4 transition-colors hover:border-bronze-500/50 hover:bg-sea-900"
+              className="group flex min-w-0 flex-col rounded-xl border border-sea-700 bg-sea-950/40 p-4 transition-colors hover:border-bronze-500/50 hover:bg-sea-900"
             >
-              <span className="flex items-center gap-2 text-xs font-semibold text-sea-400 uppercase">
-                <BookOpen className="size-3.5 text-bronze-400" aria-hidden /> Lesson
+              <span className="flex min-w-0 items-center gap-2 text-xs font-semibold text-sea-400 uppercase">
+                <BookOpen className="size-3.5 shrink-0 text-bronze-400" aria-hidden /> Lesson
                 {track ? (
-                  <span className="inline-flex min-w-0 items-center gap-1 truncate font-medium text-sea-400 normal-case">
-                    · <TrackIconGlyph icon={track.icon} className="size-3.5" /> {track.title}
+                  <span className="flex min-w-0 items-center gap-1 font-medium text-sea-400 normal-case">
+                    · <TrackIconGlyph icon={track.icon} className="size-3.5 shrink-0" />
+                    <span className="truncate">{track.title}</span>
                   </span>
                 ) : null}
               </span>
@@ -104,7 +107,7 @@ export function TodaysCourse({
           ) : (
             <Link
               href="/learn"
-              className="group flex flex-col justify-center rounded-xl border border-dashed border-sea-600 bg-sea-950/30 p-4 transition-colors hover:border-bronze-500/50"
+              className="group flex min-w-0 flex-col justify-center rounded-xl border border-dashed border-sea-600 bg-sea-950/30 p-4 transition-colors hover:border-bronze-500/50"
             >
               <span className="flex items-center gap-2 text-xs font-semibold text-sea-400 uppercase">
                 <BookOpen className="size-3.5 text-bronze-400" aria-hidden /> Lesson
@@ -125,17 +128,17 @@ export function TodaysCourse({
           {scenario ? (
             <Link
               href={`/practice/${scenario.id}`}
-              className="group flex flex-col rounded-xl border border-sea-700 bg-sea-950/40 p-4 transition-colors hover:border-bronze-500/50 hover:bg-sea-900"
+              className="group flex min-w-0 flex-col rounded-xl border border-sea-700 bg-sea-950/40 p-4 transition-colors hover:border-bronze-500/50 hover:bg-sea-900"
             >
-              <span className="flex items-center gap-2 text-xs font-semibold text-sea-400 uppercase">
-                <Swords className="size-3.5 text-bronze-400" aria-hidden /> Drill
-                <span className="font-medium normal-case">· {CATEGORY_LABEL[scenario.category]}</span>
+              <span className="flex min-w-0 items-center gap-2 text-xs font-semibold text-sea-400 uppercase">
+                <Swords className="size-3.5 shrink-0 text-bronze-400" aria-hidden /> Drill
+                <span className="truncate font-medium normal-case">· {CATEGORY_LABEL[scenario.category]}</span>
               </span>
               <span className="mt-2 font-display text-lg font-semibold text-sea-100 group-hover:text-bronze-200">
                 {scenario.title}
               </span>
               <span className="mt-1 line-clamp-2 text-sm text-sea-300">{scenario.tagline}</span>
-              <span className="mt-2 flex items-center gap-2 text-sm text-sea-300">
+              <span className="mt-2 flex min-w-0 items-center gap-2 text-sm text-sea-300">
                 <span
                   aria-hidden
                   className="flex size-7 shrink-0 items-center justify-center rounded-full border border-sea-600 bg-sea-800 text-sm"
@@ -162,7 +165,7 @@ export function TodaysCourse({
           ) : (
             <Link
               href="/practice"
-              className="group flex flex-col justify-center rounded-xl border border-dashed border-sea-600 bg-sea-950/30 p-4 transition-colors hover:border-bronze-500/50"
+              className="group flex min-w-0 flex-col justify-center rounded-xl border border-dashed border-sea-600 bg-sea-950/30 p-4 transition-colors hover:border-bronze-500/50"
             >
               <span className="flex items-center gap-2 text-xs font-semibold text-sea-400 uppercase">
                 <Swords className="size-3.5 text-bronze-400" aria-hidden /> Drill

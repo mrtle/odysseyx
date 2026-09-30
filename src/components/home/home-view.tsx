@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/loading";
 import { useAppStore, useHasHydrated } from "@/lib/store";
 import type { Catalog } from "./catalog";
 import { Dashboard } from "./dashboard";
+import { writeProfileCookie } from "./profile-cookie";
 import { Welcome } from "./welcome";
 
 function HomeSkeleton() {
@@ -29,12 +31,25 @@ function HomeSkeleton() {
   );
 }
 
-/** Welcome for newcomers, the dashboard for returning learners — decided once the store has hydrated. */
-export function HomeView({ catalog }: { catalog: Catalog }) {
+/**
+ * Welcome for newcomers, the dashboard for returning learners.
+ *
+ * Before the store has hydrated, `profileHint` (from the `ox_profile` cookie)
+ * picks what the server renders: the full Welcome page for newcomers, a
+ * dashboard skeleton for returning learners. Saved progress has the final
+ * say, and the cookie is re-synced to it whenever they disagree.
+ */
+export function HomeView({ catalog, profileHint = false }: { catalog: Catalog; profileHint?: boolean }) {
   const hydrated = useHasHydrated();
   const profile = useAppStore((s) => s.profile);
   const xp = useAppStore((s) => s.xp);
-  if (!hydrated) return <HomeSkeleton />;
+  const hasProfile = profile !== null;
+
+  useEffect(() => {
+    if (hydrated) writeProfileCookie(hasProfile);
+  }, [hydrated, hasProfile]);
+
+  if (!hydrated) return profileHint ? <HomeSkeleton /> : <Welcome />;
   if (!profile) return <Welcome existingXp={xp} />;
   return <Dashboard catalog={catalog} profile={profile} />;
 }

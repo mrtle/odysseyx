@@ -46,7 +46,7 @@ export function RankLadder({ xp, className }: { xp: number; className?: string }
                     ? "bg-gradient-to-br from-bronze-300 to-bronze-600 text-sea-950"
                     : reached
                       ? "bg-bronze-500/20 text-bronze-300"
-                      : "border border-sea-700 text-sea-500",
+                      : "border border-sea-700 text-sea-400",
                 )}
               >
                 {reached && !isCurrent ? <Check className="size-4" /> : rank.level}
@@ -69,7 +69,7 @@ export function RankLadder({ xp, className }: { xp: number; className?: string }
                   <ProgressBar value={progress} className="mt-1.5 h-1.5" label={`Progress to ${next.title}`} />
                 ) : null}
               </div>
-              <span className={cn("shrink-0 text-xs tabular-nums", reached ? "text-sea-300" : "text-sea-500")}>
+              <span className={cn("shrink-0 text-xs tabular-nums", reached ? "text-sea-300" : "text-sea-400")}>
                 {rank.minXp === 0 ? "Start" : `${formatXp(rank.minXp)} XP`}
                 <span className="sr-only">{reached ? (isCurrent ? ", current rank" : ", reached") : ", not yet reached"}</span>
               </span>

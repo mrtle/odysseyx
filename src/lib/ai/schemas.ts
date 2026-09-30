@@ -2,11 +2,15 @@
  * Zod schemas for everything the coach returns and every API request body.
  *
  * The output schemas double as Claude structured-output formats (see
- * `generateStructured` in ./client.ts), so keep them to features structured
- * outputs support: every field required, no numeric min/max (clamp in code
- * with `normalize*` helpers instead), enums for closed sets.
+ * `generateStructured` in ./client.ts and `outputJsonSchema` in
+ * ./structured.ts), so keep them to features structured outputs support:
+ * every field required, no numeric min/max (clamp in code with
+ * `normalize*` helpers instead), enums for closed sets. Output enums carry
+ * repair hints (`repairable`) so a near-miss or off-vocabulary value from
+ * the model is mapped, defaulted or dropped instead of failing the result.
  */
 import { z } from "zod";
+import { enumRepairs, type EnumRepair } from "@/lib/ai/structured";
 import { SKILL_IDS } from "@/lib/skills";
 import { FRAMEWORK_IDS } from "@/lib/frameworks";
 import { CAMERA_ANGLES, CAMERA_MOVEMENTS, SHOT_FRAMINGS, SHOT_SIZES } from "@/lib/film";
@@ -39,8 +43,36 @@ export type {
 // Shared pieces
 // ---------------------------------------------------------------------------
 
+/** Register repair hints on an output enum (see ./structured.ts). */
+function repairable<T extends z.ZodEnum>(schema: T, hints: EnumRepair): T {
+  enumRepairs.add(schema as z.ZodEnum, hints);
+  return schema;
+}
+
+/** Skill ids in model output. No fallback: a score for an unknown skill is dropped. */
+const SkillIdSchema = repairable(z.enum(SKILL_IDS), {
+  aliases: {
+    opening: "hook",
+    characterization: "character",
+    characterisation: "character",
+    tension: "conflict",
+    stakes: "conflict",
+    opposition: "conflict",
+    dialog: "dialogue",
+    imagery: "visual",
+    pace: "pacing",
+    rhythm: "pacing",
+    timing: "pacing",
+    plot: "structure",
+    voice: "delivery",
+    presence: "delivery",
+    performance: "delivery",
+    presentation: "delivery",
+  },
+});
+
 export const SkillScoreSchema = z.object({
-  skill: z.enum(SKILL_IDS),
+  skill: SkillIdSchema,
   /** 0–100 */
   score: z.number(),
   comment: z.string(),
@@ -86,7 +118,27 @@ export const LoglineAnalysisSchema = z.object({
   genreRead: z.string(),
   components: z.array(
     z.object({
-      key: z.enum(LOGLINE_COMPONENTS),
+      key: repairable(z.enum(LOGLINE_COMPONENTS), {
+        aliases: {
+          hero: "protagonist",
+          character: "protagonist",
+          objective: "goal",
+          want: "goal",
+          desire: "goal",
+          antagonist: "obstacle",
+          antagonism: "obstacle",
+          conflict: "obstacle",
+          opposition: "obstacle",
+          consequence: "stakes",
+          consequences: "stakes",
+          irony: "hook",
+          concept: "hook",
+          premise: "hook",
+          specific: "specificity",
+          detail: "specificity",
+          details: "specificity",
+        },
+      }),
       /** 0–10 */
       score: z.number(),
       note: z.string(),
@@ -110,7 +162,24 @@ export const StoryAnalysisSchema = z.object({
   beats: z.array(
     z.object({
       beat: z.string(),
-      status: z.enum(BEAT_STATUSES),
+      status: repairable(z.enum(BEAT_STATUSES), {
+        fallback: "present",
+        aliases: {
+          solid: "strong",
+          excellent: "strong",
+          adequate: "present",
+          ok: "present",
+          okay: "present",
+          implied: "present",
+          partial: "weak",
+          "partially present": "weak",
+          underdeveloped: "weak",
+          thin: "weak",
+          absent: "missing",
+          none: "missing",
+          "not present": "missing",
+        },
+      }),
       evidence: z.string(),
       suggestion: z.string(),
     }),
@@ -129,10 +198,79 @@ export type StoryAnalysis = z.infer<typeof StoryAnalysisSchema>;
 
 export const ShotSchema = z.object({
   number: z.number(),
-  size: z.enum(SHOT_SIZES),
-  framing: z.enum(SHOT_FRAMINGS),
-  angle: z.enum(CAMERA_ANGLES),
-  movement: z.enum(CAMERA_MOVEMENTS),
+  size: repairable(z.enum(SHOT_SIZES), {
+    fallback: "medium",
+    aliases: {
+      ews: "extreme-wide",
+      els: "extreme-wide",
+      "extreme long": "extreme-wide",
+      ws: "wide",
+      ls: "wide",
+      long: "wide",
+      fs: "full",
+      "full body": "full",
+      mws: "medium-wide",
+      mls: "medium-wide",
+      "medium long": "medium-wide",
+      cowboy: "medium-wide",
+      american: "medium-wide",
+      ms: "medium",
+      mid: "medium",
+      mcu: "medium-close-up",
+      cu: "close-up",
+      ecu: "extreme-close-up",
+      xcu: "extreme-close-up",
+      detail: "extreme-close-up",
+      macro: "extreme-close-up",
+    },
+  }),
+  framing: repairable(z.enum(SHOT_FRAMINGS), {
+    fallback: "single",
+    aliases: {
+      ots: "over-the-shoulder",
+      "point of view": "pov",
+      "2 shot": "two-shot",
+      "three shot": "group",
+      cutaway: "insert",
+      master: "establishing",
+    },
+  }),
+  angle: repairable(z.enum(CAMERA_ANGLES), {
+    fallback: "eye-level",
+    aliases: {
+      "bird eye": "birds-eye",
+      aerial: "birds-eye",
+      "worm eye": "worms-eye",
+      canted: "dutch",
+      tilted: "dutch",
+      oblique: "dutch",
+      "top down": "overhead",
+      "top shot": "overhead",
+      neutral: "eye-level",
+      "shoulder level": "eye-level",
+    },
+  }),
+  movement: repairable(z.enum(CAMERA_MOVEMENTS), {
+    fallback: "static",
+    aliases: {
+      "dolly in": "push-in",
+      push: "push-in",
+      "dolly out": "pull-out",
+      "pull back": "pull-out",
+      dolly: "tracking",
+      truck: "tracking",
+      track: "tracking",
+      follow: "tracking",
+      jib: "crane",
+      boom: "crane",
+      gimbal: "steadicam",
+      locked: "static",
+      "locked off": "static",
+      fixed: "static",
+      still: "static",
+      none: "static",
+    },
+  }),
   /** e.g. "35mm", "85mm portrait", "wide 18mm". */
   lens: z.string(),
   subject: z.string(),
@@ -165,7 +303,7 @@ export const MicroFeedbackSchema = z.object({
   praise: z.string(),
   nudge: z.string(),
   tryThis: z.string(),
-  skill: z.enum(SKILL_IDS),
+  skill: SkillIdSchema,
 });
 export type MicroFeedback = z.infer<typeof MicroFeedbackSchema>;
 

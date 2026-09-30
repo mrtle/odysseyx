@@ -303,7 +303,7 @@ function QuestionStep({
                   state === "selected" && "border-bronze-400 bg-bronze-400 text-sea-950",
                   state === "correct" && "border-emerald-400 bg-emerald-400 text-sea-950",
                   state === "wrong" && "border-wine-400 bg-wine-400 text-sea-950",
-                  state === "muted" && "border-sea-700 text-sea-500",
+                  state === "muted" && "border-sea-700 text-sea-400",
                 )}
               >
                 {state === "correct" ? (

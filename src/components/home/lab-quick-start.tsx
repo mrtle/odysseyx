@@ -11,7 +11,7 @@ export function LabQuickStart({ className }: { className?: string }) {
         <h2 id="lab-quick-start-heading" className="font-display text-xl font-semibold text-sea-100">
           Story Lab
         </h2>
-        <Link href="/lab" className="text-sm font-medium text-bronze-300 hover:text-bronze-200">
+        <Link href="/lab" className="-mx-2 -my-3 inline-flex items-center rounded-md px-2 py-3 text-sm font-medium text-bronze-300 hover:text-bronze-200">
           All tools
         </Link>
       </div>
