@@ -228,6 +228,7 @@ export interface DailyEntry {
   date: string;
   response: string;
   feedback?: MicroFeedback;
+  mode?: CoachMode;
 }
 
 export interface XpEvent {

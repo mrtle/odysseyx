@@ -80,7 +80,7 @@ export function rankForXp(xp: number): RankProgress {
 }
 
 export function practiceXp(overall: number): number {
-  const clamped = Math.max(0, Math.min(100, overall));
+  const clamped = Number.isFinite(overall) ? Math.max(0, Math.min(100, overall)) : 0;
   return Math.round(XP_REWARDS.practiceBase + clamped * XP_REWARDS.practiceScoreFactor);
 }
 
@@ -233,7 +233,7 @@ export function computeSkillProfile(
   const result = {} as Record<SkillId, SkillStat>;
   for (const skill of SKILL_IDS) {
     const obs = observations
-      .filter((o) => o.skill === skill && Number.isFinite(o.score))
+      .filter((o) => o.skill === skill && Number.isFinite(o.score) && Number.isFinite(new Date(o.at).getTime()))
       .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
     if (obs.length === 0) {
       result[skill] = { skill, score: null, samples: 0, trend: 0 };
@@ -288,7 +288,8 @@ export function recommendNext(
   let focus: SkillStat;
   let reason: string;
   if (unmeasured.length > 0) {
-    focus = unmeasured.find((s) => preferredSkills.includes(s.skill)) ?? unmeasured[0];
+    // Honour the caller's priority order among preferred skills.
+    focus = preferredSkills.map((id) => profile[id]).find((s) => s?.score === null) ?? unmeasured[0];
     reason = "You haven't been scored on this yet — let's get a baseline.";
   } else {
     focus = stats.reduce((lowest, s) => ((s.score ?? 0) < (lowest.score ?? 0) ? s : lowest));

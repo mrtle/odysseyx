@@ -4,9 +4,16 @@
  * deterministic feedback when no API key is configured.
  */
 
+/** Abbreviations whose dots shouldn't end a sentence ("Dr.", "4 a.m."). */
+const ABBREVIATIONS = /\b(Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|e\.g|i\.e|a\.m|p\.m|U\.S)\./gi;
+const DOT = "\u2024"; // one-dot leader, restored after splitting
+
 export function sentences(text: string): string[] {
-  return (text.replace(/\s+/g, " ").match(/[^.!?]+[.!?]+["')\]]*|[^.!?]+$/g) ?? [])
-    .map((s) => s.trim())
+  const protectedText = text
+    .replace(/\s+/g, " ")
+    .replace(ABBREVIATIONS, (m) => m.replaceAll(".", DOT));
+  return (protectedText.match(/[^.!?]+[.!?]+["')\]”’]*|[^.!?]+$/g) ?? [])
+    .map((s) => s.replaceAll(DOT, ".").trim())
     .filter(Boolean);
 }
 
@@ -32,7 +39,7 @@ export function hasAny(text: string, terms: readonly string[]): boolean {
 }
 
 export const LEXICON = {
-  conflict: ["but", "however", "until", "against", "struggle", "fight", "refuse", "refused", "forbidden", "obstacle", "threat", "enemy", "rival", "trapped", "must", "can't", "cannot", "won't", "afraid", "fear", "lose", "losing", "risk", "danger", "problem", "conflict"],
+  conflict: ["but", "however", "until", "against", "struggle", "fight", "refuse", "refused", "forbidden", "obstacle", "threat", "enemy", "rival", "trapped", "must", "can't", "cannot", "won't", "afraid", "fear", "lose", "losing", "lost", "loses", "failed", "fails", "crashed", "died", "stole", "betrayed", "risk", "danger", "problem", "conflict"],
   stakes: ["or else", "before", "lose", "losing", "die", "death", "save", "forever", "last chance", "only", "everything", "never", "destroy", "ruin", "fired", "alone", "family", "home", "life"],
   desire: ["want", "wants", "wanted", "need", "needs", "dream", "dreams", "hope", "goal", "determined", "desperate", "longs", "longed", "tries", "tried", "trying", "must", "sets out", "decides", "decided", "wish"],
   change: ["realized", "realised", "learned", "learnt", "understood", "finally", "since then", "ever since", "now", "changed", "different", "became", "no longer", "for the first time"],

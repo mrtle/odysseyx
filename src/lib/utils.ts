@@ -1,7 +1,14 @@
 import { clsx, type ClassValue } from "clsx";
+import { extendTailwindMerge } from "tailwind-merge";
 
+/** tailwind-merge that knows about the custom `font-display` family. */
+const twMerge = extendTailwindMerge({
+  extend: { classGroups: { "font-family": ["font-display"] } },
+});
+
+/** Join class names; later Tailwind classes override conflicting earlier ones. */
 export function cn(...inputs: ClassValue[]): string {
-  return clsx(inputs);
+  return twMerge(clsx(inputs));
 }
 
 /** Random id that works outside secure contexts too. */

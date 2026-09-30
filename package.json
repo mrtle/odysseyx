@@ -2,7 +2,7 @@
   "name": "odysseusx",
   "version": "0.1.0",
   "private": true,
-  "description": "OdysseusX \u2014 an AI storytelling coach that trains storytellers and filmmakers.",
+  "description": "OdysseusX — an AI storytelling coach that trains storytellers and filmmakers.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,6 +19,7 @@
     "next": "16.3.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tailwind-merge": "^3.7.0",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
