@@ -31,6 +31,11 @@ describe("lab meta helpers", () => {
   it("derives short titles, turning sluglines into readable ones", () => {
     expect(deriveTitle("A shy librarian who hates crowds must win a televised trivia tournament.")).toBe("A shy librarian who hates crowds must win…");
     expect(deriveTitle("INT. LIGHTHOUSE KITCHEN - NIGHT\n\nRain.")).toBe("Lighthouse Kitchen — Night");
+    // Action on the same line as the slugline stays out of the title.
+    expect(
+      deriveTitle("INT. LIGHTHOUSE - NIGHT The lamp room is dark. ELENA (60s) climbs the last steps, one hand on the wall."),
+    ).toBe("Lighthouse — Night");
+    expect(deriveTitle("EXT. HARBOUR WALL. Waves hit the stones and MARA runs.")).toBe("Harbour Wall");
     expect(deriveTitle("INT. ALL-NIGHT DINER - 3 A.M.")).toBe("All-Night Diner — 3 A.M.");
     expect(deriveTitle("   ")).toBe("Untitled");
   });

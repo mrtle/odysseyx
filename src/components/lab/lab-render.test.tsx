@@ -62,7 +62,7 @@ describe("Story Lab result components", () => {
   it("fits the shot table in a 1280px layout and lets the keyboard scroll it", () => {
     const plan = demoShots({ scene: SAMPLE_SCENES[0].scene });
     const html = renderToStaticMarkup(<ShotPlanResult plan={plan} mode="live" />);
-    expect(html).toMatch(/<div role="region" aria-labelledby="shot-list" tabindex="0"/);
+    expect(html).toMatch(/<div role="region" aria-label="Shot list table \(scrollable\)" tabindex="0"/);
     expect(html).toContain("min-w-[56rem]");
     expect(html).not.toContain("min-w-[64rem]");
   });

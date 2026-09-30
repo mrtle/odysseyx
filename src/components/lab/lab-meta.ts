@@ -163,7 +163,13 @@ export function deriveTitle(text: string, maxWords = 8): string {
   const firstLine = text.trim().split(/\n/).find((l) => l.trim().length > 0)?.trim() ?? "";
   const slug = firstLine.match(/^(?:INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E\.?|INT\.|EXT\.)\s*(.+)$/i);
   if (slug) {
-    return slug[1]
+    // Keep only the heading when action shares the line: "LIGHTHOUSE - NIGHT The lamp room…" → "LIGHTHOUSE - NIGHT".
+    const timeOfDay = slug[1].match(/^(.*?\s[-–—]\s*(?:DAY|NIGHT|MORNING|AFTERNOON|EVENING|DAWN|DUSK|SUNSET|SUNRISE|CONTINUOUS|LATER|SAME TIME)\b)/i);
+    const sentenceEnd = slug[1].match(/^(.*?)[.!?]\s/);
+    let heading = (timeOfDay?.[1] ?? sentenceEnd?.[1] ?? slug[1]).trim();
+    const headingWords = heading.split(/\s+/);
+    if (headingWords.length > maxWords) heading = headingWords.slice(0, maxWords).join(" ");
+    return heading
       .toLowerCase()
       .replace(/\s+[-–—]\s+/g, " — ")
       .replace(/(^|[\s(/-])([a-z])/g, (_, lead: string, ch: string) => `${lead}${ch.toUpperCase()}`)

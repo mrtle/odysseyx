@@ -93,7 +93,7 @@ function ScorePrompt({
       <Card className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <MessageSquareDashed className="size-8 shrink-0 text-sea-500" aria-hidden />
         <div className="min-w-0 flex-1">
-          <CardTitle>Nothing to score yet</CardTitle>
+          <CardTitle as="h2">Nothing to score yet</CardTitle>
           <CardDescription>You left before saying a line. Step back in and give it a go.</CardDescription>
         </div>
         {scenario ? (
@@ -116,7 +116,7 @@ function ScorePrompt({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <Gauge className="size-8 shrink-0 text-bronze-400" aria-hidden />
           <div className="min-w-0 flex-1">
-            <CardTitle>This scene hasn&apos;t been scored</CardTitle>
+            <CardTitle as="h2">This scene hasn&apos;t been scored</CardTitle>
             <CardDescription>
               {turns} turn{turns === 1 ? "" : "s"} on the record. Get your scorecard now, or step back in and finish the scene first.
             </CardDescription>

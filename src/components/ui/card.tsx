@@ -13,8 +13,12 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-export function CardTitle({ className, ...props }: ComponentProps<"h3">) {
-  return <h3 className={cn("font-display text-lg font-semibold text-sea-100", className)} {...props} />;
+export function CardTitle({
+  as: Heading = "h3",
+  className,
+  ...props
+}: ComponentProps<"h3"> & { as?: "h2" | "h3" | "h4" }) {
+  return <Heading className={cn("font-display text-lg font-semibold text-sea-100", className)} {...props} />;
 }
 
 export function CardDescription({ className, ...props }: ComponentProps<"p">) {

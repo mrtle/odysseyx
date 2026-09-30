@@ -90,6 +90,7 @@ export function LabEntryView({ id }: { id: string }) {
       <div className="animate-fade-in">
         <BackToLab />
         <EmptyState
+          headingLevel={1}
           icon={<FileSearch className="size-8" aria-hidden />}
           title="This analysis isn't in your logbook"
           description="Saved analyses live in this browser. It may have been deleted, or saved on another device."

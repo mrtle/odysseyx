@@ -280,7 +280,7 @@ export function ShotPlanResult({
         {/* Sized to fit the xl content width (974px at a 1280px window); it only scrolls on unusually narrow xl layouts, and the scroller is focusable so it can be scrolled from the keyboard. */}
         <div
           role="region"
-          aria-labelledby="shot-list"
+          aria-label="Shot list table (scrollable)"
           tabIndex={0}
           className="hidden overflow-x-auto rounded-2xl border border-sea-700/80 bg-sea-900/60 focus-visible:border-bronze-400/60 xl:block"
         >

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Sailboat } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -202,6 +203,12 @@ export function OnboardingForm({ initial, returnTo }: { initial: Profile | null;
                     aria-invalid={error ? true : undefined}
                     aria-describedby={error ? errorId : undefined}
                   />
+                  <p className="mt-6 text-sm text-sea-400">
+                    Coming from another browser?{" "}
+                    <Link href="/progress" className="font-medium text-bronze-300 underline-offset-4 hover:underline">
+                      Restore your progress from a backup
+                    </Link>
+                  </p>
                 </div>
               ) : null}
 

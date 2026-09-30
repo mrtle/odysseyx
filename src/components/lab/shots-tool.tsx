@@ -76,6 +76,8 @@ function ShotsWorkbench({ initial }: { initial: { scene: string; intent: string;
     if (request.pending) return;
     if (tooShort) {
       setShowValidation(true);
+      // Move focus to the field so keyboard and screen-reader users hear the error.
+      document.getElementById(`${id}-scene`)?.focus();
       return;
     }
     const cleanIntent = intent.trim();
@@ -146,7 +148,7 @@ function ShotsWorkbench({ initial }: { initial: { scene: string; intent: string;
               placeholder={"INT. KITCHEN - NIGHT\n\nRain on the windows. MARA stands at the stove...\n\nScreenplay format or plain prose both work."}
               aria-describedby={`${id}-scene-hint${invalid ? ` ${id}-scene-error` : ""}`}
               aria-invalid={invalid || undefined}
-              className={cn("field screenplay mt-2 min-h-72 resize-y text-base leading-6 sm:text-[0.95rem]", invalid && "border-wine-500/70")}
+              className={cn("field screenplay mt-2 min-h-72 resize-y text-base leading-6 lg:text-[0.95rem]", invalid && "border-wine-500/70")}
             />
             <FieldMeta
               id={`${id}-scene-hint`}
@@ -156,7 +158,7 @@ function ShotsWorkbench({ initial }: { initial: { scene: string; intent: string;
               Sluglines (INT./EXT.) and character cues help the planner find locations and speakers.
             </FieldMeta>
             {invalid ? (
-              <p id={`${id}-scene-error`} className="mt-2 text-sm text-wine-400">
+              <p role="alert" id={`${id}-scene-error`} className="mt-2 text-sm text-wine-400">
                 Add a little more of the scene — at least a few lines of action ({MIN_CHARS} characters).
               </p>
             ) : null}

@@ -95,6 +95,8 @@ function StoryWorkbench({ initial }: { initial: StoryInitial }) {
     if (request.pending) return;
     if (tooShort) {
       setShowValidation(true);
+      // Move focus to the field so keyboard and screen-reader users hear the error.
+      document.getElementById(`${id}-text`)?.focus();
       return;
     }
     const cleanTitle = title.trim();
@@ -269,7 +271,7 @@ function StoryWorkbench({ initial }: { initial: StoryInitial }) {
                 : `About ${Math.max(1, Math.round(words / 200))} min to read aloud.`}
             </FieldMeta>
             {invalid ? (
-              <p id={`${id}-text-error`} className="mt-2 text-sm text-wine-400">
+              <p role="alert" id={`${id}-text-error`} className="mt-2 text-sm text-wine-400">
                 Give the coach a little more to work with — at least a paragraph ({MIN_CHARS} characters).
               </p>
             ) : null}

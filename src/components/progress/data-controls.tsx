@@ -52,7 +52,12 @@ type Backup = Extract<ProgressImport, { ok: true }>;
 type Dialog = { kind: "reset" } | { kind: "import"; file: string; backup: Backup; current: ProgressSummary } | null;
 
 /** Export everything as JSON, restore an export, or wipe this browser's progress after confirming. */
-export function DataControls({ className }: { className?: string }) {
+/**
+ * Export / import / reset. The "restore" variant is shown when there is no
+ * progress yet (a new browser, or after a reset) and offers only Import.
+ */
+export function DataControls({ className, variant = "full" }: { className?: string; variant?: "full" | "restore" }) {
+  const restoreOnly = variant === "restore";
   const router = useRouter();
   const resetProgress = useAppStore((s) => s.resetProgress);
   const [status, setStatus] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
@@ -144,14 +149,20 @@ export function DataControls({ className }: { className?: string }) {
   return (
     <SectionCard
       id="data-heading"
-      title="Your data"
-      description="Everything lives in this browser — there's no account. Export a backup before clearing site data or switching devices, then import it to pick up where you left off."
+      title={restoreOnly ? "Coming from another browser?" : "Your data"}
+      description={
+        restoreOnly
+          ? "If you exported your progress from OdysseusX before, import the JSON file to pick up where you left off."
+          : "Everything lives in this browser — there's no account. Export a backup before clearing site data or switching devices, then import it to pick up where you left off."
+      }
       className={className}
     >
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="secondary" onClick={exportProgress} icon={<Download className="size-4" aria-hidden />}>
-          Export progress (JSON)
-        </Button>
+        {restoreOnly ? null : (
+          <Button variant="secondary" onClick={exportProgress} icon={<Download className="size-4" aria-hidden />}>
+            Export progress (JSON)
+          </Button>
+        )}
         <Button
           ref={importRef}
           variant="secondary"
@@ -169,7 +180,7 @@ export function DataControls({ className }: { className?: string }) {
           aria-hidden
           onChange={chooseFile}
         />
-        {dialog?.kind !== "reset" ? (
+        {!restoreOnly && dialog?.kind !== "reset" ? (
           <Button ref={resetRef} variant="danger" onClick={() => setDialog({ kind: "reset" })} icon={<Trash2 className="size-4" aria-hidden />}>
             Reset progress…
           </Button>

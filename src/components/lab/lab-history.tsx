@@ -46,7 +46,7 @@ function HistoryItem({ entry, onDelete, linkRef }: { entry: LabEntry; onDelete: 
         <Link
           ref={linkRef}
           href={entryHref(entry.id)}
-          className="line-clamp-2 font-medium text-sea-100 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none group-hover:text-bronze-200"
+          className="line-clamp-2 font-medium text-sea-100 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-bronze-400/80 group-hover:text-bronze-200"
         >
           {entry.title}
         </Link>

@@ -9,7 +9,7 @@ import { useStorageHealth, type StorageStatus } from "@/lib/store";
 const MESSAGES: Record<Exclude<StorageStatus, "ok">, { title: string; body: string }> = {
   unavailable: {
     title: "Progress won't be saved in this browser",
-    body: "Your browser is blocking site storage, so lessons, drills and Story Lab entries only last until you close this tab. Allow site data for OdysseusX to keep them.",
+    body: "Your browser is blocking site storage, so lessons, drills and Story Lab entries only last until you reload or leave this page. Allow site data for OdysseusX to keep them.",
   },
   quota: {
     title: "Your browser's storage for OdysseusX is full",

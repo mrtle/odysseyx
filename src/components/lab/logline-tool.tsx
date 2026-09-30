@@ -103,6 +103,8 @@ function LoglineWorkbench({ initialLogline, initialGenre }: { initialLogline: st
     if (request.pending) return;
     if (tooShort) {
       setShowValidation(true);
+      // Move focus to the field so keyboard and screen-reader users hear the error.
+      document.getElementById(`${id}-logline`)?.focus();
       return;
     }
     const cleanGenre = genre.trim();
@@ -178,7 +180,7 @@ function LoglineWorkbench({ initialLogline, initialGenre }: { initialLogline: st
               <span className={hint.tone}>{hint.text}</span>
             </FieldMeta>
             {invalid ? (
-              <p id={`${id}-error`} className="mt-2 text-sm text-wine-400">
+              <p role="alert" id={`${id}-error`} className="mt-2 text-sm text-wine-400">
                 Write at least a full phrase (10 characters or more) so there&apos;s something to diagnose.
               </p>
             ) : null}

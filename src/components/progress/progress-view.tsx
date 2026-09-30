@@ -67,12 +67,15 @@ export function ProgressView({ catalog }: { catalog: Catalog }) {
       {!hydrated ? (
         <ProgressSkeleton />
       ) : !profile && !hasActivity ? (
-        <EmptyState
-          icon={<Sailboat className="size-8" aria-hidden />}
-          title="The log is empty — for now"
-          description="Set your course and every lesson, drill, analysis and daily challenge will be charted here."
-          action={<ButtonLink href="/onboarding">Begin your voyage</ButtonLink>}
-        />
+        <div className="space-y-6">
+          <EmptyState
+            icon={<Sailboat className="size-8" aria-hidden />}
+            title="The log is empty — for now"
+            description="Set your course and every lesson, drill, analysis and daily challenge will be charted here."
+            action={<ButtonLink href="/onboarding">Begin your voyage</ButtonLink>}
+          />
+          <DataControls variant="restore" />
+        </div>
       ) : (
         <ProgressLog catalog={catalog} />
       )}
