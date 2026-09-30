@@ -227,8 +227,8 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
       */}
       <div className="flex h-[calc(100dvh_-_15rem_-_env(safe-area-inset-bottom))] flex-col overflow-hidden rounded-2xl border border-sea-700/80 bg-sea-900/60 shadow-xl shadow-black/20 backdrop-blur-sm max-lg:[@media(max-height:32rem)]:h-[calc(100dvh_-_11.25rem_-_env(safe-area-inset-bottom))] lg:h-[calc(100dvh-12rem)] lg:min-h-[26rem]">
         {/* Scene header: the controls wrap under the persona on narrow screens rather than squeezing the name away. */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-sea-800 px-4 py-3 sm:px-5 [@media(max-height:32rem)]:py-2">
-          <div className="flex min-w-[12rem] flex-1 items-center gap-3">
+        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-sea-800 px-4 py-3 sm:px-5 [@media(max-height:32rem)]:flex-nowrap [@media(max-height:32rem)]:py-2">
+          <div className="flex min-w-[12rem] flex-1 items-center gap-3 [@media(max-height:32rem)]:min-w-0">
             <PersonaAvatar persona={persona} category={scenario.category} />
             <div className="min-w-0">
               <p className="truncate font-medium text-sea-100">{persona.name}</p>
@@ -285,7 +285,7 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
           role="region"
           aria-label={`Conversation with ${persona.name}`}
           tabIndex={0}
-          className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 focus-visible:outline-offset-[-2px] sm:px-5"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 focus-visible:outline-offset-[-2px] sm:px-5 [@media(max-height:32rem)]:py-3"
         >
           {mode === "demo" ? <DemoNotice mode={mode} className="mb-5 [@media(max-height:32rem)]:hidden" /> : null}
           <ol className="space-y-5" aria-busy={reply.streaming}>
@@ -355,7 +355,7 @@ export function PracticeChat({ scenario, sessionId, speakOpening = false, onEnd 
 
         {/* Composer */}
         <form
-          className="border-t border-sea-800 p-3 sm:p-4 [@media(max-height:32rem)]:p-2"
+          className="shrink-0 border-t border-sea-800 p-3 sm:p-4 [@media(max-height:32rem)]:p-2"
           onSubmit={(event) => {
             event.preventDefault();
             send();
